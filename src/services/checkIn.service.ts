@@ -112,11 +112,15 @@ export const checkInService = {
 
     // When the scanner names the event, who may act and what state the event is in are settled before the pass is
     // looked at, so a stranger or a closed door learns nothing about the credential.
-    let context = dto.eventId ? await this.validateActorAndEvent(actor, dto.eventId) : null;
-    if (context) this.assertEventAdmitting(context.event, now, true);
-
+    // (The pass is looked up at the same moment, to save a round trip to the database at the door; its result is only used after
+    // the actor and the event have been accepted, so nothing about it is revealed to someone who is not allowed.)
     const tokenHash = hashToken(parsed.token);
-    const invitee = await Invitee.findOne({ qrTokenHash: tokenHash });
+    const [checked, invitee] = await Promise.all([
+      dto.eventId ? this.validateActorAndEvent(actor, dto.eventId) : Promise.resolve(null),
+      Invitee.findOne({ qrTokenHash: tokenHash }),
+    ]);
+    let context = checked;
+    if (context) this.assertEventAdmitting(context.event, now, true);
     if (!invitee) {
       // A token from an earlier send/resend is replaced by the newest one
       const superseded = (await Invitation.exists({ tokenHash })) || (await CredentialEvent.exists({ tokenHash }));
@@ -372,7 +376,11 @@ export const checkInService = {
 
   // Helper Methods
   async validateActorAndEvent(actor: { userId: string; role: Role }, eventId: string) {
-    const event = await Event.findById(eventId);
+    // the staff assignment is read together with the event (one round trip); it is only used once the event is known to exist
+    const [event, staffAssignment] = await Promise.all([
+      Event.findById(eventId),
+      actor.role === Role.SYSTEM_USER ? SystemUserAssignment.findOne({ userId: actor.userId, eventId }) : Promise.resolve(null),
+    ]);
     if (!event) {
       throw new Error('EVENT_NOT_FOUND');
     }
@@ -391,7 +399,7 @@ export const checkInService = {
     }
 
     if (actor.role === Role.SYSTEM_USER) {
-      assignment = await SystemUserAssignment.findOne({ userId: actor.userId, eventId });
+      assignment = staffAssignment;
       if (!assignment) {
         throw new Error('STAFF_EVENT_FORBIDDEN');
       }

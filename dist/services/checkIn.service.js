@@ -98,11 +98,16 @@ exports.checkInService = {
         const now = clock_1.clock.now();
         // When the scanner names the event, who may act and what state the event is in are settled before the pass is
         // looked at, so a stranger or a closed door learns nothing about the credential.
-        let context = dto.eventId ? await this.validateActorAndEvent(actor, dto.eventId) : null;
+        // (The pass is looked up at the same moment, to save a round trip to the database at the door; its result is only used after
+        // the actor and the event have been accepted, so nothing about it is revealed to someone who is not allowed.)
+        const tokenHash = (0, invitation_util_1.hashToken)(parsed.token);
+        const [checked, invitee] = await Promise.all([
+            dto.eventId ? this.validateActorAndEvent(actor, dto.eventId) : Promise.resolve(null),
+            Invitee_1.Invitee.findOne({ qrTokenHash: tokenHash }),
+        ]);
+        let context = checked;
         if (context)
             this.assertEventAdmitting(context.event, now, true);
-        const tokenHash = (0, invitation_util_1.hashToken)(parsed.token);
-        const invitee = await Invitee_1.Invitee.findOne({ qrTokenHash: tokenHash });
         if (!invitee) {
             // A token from an earlier send/resend is replaced by the newest one
             const superseded = (await Invitation_1.Invitation.exists({ tokenHash })) || (await CredentialEvent_1.CredentialEvent.exists({ tokenHash }));
@@ -342,7 +347,11 @@ exports.checkInService = {
     },
     // Helper Methods
     async validateActorAndEvent(actor, eventId) {
-        const event = await Event_1.Event.findById(eventId);
+        // the staff assignment is read together with the event (one round trip); it is only used once the event is known to exist
+        const [event, staffAssignment] = await Promise.all([
+            Event_1.Event.findById(eventId),
+            actor.role === User_1.Role.SYSTEM_USER ? SystemUserAssignment_1.SystemUserAssignment.findOne({ userId: actor.userId, eventId }) : Promise.resolve(null),
+        ]);
         if (!event) {
             throw new Error('EVENT_NOT_FOUND');
         }
@@ -357,7 +366,7 @@ exports.checkInService = {
             return { event, assignment: null };
         }
         if (actor.role === User_1.Role.SYSTEM_USER) {
-            assignment = await SystemUserAssignment_1.SystemUserAssignment.findOne({ userId: actor.userId, eventId });
+            assignment = staffAssignment;
             if (!assignment) {
                 throw new Error('STAFF_EVENT_FORBIDDEN');
             }
