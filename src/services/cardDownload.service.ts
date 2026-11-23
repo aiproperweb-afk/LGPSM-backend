@@ -126,6 +126,9 @@ export async function writePartZip(actor: Actor, event: any, guests: any[], firs
     for (let i = 0; i < guests.length; i += RENDER_AT_A_TIME) {
       const slice = guests.slice(i, i + RENDER_AT_A_TIME);
       const pdfs = await Promise.all(slice.map((g) => makePdf(g).catch((e) => { console.error('Card not drawn:', e?.message); return null; })));
+      // the guests whose card was made are "used" for billing from now on (a later send is not charged again)
+      const made = slice.filter((_, k) => !!pdfs[k]).map((g) => g._id);
+      if (made.length) await Invitee.updateMany({ _id: { $in: made } }, { $set: { cardDownloadedAt: new Date() } }, { timestamps: false });
       slice.forEach((g, k) => {
         const pdf = pdfs[k];
         if (!pdf) { skipped.push(g.name); return; }
@@ -158,6 +161,14 @@ export const cardDownloadService = {
     if (ids.length === 0) throw fail(400, 'Select at least one guest to download cards for.', 'NO_GUESTS_SELECTED');
     const found = await Invitee.find({ eventId, _id: { $in: ids } }).select('_id').sort({ createdAt: 1, _id: 1 }).lean();
     if (found.length === 0) throw fail(400, 'None of the selected guests are on this event.', 'NO_GUESTS_SELECTED');
+    // Cards are paid for before they are made, just like sending: the same per-guest charge, and a guest already paid for (sent or downloaded) is not charged again
+    if (actor.role !== 'ADMIN') {
+      const { billingService } = await import('./billing.service');
+      await billingService.assertPaidFor(event, found.map((g: any) => String(g._id))).catch((e: any) => {
+        if (e?.message === 'PAYMENT_REQUIRED') throw fail(402, 'Please pay the bill for these cards first. Nothing was downloaded.', 'PAYMENT_REQUIRED');
+        throw e;
+      });
+    }
     const plan = await CardDownloadPlan.create({
       eventId, userId: actor.userId, inviteeIds: found.map((g: any) => g._id), sessionId: session ? session._id : null, expiresAt: new Date(Date.now() + PLAN_MINUTES * 60 * 1000)
     });

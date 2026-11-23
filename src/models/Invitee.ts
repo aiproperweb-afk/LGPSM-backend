@@ -26,6 +26,8 @@ export interface IInvitee extends Document {
   /** The phone number in the one form every duplicate check uses (digits, +91 for ten-digit numbers). Derived on save. */
   mobileKey?: string;
   invitationStatus: InvitationStatus;
+  /** Set the first time this guest's print-ready card was made; with a sent invitation it is what makes the guest "used" for billing (one payment covers either) */
+  cardDownloadedAt?: Date;
   rsvpStatus: RsvpStatus;
   dietaryPreference?: string;
   dietarySelections?: { title: string; value: string }[];
@@ -79,6 +81,7 @@ const InviteeSchema: Schema = new Schema(
     email: { type: String, lowercase: true, trim: true },
     mobile: { type: String, trim: true },
     mobileKey: { type: String, select: false },
+    cardDownloadedAt: { type: Date },
     invitationStatus: { 
       type: String, 
       enum: Object.values(InvitationStatus), 

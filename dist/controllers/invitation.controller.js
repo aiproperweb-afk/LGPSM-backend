@@ -40,6 +40,8 @@ exports.invitationController = {
         catch (error) {
             if (error.message === 'EVENT_NOT_FOUND')
                 return res.status(404).json({ error: 'Not Found', message: 'Event not found or access denied' });
+            if (error.message === 'PAYMENT_REQUIRED')
+                return res.status(402).json({ success: false, error: 'Payment Required', code: 'PAYMENT_REQUIRED', message: 'Please pay the bill for these invitations first. Nothing was sent.' });
             if (error.message === 'PRINT_ONLY_EVENT')
                 return res.status(409).json({ success: false, error: 'Conflict', code: 'PRINT_ONLY_EVENT', message: 'This event is set to print only, so its cards are downloaded, not sent. Use Download Invitee Cards.' });
             if (error.message === 'EVENT_CANCELLED')

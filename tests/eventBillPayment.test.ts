@@ -70,7 +70,48 @@ describe('bill for sending to chosen guests', () => {
   });
 });
 
+describe('printed cards are paid for like invitations, and one payment covers either', () => {
+  it('refuses a card download until paid, then charges nothing more for the same guests, in either order', async () => {
+    await Event.updateOne({ _id: ev._id }, { $set: { invitationType: 'BOTH' } });
+    const guests: any[] = await Invitee.insertMany([0, 1, 2].map((i) => ({ eventId: ev._id, name: `Print ${i}`, email: `print${i}@x.com`, mobile: `981110010${i}` })));
+    const ids = guests.map((g) => String(g._id));
+    const plan = () => request(app).post(`/api/v1/events/${ev._id}/invitation-cards/plan`).set(auth(org)).send({ inviteeIds: ids });
+    const refused = await plan();
+    expect(refused.status).toBe(402);
+    expect(refused.body.code).toBe('PAYMENT_REQUIRED');
+
+    stubRazorpay();
+    const pay = await request(app).post('/api/v1/billing/pay').set(auth(org)).send({ eventId: String(ev._id), inviteeIds: ids });
+    expect(pay.body.data).toMatchObject({ invitees: 3 });
+    const o = pay.body.data.providerOrderId;
+    await request(app).post('/api/v1/payments/verify').set(auth(org)).send({ providerOrderId: o, providerPaymentId: 'pay_p', signature: sign(o, 'pay_p') });
+    const ok = await plan();
+    expect(ok.status).toBe(200);
+
+    // downloading uses the payment up: the same guests are not charged again, for a download or for sending
+    await request(app).get(`/api/v1/events/${ev._id}/invitation-cards/download`).set(auth(org)).query({ planId: ok.body.data.planId, part: 1 }).buffer(true).parse((res: any, cb: any) => { const c: Buffer[] = []; res.on('data', (d: Buffer) => c.push(d)); res.on('end', () => cb(null, Buffer.concat(c))); });
+    const q = await request(app).post('/api/v1/billing/quote').set(auth(org)).send({ eventId: String(ev._id), inviteeIds: ids });
+    expect(q.body.data).toMatchObject({ invitees: 0, payable: false });
+    expect(await Invitee.countDocuments({ eventId: ev._id, cardDownloadedAt: { $ne: null } })).toBe(3);
+    const bills = await request(app).get('/api/v1/billing/events').set(auth(org));
+    expect(bills.body.data.totalDue).toBe(0);
+  });
+});
+
 describe('an event created before any rate was set', () => {
+  it('refuses to send unpaid invitations, whichever screen asks, and lets a paid or free send through', async () => {
+    const guests: any[] = await Invitee.insertMany([0, 1].map((i) => ({ eventId: ev._id, name: `Unpaid ${i}`, email: `unpaid${i}@x.com`, mobile: `9811100000`.slice(0, 9) + i })));
+    const ids = guests.map((g) => String(g._id));
+    const send = () => request(app).post(`/api/v1/events/${ev._id}/invitations/send`).set(auth(org)).send({ inviteeIds: ids, channel: 'EMAIL' });
+    const refused = await send();
+    expect(refused.status).toBe(402);
+    expect(refused.body.code).toBe('PAYMENT_REQUIRED');
+    expect(await Invitee.countDocuments({ eventId: ev._id, invitationStatus: 'SENT' })).toBe(0);
+    // no rate anywhere: nothing to charge, so the send is not held back for payment
+    await Event.updateOne({ _id: ev._id }, { $set: { pricing: { ratePerInvitee: null, currency: 'INR', lockedAt: new Date() } } });
+    expect((await send()).status).not.toBe(402);
+  });
+
   it('is billed at the admin\'s current rate, which is then kept on the event', async () => {
     await Event.updateOne({ _id: ev._id }, { $unset: { pricing: '' } });
     const g: any = await Invitee.create({ eventId: ev._id, name: 'Late', email: 'late@x.com', mobile: '9811122233' });

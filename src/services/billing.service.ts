@@ -31,7 +31,8 @@ async function eventState(event: any) {
       await Event.updateOne({ _id: event._id, $or: [{ 'pricing.ratePerInvitee': null }, { 'pricing.ratePerInvitee': { $exists: false } }, { 'pricing.ratePerInvitee': 0 }] }, { $set: { pricing: current } });
     }
   }
-  const sent = await Invitee.countDocuments({ eventId: event._id, invitationStatus: InvitationStatus.SENT });
+  // A guest is "used" once their invitation was sent OR their print-ready card was made: one payment per guest covers either (print, digital or both)
+  const sent = await Invitee.countDocuments({ eventId: event._id, $or: [{ invitationStatus: InvitationStatus.SENT }, { cardDownloadedAt: { $ne: null } }] });
   const paid = await Order.aggregate([
     { $match: { eventId: event._id, kind: 'EVENT_BILL', status: OrderStatus.PAID } },
     { $group: { _id: null, amount: { $sum: '$amount' }, invitees: { $sum: '$invitees' } } }
@@ -72,13 +73,27 @@ async function billableFor(event: any, inviteeIds: string[]) {
   const toSend = await Invitee.countDocuments({
     eventId: event._id,
     _id: { $in: inviteeIds },
-    invitationStatus: { $ne: InvitationStatus.SENT }
+    invitationStatus: { $ne: InvitationStatus.SENT },
+    cardDownloadedAt: null
   });
   const credit = Math.max(0, st.covered - st.sent);
   return { rate: st.rate, toSend, credit, billable: Math.max(0, toSend - credit) };
 }
 
 export const billingService = {
+  /**
+   * Sending an invitation or downloading a card is paid for before it happens: refuses (PAYMENT_REQUIRED) when the event has a rate and the chosen guests are not covered by
+   * payments already made. The screens show the Razorpay bill first, but the server is what keeps an invitation from going out unpaid, whichever
+   * screen or tool asks. With no rate set, or everything already paid for, nothing is charged and this returns.
+   */
+  async assertPaidFor(event: any, inviteeIds: string[]): Promise<void> {
+    const b = await billableFor(event, inviteeIds);
+    if (b.rate !== null && b.billable > 0) throw Object.assign(new Error('PAYMENT_REQUIRED'), { billable: b.billable });
+  },
+
+  /** Same check, under its earlier name */
+  async assertPaidForSend(event: any, inviteeIds: string[]): Promise<void> { return this.assertPaidFor(event, inviteeIds); },
+
   /** The organizer's events with what is billed, paid and due for each. */
   async listEventBills(organizerId: string) {
     const gst = await platformSettingsService.gstPercent();

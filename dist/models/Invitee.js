@@ -58,6 +58,7 @@ const InviteeSchema = new mongoose_1.Schema({
     email: { type: String, lowercase: true, trim: true },
     mobile: { type: String, trim: true },
     mobileKey: { type: String, select: false },
+    cardDownloadedAt: { type: Date },
     invitationStatus: {
         type: String,
         enum: Object.values(InvitationStatus),

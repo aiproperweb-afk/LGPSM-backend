@@ -236,6 +236,12 @@ export const invitationService = {
     const invitees = await Invitee.find({ _id: { $in: validObjectIds }, eventId }).select('+qrTokenCipher +invitationTokenCipher');
     if (invitees.length === 0) throw new Error('INVALID_INVITEES');
 
+    // Nothing goes out unpaid: the organizer pays the bill (Razorpay) first. Administrators sending on an organizer's behalf are not billed here.
+    if (userRole !== Role.ADMIN && userRole !== 'ADMIN') {
+      const { billingService } = await import('./billing.service');
+      await billingService.assertPaidForSend(event, invitees.map((i) => String(i._id)));
+    }
+
     const results = [];
 
     // Load all sessions for this event once

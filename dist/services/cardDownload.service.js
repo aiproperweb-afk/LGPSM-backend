@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -137,6 +170,10 @@ async function writePartZip(actor, event, guests, firstIndex, out, onGuest) {
         for (let i = 0; i < guests.length; i += RENDER_AT_A_TIME) {
             const slice = guests.slice(i, i + RENDER_AT_A_TIME);
             const pdfs = await Promise.all(slice.map((g) => makePdf(g).catch((e) => { console.error('Card not drawn:', e?.message); return null; })));
+            // the guests whose card was made are "used" for billing from now on (a later send is not charged again)
+            const made = slice.filter((_, k) => !!pdfs[k]).map((g) => g._id);
+            if (made.length)
+                await Invitee_1.Invitee.updateMany({ _id: { $in: made } }, { $set: { cardDownloadedAt: new Date() } }, { timestamps: false });
             slice.forEach((g, k) => {
                 const pdf = pdfs[k];
                 if (!pdf) {
@@ -175,6 +212,15 @@ exports.cardDownloadService = {
         const found = await Invitee_1.Invitee.find({ eventId, _id: { $in: ids } }).select('_id').sort({ createdAt: 1, _id: 1 }).lean();
         if (found.length === 0)
             throw (0, exports.fail)(400, 'None of the selected guests are on this event.', 'NO_GUESTS_SELECTED');
+        // Cards are paid for before they are made, just like sending: the same per-guest charge, and a guest already paid for (sent or downloaded) is not charged again
+        if (actor.role !== 'ADMIN') {
+            const { billingService } = await Promise.resolve().then(() => __importStar(require('./billing.service')));
+            await billingService.assertPaidFor(event, found.map((g) => String(g._id))).catch((e) => {
+                if (e?.message === 'PAYMENT_REQUIRED')
+                    throw (0, exports.fail)(402, 'Please pay the bill for these cards first. Nothing was downloaded.', 'PAYMENT_REQUIRED');
+                throw e;
+            });
+        }
         const plan = await CardDownloadPlan_1.CardDownloadPlan.create({
             eventId, userId: actor.userId, inviteeIds: found.map((g) => g._id), sessionId: session ? session._id : null, expiresAt: new Date(Date.now() + PLAN_MINUTES * 60 * 1000)
         });
