@@ -159,6 +159,9 @@ export const reportService = {
       totalSystemUsers,
       rsvpSummary,
       deliverySummary,
+      // The server's own view of whether editing is closed (an invitation was sent or tried, or cards were made). The guests' statuses above can disagree
+      // with it (for example after a list was replaced), so the screens lock Edit by this, as the server does when saving.
+      invitationsStarted: await (await import('./event.service')).eventService.invitationsStarted(eventObjId),
       checkInMethods,
       sessionReports
     };

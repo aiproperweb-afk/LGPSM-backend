@@ -240,7 +240,7 @@ export const inviteeSetService = {
       Invitee.exists({ eventId: eid, cardDownloadedAt: { $ne: null } }).setOptions({ includeArchived: true } as any)
     ]);
     if (attempt || checkIn || answered || printed) {
-      const why = attempt ? (attempt.status === InvitationDeliveryStatus.PENDING ? 'a send was started and never confirmed' : 'an invitation was sent') : printed ? 'cards were downloaded' : checkIn ? 'a guest checked in' : 'a guest answered';
+      const why = attempt ? (attempt.status === InvitationDeliveryStatus.PENDING ? 'a send was started and never confirmed' : 'an invitation was sent or tried') : printed ? 'cards were downloaded' : checkIn ? 'a guest checked in' : 'a guest answered';
       throw fail(409, `Guests may already have been contacted for this event (${why}), so its invitee lists cannot be deleted.`, 'HAS_HISTORY');
     }
     // passes made for guests who were never contacted go with those guests
