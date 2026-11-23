@@ -230,16 +230,21 @@ export const inviteeSetService = {
     const event = await manageableEvent(actor, eventId);
     if (event.status === EventStatus.COMPLETED || event.status === EventStatus.CANCELLED || eventHasEnded(event)) throw fail(409, 'This event is over or closed, so its invitee lists cannot be changed.', 'EVENT_CLOSED');
     const eid = new mongoose.Types.ObjectId(eventId);
-    const [attempt, checkIn, credential, answered, passed] = await Promise.all([
-      Invitation.exists({ eventId: eid }),
+    // What really happened to guests counts: an invitation attempt (delivered, failed, or begun and never confirmed, which may still have reached the guest),
+    // a check-in, an answer, or a printed card. A pass that was only made (never put in an invitation or on a printed card) reached nobody, so it
+    // does not block, and the reason is said when something does.
+    const [attempt, checkIn, answered, printed] = await Promise.all([
+      Invitation.findOne({ eventId: eid }).select('status').lean(),
       CheckIn.exists({ eventId: eid }),
-      CredentialEvent.exists({ eventId: eid }),
       Invitee.exists({ eventId: eid, rsvpStatus: { $ne: RsvpStatus.PENDING } }).setOptions({ includeArchived: true } as any),
-      Invitee.exists({ eventId: eid, qrTokenHash: { $exists: true, $ne: null } }).setOptions({ includeArchived: true } as any)
+      Invitee.exists({ eventId: eid, cardDownloadedAt: { $ne: null } }).setOptions({ includeArchived: true } as any)
     ]);
-    if (attempt || checkIn || credential || answered || passed) {
-      throw fail(409, 'Invitations were already sent for this event, so its invitee lists cannot be deleted.', 'HAS_HISTORY');
+    if (attempt || checkIn || answered || printed) {
+      const why = attempt ? (attempt.status === InvitationDeliveryStatus.PENDING ? 'a send was started and never confirmed' : 'an invitation was sent') : printed ? 'cards were downloaded' : checkIn ? 'a guest checked in' : 'a guest answered';
+      throw fail(409, `Guests may already have been contacted for this event (${why}), so its invitee lists cannot be deleted.`, 'HAS_HISTORY');
     }
+    // passes made for guests who were never contacted go with those guests
+    await CredentialEvent.deleteMany({ eventId: eid });
     const invitees = await Invitee.deleteMany({ eventId: eid }).setOptions({ includeArchived: true } as any);
     const lists = await InviteeSet.deleteMany({ eventId: eid });
     return { deletedInvitees: invitees.deletedCount || 0, deletedLists: lists.deletedCount || 0 };
