@@ -80,7 +80,7 @@ router.get('/:id/rate', authorizeRoles(Role.ADMIN), async (req, res, next) => {
 router.put(
   '/:id/rate',
   authorizeRoles(Role.ADMIN),
-  validate(z.object({ ratePerInvitee: z.number().finite().min(0, 'Rate cannot be negative').max(1000, 'Rate looks too high').nullable() }).strict()),
+  validate(z.object({ ratePerInvitee: z.number().finite().min(0, 'Rate cannot be negative').max(20, 'The rate can be at most 20').nullable() }).strict()),
   auditAction({ action: 'ORGANIZER_RATE_SET', entityType: 'User', entityParam: 'id' }),
   async (req, res, next) => {
     try {

@@ -98,6 +98,27 @@ describe('printed cards are paid for like invitations, and one payment covers ei
   });
 });
 
+describe('what the dashboard calls payments', () => {
+  it('counts only payments that went through, not invitations sent or orders started', async () => {
+    stubRazorpay();
+    await sendTo(4); // four invitations sent (and so billable), nothing paid
+    let bills = await request(app).get('/api/v1/billing/events').set(auth(org));
+    expect(bills.body.data.paidTotal).toBe(0);
+    expect(bills.body.data.payments).toEqual([]);
+    const g: any[] = await Invitee.insertMany([{ eventId: ev._id, name: 'Pay1', email: 'pay1@x.com' }]);
+    const pay = await request(app).post('/api/v1/billing/pay').set(auth(org)).send({ eventId: String(ev._id), inviteeIds: [String(g[0]._id)] });
+    // an order that was only started is not a payment
+    bills = await request(app).get('/api/v1/billing/events').set(auth(org));
+    expect(bills.body.data.paidTotal).toBe(0);
+    const o = pay.body.data.providerOrderId;
+    await request(app).post('/api/v1/payments/verify').set(auth(org)).send({ providerOrderId: o, providerPaymentId: 'pay_d', signature: sign(o, 'pay_d') });
+    bills = await request(app).get('/api/v1/billing/events').set(auth(org));
+    expect(bills.body.data.paidTotal).toBeCloseTo(pay.body.data.total, 2);
+    expect(bills.body.data.payments).toHaveLength(1);
+    expect(bills.body.data.payments[0]).toMatchObject({ eventName: 'Summit' });
+  });
+});
+
 describe('the default price per invitee', () => {
   it('charges the default (3) until an administrator sets a rate, on the quote and on the send', async () => {
     process.env.DEFAULT_RATE_PER_INVITEE = '3';
@@ -244,5 +265,15 @@ describe('event bill payment', () => {
     await Event.updateOne({ _id: ev._id }, { $set: { 'pricing.ratePerInvitee': null } });
     const norate = await request(app).post('/api/v1/billing/pay').set(auth(org)).send({ eventId: String(ev._id) });
     expect(norate.status).toBe(409);
+  });
+});
+
+// last: it leaves the platform rate at 20 in the settings cache
+describe('the highest price per invitee', () => {
+  it('is 20, for the platform rate and for one organizer', async () => {
+    const admin = await User.create({ fullName: 'Admin', email: 'cap@x.com', role: Role.ADMIN, isActive: true });
+    expect((await request(app).put('/api/v1/settings/pricing').set(auth(admin)).send({ ratePerInvitee: 21 })).status).toBe(400);
+    expect((await request(app).put('/api/v1/settings/pricing').set(auth(admin)).send({ ratePerInvitee: 20 })).status).toBe(200);
+    expect((await request(app).put(`/api/users/${org._id}/rate`).set(auth(admin)).send({ ratePerInvitee: 21 })).status).toBe(400);
   });
 });

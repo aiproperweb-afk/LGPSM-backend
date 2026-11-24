@@ -105,9 +105,17 @@ exports.billingService = {
         for (const e of events)
             rows.push(await eventBill(e, gst));
         const shown = rows.filter((r) => r.invitesSent > 0 || r.paid > 0);
+        // the payments themselves (only ones that went through), newest first: the dashboard's "this month" and "last billed" come from these
+        const titleOf = new Map(events.map((e) => [String(e._id), e.title]));
+        const paidOrders = await Order_1.Order.find({ userId: organizerId, kind: 'EVENT_BILL', status: Order_1.OrderStatus.PAID }).sort({ updatedAt: -1 }).limit(100).select('eventId amount updatedAt').lean();
+        const payments = paidOrders.map((o) => ({ eventId: String(o.eventId), eventName: titleOf.get(String(o.eventId)) || 'Event', amount: round2(o.amount || 0), at: o.updatedAt }));
+        const paidSum = await Order_1.Order.aggregate([{ $match: { userId: new mongoose_1.default.Types.ObjectId(organizerId), kind: 'EVENT_BILL', status: Order_1.OrderStatus.PAID } }, { $group: { _id: null, amount: { $sum: '$amount' } } }]);
         return {
             currency: currency_1.PLATFORM_CURRENCY,
             gstPercent: gst,
+            /** everything this organizer has really paid (payments that went through), across all their events */
+            paidTotal: round2(paidSum[0]?.amount || 0),
+            payments,
             totalDue: round2(shown.reduce((s, r) => s + r.due, 0)),
             totalPaid: round2(shown.reduce((s, r) => s + r.paid, 0)),
             events: shown

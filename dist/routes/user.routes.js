@@ -46,7 +46,7 @@ router.get('/:id/rate', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ADMIN),
         next(e);
     }
 });
-router.put('/:id/rate', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ADMIN), validate(zod_1.z.object({ ratePerInvitee: zod_1.z.number().finite().min(0, 'Rate cannot be negative').max(1000, 'Rate looks too high').nullable() }).strict()), (0, auditAction_1.auditAction)({ action: 'ORGANIZER_RATE_SET', entityType: 'User', entityParam: 'id' }), async (req, res, next) => {
+router.put('/:id/rate', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ADMIN), validate(zod_1.z.object({ ratePerInvitee: zod_1.z.number().finite().min(0, 'Rate cannot be negative').max(20, 'The rate can be at most 20').nullable() }).strict()), (0, auditAction_1.auditAction)({ action: 'ORGANIZER_RATE_SET', entityType: 'User', entityParam: 'id' }), async (req, res, next) => {
     try {
         const target = await User_1.User.findOne({ _id: req.params.id, role: User_2.Role.ORGANIZER }).select('_id').lean();
         if (!target)
