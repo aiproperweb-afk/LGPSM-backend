@@ -7,6 +7,19 @@ import { PriceRateChange } from '../models/PriceRateChange';
 
 const KEY = 'global';
 
+/** What an organizer is charged per invitee until an administrator sets a rate (Settings > Price Rate): invitations are never free by accident.
+ *  DEFAULT_RATE_PER_INVITEE changes it (0 = free until a rate is set; the automated tests use that). */
+export const DEFAULT_RATE_PER_INVITEE = 3;
+const defaultRate = (): number => {
+  const v = process.env.DEFAULT_RATE_PER_INVITEE;
+  const n = v === undefined || v.trim() === '' ? NaN : Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : DEFAULT_RATE_PER_INVITEE;
+};
+const platformRate = (settings: any): number => {
+  const r = settings?.pricing?.ratePerInvitee;
+  return typeof r === 'number' && Number.isFinite(r) && r > 0 ? r : defaultRate();
+};
+
 async function load() {
   // Upsert so the defaults exist without a separate seeding step
   return PlatformSettings.findOneAndUpdate({ key: KEY }, { $setOnInsert: { key: KEY } }, { new: true, upsert: true, setDefaultsOnInsert: true });
@@ -51,7 +64,7 @@ export const platformSettingsService = {
     const settings = await loadCached();
     const history = await PriceRateChange.find().sort({ createdAt: -1 }).limit(100).populate('changedBy', 'fullName email').lean();
     return {
-      ratePerInvitee: settings.pricing?.ratePerInvitee ?? null,
+      ratePerInvitee: platformRate(settings),
       gstPercent: settings.pricing?.gstPercent ?? 18,
       currency: PLATFORM_CURRENCY,
       updatedAt: settings.pricing?.updatedAt || null,
@@ -94,7 +107,7 @@ export const platformSettingsService = {
   async currentRateSnapshot(organizerId?: unknown) {
     const settings = await loadCached();
     const custom = organizerId ? await this.customRateOf(organizerId) : null;
-    return { ratePerInvitee: custom ?? settings.pricing?.ratePerInvitee ?? null, currency: PLATFORM_CURRENCY, lockedAt: new Date() };
+    return { ratePerInvitee: custom ?? platformRate(settings), currency: PLATFORM_CURRENCY, lockedAt: new Date() };
   },
 
   /** The rate an administrator set for one organizer, or null when the platform rate applies to them */
@@ -109,7 +122,7 @@ export const platformSettingsService = {
   async rateForOrganizer(organizerId: unknown) {
     const settings = await loadCached();
     const custom = await this.customRateOf(organizerId);
-    return { customRate: custom, defaultRate: settings.pricing?.ratePerInvitee ?? null, effectiveRate: custom ?? settings.pricing?.ratePerInvitee ?? null, currency: PLATFORM_CURRENCY };
+    return { customRate: custom, defaultRate: platformRate(settings), effectiveRate: custom ?? platformRate(settings), currency: PLATFORM_CURRENCY };
   },
 
   async setOrganizerRate(actorId: string, organizerId: string, rate: number | null) {

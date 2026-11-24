@@ -138,8 +138,8 @@ describe('deleting unused invitee lists (card details changed after the sample w
     const ev = await mkEvent(a); await guests(ev);
     expect((await request(app).post(`/api/v1/events/${ev._id}/invitees/sets/clear`).set(auth(b))).status).toBe(404);
     const g = await Invitee.findOne({ eventId: ev._id });
-    await Invitation.create({ eventId: ev._id, inviteeId: g!._id, emailStatus: 'SENT' } as any).catch(async () => { await Invitee.updateOne({ _id: g!._id }, { qrTokenHash: 'x' }); });
-    await Invitee.updateOne({ _id: g!._id }, { qrTokenHash: hashToken('x') });
+    // an invitation that went out (a pass that was only made, never delivered, does not count)
+    await Invitation.create({ eventId: ev._id, inviteeId: g!._id, channel: 'EMAIL', status: 'SENT', tokenHash: hashToken('x') } as any);
     const res = await request(app).post(`/api/v1/events/${ev._id}/invitees/sets/clear`).set(auth(a));
     expect(res.status).toBe(409);
     expect(await Invitee.countDocuments({ eventId: ev._id })).toBe(2);

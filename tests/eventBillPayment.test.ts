@@ -98,6 +98,25 @@ describe('printed cards are paid for like invitations, and one payment covers ei
   });
 });
 
+describe('the default price per invitee', () => {
+  it('charges the default (3) until an administrator sets a rate, on the quote and on the send', async () => {
+    process.env.DEFAULT_RATE_PER_INVITEE = '3';
+    try {
+      await Event.updateOne({ _id: ev._id }, { $unset: { pricing: 1 } });
+      const g: any[] = await Invitee.insertMany([{ eventId: ev._id, name: 'D0', email: 'd0@x.com' }]);
+      const ids = g.map((x) => String(x._id));
+      const q = await request(app).post('/api/v1/billing/quote').set(auth(org)).send({ eventId: String(ev._id), inviteeIds: ids });
+      expect(q.body.data).toMatchObject({ rate: 3, invitees: 1, subtotal: 3, payable: true });
+      const sent = await request(app).post(`/api/v1/events/${ev._id}/invitations/send`).set(auth(org)).send({ inviteeIds: ids, channel: 'EMAIL' });
+      expect(sent.status).toBe(402);
+      const price = await request(app).get('/api/v1/settings/pricing').set(auth(await User.create({ fullName: 'A', email: 'ad@x.com', role: Role.ADMIN, isActive: true })));
+      expect(price.body.data.ratePerInvitee).toBe(3);
+    } finally {
+      process.env.DEFAULT_RATE_PER_INVITEE = '0';
+    }
+  });
+});
+
 describe('an event created before any rate was set', () => {
   it('refuses to send unpaid invitations, whichever screen asks, and lets a paid or free send through', async () => {
     const guests: any[] = await Invitee.insertMany([0, 1].map((i) => ({ eventId: ev._id, name: `Unpaid ${i}`, email: `unpaid${i}@x.com`, mobile: `9811100000`.slice(0, 9) + i })));

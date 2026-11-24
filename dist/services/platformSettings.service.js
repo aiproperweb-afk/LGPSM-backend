@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.platformSettingsService = void 0;
+exports.platformSettingsService = exports.DEFAULT_RATE_PER_INVITEE = void 0;
 const currency_1 = require("../constants/currency");
 const cache_1 = require("../infra/cache");
 const mongoose_1 = __importDefault(require("mongoose"));
@@ -11,6 +11,18 @@ const User_1 = require("../models/User");
 const PlatformSettings_1 = require("../models/PlatformSettings");
 const PriceRateChange_1 = require("../models/PriceRateChange");
 const KEY = 'global';
+/** What an organizer is charged per invitee until an administrator sets a rate (Settings > Price Rate): invitations are never free by accident.
+ *  DEFAULT_RATE_PER_INVITEE changes it (0 = free until a rate is set; the automated tests use that). */
+exports.DEFAULT_RATE_PER_INVITEE = 3;
+const defaultRate = () => {
+    const v = process.env.DEFAULT_RATE_PER_INVITEE;
+    const n = v === undefined || v.trim() === '' ? NaN : Number(v);
+    return Number.isFinite(n) && n >= 0 ? n : exports.DEFAULT_RATE_PER_INVITEE;
+};
+const platformRate = (settings) => {
+    const r = settings?.pricing?.ratePerInvitee;
+    return typeof r === 'number' && Number.isFinite(r) && r > 0 ? r : defaultRate();
+};
 async function load() {
     // Upsert so the defaults exist without a separate seeding step
     return PlatformSettings_1.PlatformSettings.findOneAndUpdate({ key: KEY }, { $setOnInsert: { key: KEY } }, { new: true, upsert: true, setDefaultsOnInsert: true });
@@ -48,7 +60,7 @@ exports.platformSettingsService = {
         const settings = await loadCached();
         const history = await PriceRateChange_1.PriceRateChange.find().sort({ createdAt: -1 }).limit(100).populate('changedBy', 'fullName email').lean();
         return {
-            ratePerInvitee: settings.pricing?.ratePerInvitee ?? null,
+            ratePerInvitee: platformRate(settings),
             gstPercent: settings.pricing?.gstPercent ?? 18,
             currency: currency_1.PLATFORM_CURRENCY,
             updatedAt: settings.pricing?.updatedAt || null,
@@ -81,7 +93,7 @@ exports.platformSettingsService = {
     async currentRateSnapshot(organizerId) {
         const settings = await loadCached();
         const custom = organizerId ? await this.customRateOf(organizerId) : null;
-        return { ratePerInvitee: custom ?? settings.pricing?.ratePerInvitee ?? null, currency: currency_1.PLATFORM_CURRENCY, lockedAt: new Date() };
+        return { ratePerInvitee: custom ?? platformRate(settings), currency: currency_1.PLATFORM_CURRENCY, lockedAt: new Date() };
     },
     /** The rate an administrator set for one organizer, or null when the platform rate applies to them */
     async customRateOf(organizerId) {
@@ -95,7 +107,7 @@ exports.platformSettingsService = {
     async rateForOrganizer(organizerId) {
         const settings = await loadCached();
         const custom = await this.customRateOf(organizerId);
-        return { customRate: custom, defaultRate: settings.pricing?.ratePerInvitee ?? null, effectiveRate: custom ?? settings.pricing?.ratePerInvitee ?? null, currency: currency_1.PLATFORM_CURRENCY };
+        return { customRate: custom, defaultRate: platformRate(settings), effectiveRate: custom ?? platformRate(settings), currency: currency_1.PLATFORM_CURRENCY };
     },
     async setOrganizerRate(actorId, organizerId, rate) {
         await User_1.User.updateOne({ _id: organizerId, role: 'ORGANIZER' }, { $set: { customRatePerInvitee: rate } });

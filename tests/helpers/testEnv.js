@@ -19,3 +19,6 @@ for (const key of [
 ]) {
   delete process.env[key];
 }
+
+// Automated tests start with no default price per invitee (events are free until a test sets a rate); the app's default is 3
+process.env.DEFAULT_RATE_PER_INVITEE = '0';
