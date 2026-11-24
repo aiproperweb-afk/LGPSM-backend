@@ -51,7 +51,9 @@ async function sweepOldFiles() {
 }
 exports.cardJobService = {
     /** Starts building the cards for a plan. Returns at once; the work goes on in the background. */
-    async start(actor, eventId, planId) {
+    async start(actor, eventId, planId, format = 'PRINT_PDF') {
+        if (!(0, cardDownload_service_1.isCardFormat)(format))
+            throw (0, cardDownload_service_1.fail)(400, 'Choose a card format.', 'BAD_FORMAT');
         const event = await (0, cardDownload_service_1.loadEvent)(actor, eventId);
         const plan = mongoose_1.default.Types.ObjectId.isValid(planId) ? await CardDownloadPlan_1.CardDownloadPlan.findOne({ _id: planId, eventId, userId: actor.userId }).lean() : null;
         if (!plan)
@@ -78,7 +80,7 @@ exports.cardJobService = {
         await kv_1.kv.set(activeKey, job.id, 30 * 60_000);
         await save(job);
         running++;
-        void runJob(actor, event, plan, sizes, (0, cardDownload_service_1.zipFileNames)(event.title, sess ? sess.name : null, sizes.length), job)
+        void runJob(actor, event, plan, sizes, (0, cardDownload_service_1.zipFileNames)(event.title, sess ? sess.name : null, sizes.length), job, format)
             .catch(() => undefined)
             .finally(() => { running--; void kv_1.kv.del(activeKey).catch(() => undefined); });
         return job;
@@ -115,7 +117,7 @@ exports.cardJobService = {
         return { filePath: job.filePath, fileName: job.fileName, size: job.size || fs_1.default.statSync(job.filePath).size };
     },
 };
-async function runJob(actor, event, plan, sizes, partNames, job) {
+async function runJob(actor, event, plan, sizes, partNames, job, format) {
     const files = [];
     let lastSaved = 0;
     const progress = async (force = false) => { if (force || Date.now() - lastSaved > 1000) {
@@ -136,7 +138,7 @@ async function runJob(actor, event, plan, sizes, partNames, job) {
         const tick = () => { job.doneGuests++; void progress(); };
         if (sizes.length === 1) {
             // up to 100 guests: the PDFs are in the one zip directly
-            await (0, cardDownload_service_1.writePartZip)(actor, event, await guestsFor(0, sizes[0]), 0, out, tick);
+            await (0, cardDownload_service_1.writePartZip)(actor, event, await guestsFor(0, sizes[0]), 0, out, tick, format);
             job.doneParts = 1;
         }
         else {
@@ -149,7 +151,7 @@ async function runJob(actor, event, plan, sizes, partNames, job) {
             for (let part = 0; part < sizes.length; part++) {
                 const innerPath = path_1.default.join(DIR, `${job.id}-part${part + 1}.zip`);
                 files.push(innerPath);
-                await (0, cardDownload_service_1.writePartZip)(actor, event, await guestsFor(offset, sizes[part]), offset, fs_1.default.createWriteStream(innerPath), tick);
+                await (0, cardDownload_service_1.writePartZip)(actor, event, await guestsFor(offset, sizes[part]), offset, fs_1.default.createWriteStream(innerPath), tick, format);
                 await new Promise((resolve) => { outer.once('entry', () => resolve()); outer.append(fs_1.default.createReadStream(innerPath), { name: partNames[part] }); });
                 await fs_1.default.promises.rm(innerPath, { force: true });
                 offset += sizes[part];

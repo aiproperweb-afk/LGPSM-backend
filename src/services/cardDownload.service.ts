@@ -73,7 +73,18 @@ const safeName = (s: string) => String(s || 'guest').normalize('NFKD').replace(/
  * Writes ONE zip of printable PDFs (one per guest, in order) to `out`. A guest with no pass yet gets one (nothing is sent to them).
  * `onGuest` is called after each guest so a caller can show progress.
  */
-export async function writePartZip(actor: Actor, event: any, guests: any[], firstIndex: number, out: NodeJS.WritableStream, onGuest?: () => void): Promise<void> {
+/** The file kinds a card can be downloaded as. The first is the default (and what every download was before the choice existed). */
+export const CARD_FORMATS = [
+  { value: 'PRINT_PDF', label: 'Print PDF (High Resolution)', ext: 'pdf' },
+  { value: 'WEB_PDF', label: 'PDF (Smaller file)', ext: 'pdf' },
+  { value: 'PNG', label: 'PNG image (High Resolution)', ext: 'png' },
+  { value: 'JPG', label: 'JPG image (Smaller file)', ext: 'jpg' },
+] as const;
+export type CardFormat = (typeof CARD_FORMATS)[number]['value'];
+export const isCardFormat = (v: unknown): v is CardFormat => CARD_FORMATS.some((f) => f.value === v);
+
+export async function writePartZip(actor: Actor, event: any, guests: any[], firstIndex: number, out: NodeJS.WritableStream, onGuest?: () => void, format: CardFormat = 'PRINT_PDF'): Promise<void> {
+  const ext = CARD_FORMATS.find((f) => f.value === format)!.ext;
   const zip = archiver('zip', { store: true }); // the PDFs are already compressed
   zip.on('warning', (e: Error) => console.warn('Card zip warning:', e.message));
   const written = new Promise<void>((resolve, reject) => { out.on('finish', () => resolve()); out.on('error', reject); });
@@ -100,17 +111,24 @@ export async function writePartZip(actor: Actor, event: any, guests: any[], firs
     const token = await passFor(g);
     if (!token) return null;
     const png = await invitationService.renderPassCard(event, g, token);
-    const flat = sharp(png).flatten({ background: '#ffffff' });
+    // the image formats are the card itself; the PDFs put it on a page of its own shape
+    if (format === 'PNG') return png;
+    if (format === 'JPG') return sharp(png).flatten({ background: '#ffffff' }).jpeg({ quality: 90, chromaSubsampling: '4:4:4' }).toBuffer();
     const meta = await sharp(png).metadata();
-    const pxW = meta.width || 1536;
-    const pxH = meta.height || 2048;
-    const jpg = await flat.jpeg({ quality: 95, chromaSubsampling: '4:4:4' }).toBuffer();
+    // the smaller PDF holds the card at half the size in each direction (still sharp on screen, a fraction of the file)
+    const scale = format === 'WEB_PDF' ? 0.5 : 1;
+    const pxW = Math.round((meta.width || 1536) * scale);
+    const pxH = Math.round((meta.height || 2048) * scale);
+    let flat = sharp(png).flatten({ background: '#ffffff' });
+    if (scale !== 1) flat = flat.resize(pxW, pxH);
+    const jpg = await flat.jpeg({ quality: format === 'WEB_PDF' ? 85 : 95, chromaSubsampling: '4:4:4' }).toBuffer();
     const pdf = await PDFDocument.create();
     pdf.setTitle(`${event.title}: ${g.name}`);
     pdf.setCreator('EventQRapp');
     const img = await pdf.embedJpg(jpg);
-    const pageW = pxW * PT_PER_PX;
-    const pageH = pxH * PT_PER_PX;
+    // the page keeps the full card's size whichever resolution the picture has
+    const pageW = (pxW / scale) * PT_PER_PX;
+    const pageH = (pxH / scale) * PT_PER_PX;
     const page = pdf.addPage([pageW, pageH]);
     page.drawImage(img, { x: 0, y: 0, width: pageW, height: pageH });
     return Buffer.from(await pdf.save());
@@ -132,7 +150,7 @@ export async function writePartZip(actor: Actor, event: any, guests: any[], firs
       slice.forEach((g, k) => {
         const pdf = pdfs[k];
         if (!pdf) { skipped.push(g.name); return; }
-        zip.append(pdf, { name: `${String(firstIndex + i + k + 1).padStart(4, '0')}-${safeName(g.name)}.pdf` });
+        zip.append(pdf, { name: `${String(firstIndex + i + k + 1).padStart(4, '0')}-${safeName(g.name)}.${ext}` });
       });
       slice.forEach(() => onGuest?.());
     }
@@ -179,7 +197,7 @@ export const cardDownloadService = {
     });
     const sizes = zipSizes(found.length);
     const outer = zipFileNames(event.title, session ? session.name : null, 1)[0];
-    return { planId: String(plan._id), total: found.length, zips: sizes.length, sizes, fileNames: zipFileNames(event.title, session ? session.name : null, sizes.length), /** the one file the person downloads */ fileName: outer, /** true when it holds smaller zips (more than 100 guests); false when it holds the PDFs directly */ nested: sizes.length > 1 };
+    return { planId: String(plan._id), total: found.length, zips: sizes.length, sizes, fileNames: zipFileNames(event.title, session ? session.name : null, sizes.length), /** the one file the person downloads */ fileName: outer, /** the kinds of file the cards can be downloaded as (the first is the default) */ formats: CARD_FORMATS.map(({ value, label }) => ({ value, label })), /** true when it holds smaller zips (more than 100 guests); false when it holds the PDFs directly */ nested: sizes.length > 1 };
   },
 
   /**
@@ -211,6 +229,6 @@ export const cardDownloadService = {
     res.setHeader('X-Guests-Total', String(total));
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, X-Zip-Part, X-Zip-Count, X-Guests-Total');
 
-    await writePartZip(actor, event, guests, firstIndex, res);
+    await writePartZip(actor, event, guests, firstIndex, res, undefined, isCardFormat((opts as any).format) ? (opts as any).format : 'PRINT_PDF');
   }
 };

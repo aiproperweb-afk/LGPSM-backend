@@ -65,11 +65,11 @@ router.post('/download', (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ORGANI
 router.get('/download', (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ORGANIZER, User_1.Role.ADMIN), zipLimit, (0, userRateLimit_1.dedupeWindow)('cards-zip', 5_000), audit, (req, res) => stream(req, res, { planId: req.query.planId, part: Number(req.query.part) }));
 // POST /jobs { planId }: starts building the cards in the background; answers at once
 router.post('/jobs', (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ORGANIZER, User_1.Role.ADMIN), (0, userRateLimit_1.perUserLimit)('cards-job', { windowMs: 60 * 60_000, max: 12, message: 'Too many card downloads started this hour. Please try again later.' }), audit, async (req, res) => {
-    const p = zod_1.z.object({ planId: objectId }).safeParse(req.body);
+    const p = zod_1.z.object({ planId: objectId, format: zod_1.z.enum(['PRINT_PDF', 'WEB_PDF', 'PNG', 'JPG']).optional() }).safeParse(req.body);
     if (!p.success)
         return res.status(400).json({ success: false, message: 'A plan is required.' });
     try {
-        const job = await cardJob_service_1.cardJobService.start(req.user, String(req.params.eventId), p.data.planId);
+        const job = await cardJob_service_1.cardJobService.start(req.user, String(req.params.eventId), p.data.planId, p.data.format);
         res.status(202).json({ success: true, data: { jobId: job.id, total: job.total, zips: job.zips, fileName: job.fileName, nested: job.nested } });
     }
     catch (e) {

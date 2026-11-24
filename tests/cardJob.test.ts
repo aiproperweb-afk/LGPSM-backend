@@ -54,6 +54,44 @@ beforeEach(async () => {
 });
 afterEach(() => { delete process.env.CARD_ZIP_MAX_GUESTS; });
 
+describe('card formats', () => {
+  const run = async (format?: string) => {
+    const ev: any = await mkEvent();
+    const guests: any[] = await mkGuests(ev, 2);
+    const plan = await request(app).post(`${base(ev)}/plan`).set(auth(org)).send({ inviteeIds: guests.map((g) => String(g._id)) });
+    const start = await request(app).post(`${base(ev)}/jobs`).set(auth(org)).send({ planId: plan.body.data.planId, ...(format ? { format } : {}) });
+    return { ev, plan, start };
+  };
+  it('the plan lists the formats, and the default stays the print PDF', async () => {
+    const { plan, start, ev } = await run();
+    expect(plan.body.data.formats.map((f: any) => f.value)).toEqual(['PRINT_PDF', 'WEB_PDF', 'PNG', 'JPG']);
+    const done = await waitDone(ev, org, start.body.data.jobId);
+    const ticket = await request(app).post(`${base(ev)}/jobs/${start.body.data.jobId}/ticket`).set(auth(org));
+    const file = await request(app).get(ticket.body.data.path).buffer(true).parse(binary);
+    expect(done.status).toBe('DONE');
+    expect(await names(file.body as Buffer)).toEqual(['0001-Guest-1.pdf', '0002-Guest-2.pdf']);
+  });
+  it.each([['PNG', 'png', '89504e47'], ['JPG', 'jpg', 'ffd8ff']])('%s: still one zip, the cards as %s files', async (format, ext, magic) => {
+    const { ev, start } = await run(format);
+    expect(start.status).toBe(202);
+    await waitDone(ev, org, start.body.data.jobId);
+    const ticket = await request(app).post(`${base(ev)}/jobs/${start.body.data.jobId}/ticket`).set(auth(org));
+    const file = await request(app).get(ticket.body.data.path).buffer(true).parse(binary);
+    expect(await names(file.body as Buffer)).toEqual([`0001-Guest-1.${ext}`, `0002-Guest-2.${ext}`]);
+    expect((await entryBuffer(file.body as Buffer, `0001-Guest-1.${ext}`)).subarray(0, magic.length / 2).toString('hex')).toBe(magic);
+  });
+  it('a smaller PDF is smaller than the print PDF, and an unknown format is refused', async () => {
+    const sizeOf = async (format: string) => {
+      const { ev, start } = await run(format);
+      const done = await waitDone(ev, org, start.body.data.jobId);
+      return done.size as number;
+    };
+    expect(await sizeOf('WEB_PDF')).toBeLessThan(await sizeOf('PRINT_PDF'));
+    const { ev, plan } = await run();
+    expect((await request(app).post(`${base(ev)}/jobs`).set(auth(org)).send({ planId: plan.body.data.planId, format: 'GIF' })).status).toBe(400);
+  });
+});
+
 describe('cards as one download', () => {
   it('up to the zip size: one zip holding the PDFs directly', async () => {
     const ev: any = await mkEvent();

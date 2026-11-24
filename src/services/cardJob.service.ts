@@ -8,7 +8,7 @@ import { kv } from '../infra/kv';
 import { Invitee } from '../models/Invitee';
 import { Session } from '../models/Session';
 import { CardDownloadPlan } from '../models/CardDownloadPlan';
-import { loadEvent, fail, writePartZip, zipSizes, zipFileNames, type Actor } from './cardDownload.service';
+import { loadEvent, fail, writePartZip, zipSizes, zipFileNames, isCardFormat, type CardFormat, type Actor } from './cardDownload.service';
 
 /**
  * Printable cards as ONE download. The cards are built in the background (so no web request runs for minutes, which a shared host would cut
@@ -53,7 +53,8 @@ async function sweepOldFiles() {
 
 export const cardJobService = {
   /** Starts building the cards for a plan. Returns at once; the work goes on in the background. */
-  async start(actor: Actor, eventId: string, planId: string): Promise<CardJob> {
+  async start(actor: Actor, eventId: string, planId: string, format: CardFormat = 'PRINT_PDF'): Promise<CardJob> {
+    if (!isCardFormat(format)) throw fail(400, 'Choose a card format.', 'BAD_FORMAT');
     const event = await loadEvent(actor, eventId);
     const plan: any = mongoose.Types.ObjectId.isValid(planId) ? await CardDownloadPlan.findOne({ _id: planId, eventId, userId: actor.userId }).lean() : null;
     if (!plan) throw fail(404, 'This download has expired. Please start it again.', 'PLAN_EXPIRED');
@@ -80,7 +81,7 @@ export const cardJobService = {
     await kv.set(activeKey, job.id, 30 * 60_000);
     await save(job);
     running++;
-    void runJob(actor, event, plan, sizes, zipFileNames(event.title, sess ? sess.name : null, sizes.length), job)
+    void runJob(actor, event, plan, sizes, zipFileNames(event.title, sess ? sess.name : null, sizes.length), job, format)
       .catch(() => undefined)
       .finally(() => { running--; void kv.del(activeKey).catch(() => undefined); });
     return job;
@@ -116,7 +117,7 @@ export const cardJobService = {
   },
 };
 
-async function runJob(actor: Actor, event: any, plan: any, sizes: number[], partNames: string[], job: CardJob): Promise<void> {
+async function runJob(actor: Actor, event: any, plan: any, sizes: number[], partNames: string[], job: CardJob, format: CardFormat): Promise<void> {
   const files: string[] = [];
   let lastSaved = 0;
   const progress = async (force = false) => { if (force || Date.now() - lastSaved > 1000) { lastSaved = Date.now(); await save(job); } };
@@ -135,7 +136,7 @@ async function runJob(actor: Actor, event: any, plan: any, sizes: number[], part
 
     if (sizes.length === 1) {
       // up to 100 guests: the PDFs are in the one zip directly
-      await writePartZip(actor, event, await guestsFor(0, sizes[0]), 0, out, tick);
+      await writePartZip(actor, event, await guestsFor(0, sizes[0]), 0, out, tick, format);
       job.doneParts = 1;
     } else {
       // more: one outer zip holding the smaller zips. Each smaller zip is built on disk, added, and removed before the next, so the disk
@@ -147,7 +148,7 @@ async function runJob(actor: Actor, event: any, plan: any, sizes: number[], part
       for (let part = 0; part < sizes.length; part++) {
         const innerPath = path.join(DIR, `${job.id}-part${part + 1}.zip`);
         files.push(innerPath);
-        await writePartZip(actor, event, await guestsFor(offset, sizes[part]), offset, fs.createWriteStream(innerPath), tick);
+        await writePartZip(actor, event, await guestsFor(offset, sizes[part]), offset, fs.createWriteStream(innerPath), tick, format);
         await new Promise<void>((resolve) => { outer.once('entry', () => resolve()); outer.append(fs.createReadStream(innerPath), { name: partNames[part] }); });
         await fs.promises.rm(innerPath, { force: true });
         offset += sizes[part];

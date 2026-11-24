@@ -55,10 +55,10 @@ router.get('/download', authorizeRoles(Role.ORGANIZER, Role.ADMIN), zipLimit, de
 
 // POST /jobs { planId }: starts building the cards in the background; answers at once
 router.post('/jobs', authorizeRoles(Role.ORGANIZER, Role.ADMIN), perUserLimit('cards-job', { windowMs: 60 * 60_000, max: 12, message: 'Too many card downloads started this hour. Please try again later.' }), audit, async (req: Request, res: Response) => {
-  const p = z.object({ planId: objectId }).safeParse(req.body);
+  const p = z.object({ planId: objectId, format: z.enum(['PRINT_PDF', 'WEB_PDF', 'PNG', 'JPG']).optional() }).safeParse(req.body);
   if (!p.success) return res.status(400).json({ success: false, message: 'A plan is required.' });
   try {
-    const job = await cardJobService.start((req as any).user, String(req.params.eventId), p.data.planId);
+    const job = await cardJobService.start((req as any).user, String(req.params.eventId), p.data.planId, p.data.format);
     res.status(202).json({ success: true, data: { jobId: job.id, total: job.total, zips: job.zips, fileName: job.fileName, nested: job.nested } });
   } catch (e: any) {
     if (e?.code === 'JOB_ALREADY_RUNNING') return res.status(409).json({ success: false, code: e.code, jobId: e.jobId, message: e.message });
