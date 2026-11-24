@@ -1,12 +1,25 @@
 import { buildInvitationEmail, invitationEmailSubject, whenSentence } from '../src/services/email/invitationEmail';
 
 const base = {
+  rsvpBy: '2026-11-23T00:00:00Z', // RSVP is on in these examples (the button is only shown then)
   eventTitle: 'Annual Leadership Summit 2026', inviteeName: 'Sayan Ghosh', invitationUrl: 'https://lgpsm.example/invitation/abc',
   qrCid: 'qr-1', cardCid: 'card-1', organizerLogoCid: 'logo-1', organizerName: 'Iconic Events',
   startIso: '2026-11-21T13:30:00Z', endIso: '2026-11-21T16:30:00Z', venue: 'Taj Bengal', locationSub: 'Kolkata', contactNumber: '9007000891',
 };
 
 describe('the invitation email', () => {
+  it("shows the host's Invitation Message in the blue note, and the standard line when there is none", () => {
+    const withMessage = buildInvitationEmail({ ...base, description: 'Join us for the launch.\nParking is free.' });
+    expect(withMessage).toContain('Join us for the launch.<br>Parking is free.');
+    expect(withMessage).not.toContain('This email has your personal invitation card');
+    expect(withMessage).not.toContain('About the event');
+    // an event saved without a message carries its title in that field: that is not a message
+    expect(buildInvitationEmail({ ...base, description: base.eventTitle })).toContain('This email has your personal invitation card');
+    expect(buildInvitationEmail({ ...base, description: 'Event Description' })).toContain('This email has your personal invitation card');
+    // what the host typed is escaped
+    expect(buildInvitationEmail({ ...base, description: '<b>x</b>' })).not.toContain('<b>x</b>');
+  });
+
   it('is laid out like a Google notice: white page, headline, blue note, rounded details panel and an oval button', () => {
     const html = buildInvitationEmail({ ...base, inviteeEmail: 'sayan@example.com', dietaryPreference: 'Vegetarian' });
     expect(html).toContain('<body style="margin:0;padding:0;background:#FFFFFF;">');
@@ -50,7 +63,7 @@ describe('the invitation email', () => {
     const first = buildInvitationEmail({ ...base, asksDietary: true, rsvpBy: '2026-11-15T12:00:00Z' });
     expect(first).not.toContain('Vegetarian');
     expect(first).toContain('You will choose this when you reply');
-    expect(buildInvitationEmail({ ...base, asksDietary: true })).toContain('You will choose this on your invitation page');
+    expect(buildInvitationEmail({ ...base, rsvpBy: undefined, asksDietary: true })).toContain('You will choose this on your invitation page');
     expect(buildInvitationEmail({ ...base, asksDietary: true, isReminder: true })).toContain('Not chosen yet. Please choose on your invitation page');
     // an event that does not ask for food has no food row at all
     expect(buildInvitationEmail(base)).not.toContain('cid:lgpsm-icon-restaurant');
@@ -118,5 +131,19 @@ describe('the inline images', () => {
     const cids = files.map((f) => f.cid).sort();
     expect(cids).toEqual(['lgpsm-icon-event', 'lgpsm-icon-info', 'lgpsm-icon-person', 'lgpsm-icon-place', 'lgpsm-icon-qr', 'lgpsm-logo']);
     for (const f of files) expect((f.content as Buffer).subarray(1, 4).toString()).toBe('PNG');
+  });
+});
+
+describe('the invitation email button', () => {
+  it('shows the reply button only when guests can reply (RSVP) or must choose food', () => {
+    const rsvp = buildInvitationEmail({ ...base, rsvpBy: '2026-11-23T00:00:00Z' });
+    expect(rsvp).toContain('View invitation &amp; reply');
+    const none = buildInvitationEmail({ ...base, rsvpBy: undefined });
+    expect(none).not.toContain('View invitation');
+    expect(none).not.toContain('View your invitation');
+    expect(none).not.toContain('If the button does not work');
+    expect(none).toContain('Your invitation page: ');
+    const food = buildInvitationEmail({ ...base, rsvpBy: undefined, asksDietary: true });
+    expect(food).toContain('Choose your food preference');
   });
 });

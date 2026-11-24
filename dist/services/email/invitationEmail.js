@@ -46,11 +46,17 @@ function buildInvitationEmail(input) {
     const host = input.organizerName?.trim() ? e(input.organizerName.trim()) : '';
     const when = whenSentence(input.startIso, input.endIso);
     const venueLine = input.isVirtual ? 'Online' : [input.venue, input.locationSub].filter((v) => v && v.trim()).map((v) => e(v.trim())).join(', ');
-    const description = input.description?.trim() ? e(input.description.trim()) : '';
+    // The host's own Invitation Message. An event saved without one carries its title (or "Event Description") in that field, which is not a message.
+    const rawMessage = input.description?.trim() || '';
+    const message = rawMessage && rawMessage !== input.eventTitle.trim() && rawMessage !== 'Event Description' ? e(rawMessage).replace(/\r?\n/g, '<br>') : '';
     const contact = input.contactNumber ? e((0, coverage_1.contactForCard)(input.contactNumber)) : '';
     const rsvpBy = input.isReminder ? null : toDate(input.rsvpBy);
     const dietary = input.dietaryPreference?.trim() ? e(input.dietaryPreference.trim()) : '';
     const showQr = input.showQr !== false;
+    // The button leads to the invitation page, where the guest replies (RSVP) or chooses food. With RSVP turned off and no food question there is
+    // nothing to do there, so the button is not shown; the card and entry pass are in the email itself.
+    const rsvpOn = !!toDate(input.rsvpBy);
+    const showButton = rsvpOn || !!input.asksDietary;
     // the QR is placed once: on the invitation card when there is one (it is printed there), on its own only when there is no card image
     const standaloneQr = showQr && !input.cardCid;
     const link = e(input.invitationUrl);
@@ -66,9 +72,10 @@ function buildInvitationEmail(input) {
     const noteFirst = input.isReminder
         ? `This is a friendly reminder that you're invited to ${b(title)}${when ? ` on ${b(when.date)}, ${b(when.time)}` : ''}.`
         : `${host ? `${b(host)} is` : "We're"} delighted to invite you to ${b(title)}${when ? `, taking place on ${b(when.date)}, ${b(when.time)}` : ''}${venueLine ? `, ${input.isVirtual ? '' : 'at '}${b(venueLine)}` : ''}.`;
+    // the blue note carries the host's Invitation Message when there is one (otherwise the standard line)
     const noteSecond = input.isReminder
         ? "We're looking forward to seeing you there. Your invitation and entry pass are below."
-        : 'This email has your personal invitation card and everything you need for the day.';
+        : message || 'This email has your personal invitation card and everything you need for the day.';
     // ---- the details panel ----
     const row = (key, main, sub) => `
               <tr>
@@ -175,11 +182,7 @@ function buildInvitationEmail(input) {
           </table>
         </td></tr>
 
-        ${description ? `
-        <tr><td class="pad" style="padding:24px 24px 0 24px;">
-          <p style="margin:0 0 6px 0;font-family:${FONT};font-size:13px;font-weight:500;letter-spacing:0.4px;text-transform:uppercase;color:${SOFT};">About the event</p>
-          ${text(description, `color:${MUTED};margin:0;`)}
-        </td></tr>` : ''}
+
 
         <!-- the details panel -->
         <tr><td class="pad" style="padding:24px 24px 0 24px;">
@@ -194,12 +197,12 @@ function buildInvitationEmail(input) {
         </td></tr>
 
         <!-- the call to action -->
-        <tr><td class="pad" style="padding:28px 24px 0 24px;">
-          ${text(rsvpBy
+        ${showButton ? `<tr><td class="pad" style="padding:28px 24px 0 24px;">
+          ${text(rsvpOn
         ? `Please let ${host || 'us'} know whether you can make it. Your invitation page has the full event details and a one-tap reply.`
-        : 'Your invitation page has your card and the full event details.')}
-          ${button(rsvpBy ? 'View invitation &amp; reply' : 'View your invitation', link)}
-        </td></tr>
+        : 'Please choose your food preference on your invitation page.')}
+          ${button(rsvpOn ? 'View invitation &amp; reply' : 'Choose your food preference', link)}
+        </td></tr>` : ''}
 
         <!-- the entry pass -->
         <tr><td class="pad" style="padding:0 24px 0 24px;">
@@ -229,7 +232,7 @@ function buildInvitationEmail(input) {
         <tr><td class="pad" style="padding:24px 24px 32px 24px;">
           <p style="margin:0;padding-top:16px;border-top:1px solid ${LINE};font-family:${FONT};font-size:12px;line-height:1.6;color:${SOFT};">
             ${host ? `Organized by <strong>${host}</strong>` : 'Organized via <strong>LGPSM Platform</strong>'}. This invitation is personal to ${guest}.
-            If the button does not work, open this link: <a href="${link}" target="_blank" style="color:${BLUE};word-break:break-all;">${link}</a>
+ ${showButton ? 'If the button does not work, open this link' : 'Your invitation page'}: <a href="${link}" target="_blank" style="color:${BLUE};word-break:break-all;">${link}</a>
           </p>
         </td></tr>
       </table>

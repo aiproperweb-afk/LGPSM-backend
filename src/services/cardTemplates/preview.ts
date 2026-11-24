@@ -24,6 +24,8 @@ export interface TemplatePreviewInput {
   companyName?: string;
   cardInfo?: CardInfo;
   contactNumber?: string;
+  /** the host named for the event: printed where a design shows the host */
+  hostName?: string;
   cardDisplay?: { title?: boolean; qr?: boolean; dateTime?: boolean; location?: boolean; inviteeName?: boolean; logo?: boolean };
 }
 
@@ -66,6 +68,7 @@ export async function renderTemplatePreview(templateId: string | null, input: Te
       subcategoryName: input.subcategoryName,
       isVirtual: input.isVirtual,
       contactNumber: input.contactNumber,
+      organizerName: input.hostName?.trim() || undefined,
       photoBase64: input.logoKey ? await resolveImageKeyBase64(input.logoKey) : undefined
     },
     sessions: [],

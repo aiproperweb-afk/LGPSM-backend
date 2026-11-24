@@ -159,8 +159,13 @@ export const cardDownloadService = {
     }
     const ids = [...new Set(inviteeIds.filter((i) => mongoose.Types.ObjectId.isValid(i)))];
     if (ids.length === 0) throw fail(400, 'Select at least one guest to download cards for.', 'NO_GUESTS_SELECTED');
-    const found = await Invitee.find({ eventId, _id: { $in: ids } }).select('_id').sort({ createdAt: 1, _id: 1 }).lean();
+    const found = await Invitee.find({ eventId, _id: { $in: ids } }).select('_id invitationStatus').sort({ createdAt: 1, _id: 1 }).lean();
     if (found.length === 0) throw fail(400, 'None of the selected guests are on this event.', 'NO_GUESTS_SELECTED');
+    // Print and Digital both: a guest's invitation goes out first, then the printed card is made, so the digital pass and the card are the same one
+    if ((event as any).invitationType === 'BOTH') {
+      const notSent = found.filter((g: any) => g.invitationStatus !== 'SENT').length;
+      if (notSent > 0) throw fail(409, `${notSent} of the selected ${notSent === 1 ? 'guest has' : 'guests have'} not been sent an invitation yet. Send the invitations first, then download their cards.`, 'INVITATIONS_NOT_SENT');
+    }
     // Cards are paid for before they are made, just like sending: the same per-guest charge, and a guest already paid for (sent or downloaded) is not charged again
     if (actor.role !== 'ADMIN') {
       const { billingService } = await import('./billing.service');

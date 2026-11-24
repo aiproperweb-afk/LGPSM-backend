@@ -112,6 +112,19 @@ describe('printable card download', () => {
     expect(locked.body.code).toBe('EVENT_LOCKED');
   });
 
+  it('on a Print and Digital both event, cards come only after the invitation was sent', async () => {
+    const both: any = await mkEvent('BOTH');
+    const g: any[] = await mkGuests(both, 2);
+    const ids = g.map((x) => String(x._id));
+    const refused = await plan(both, org, ids);
+    expect(refused.status).toBe(409);
+    expect(refused.body.code).toBe('INVITATIONS_NOT_SENT');
+    expect(refused.body.message).toMatch(/Send the invitations first/);
+    await Invitee.updateOne({ _id: g[0]._id }, { $set: { invitationStatus: 'SENT' } });
+    expect((await plan(both, org, ids)).status).toBe(409); // one of the two is still not sent
+    expect((await plan(both, org, [ids[0]])).status).toBe(200);
+  });
+
   it('names the zip after the event and the chosen session, and only the event for all sessions', async () => {
     const { Session } = require('../src/models/Session');
     const ev: any = await mkEvent('PRINT');
@@ -147,7 +160,7 @@ describe('printable card download', () => {
 
   it('needs selected guests, an event set to print, the owner, and a live plan', async () => {
     const digital: any = await mkEvent('DIGITAL');
-    const print: any = await mkEvent('BOTH');
+    const print: any = await mkEvent('PRINT');
     const g: any[] = await mkGuests(print, 1);
     const ids = [String(g[0]._id)];
     expect((await plan(print, org, [])).status).toBe(400);

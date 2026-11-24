@@ -30,6 +30,8 @@ export interface IEvent extends Document {
     };
   };
   contactNumber?: string;
+  /** The host named on the invitation (email, page and card) instead of the organizer's own name; the host's contact number is `contactNumber` */
+  hostName?: string;
   schedule: {
     start: Date;
     end: Date;
@@ -102,6 +104,7 @@ const EventSchema: Schema = new Schema(
       }
     },
     contactNumber: { type: String },
+    hostName: { type: String, trim: true, maxlength: 100 },
     schedule: {
       start: { type: Date, required: true },
       end: { type: Date, required: true }

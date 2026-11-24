@@ -36,6 +36,20 @@ beforeAll(async () => {
 });
 afterAll(async () => { await mongoose.disconnect(); await mongoServer.stop(); });
 
+describe('the host of an event', () => {
+  it('is saved with the event, can be changed and cleared, and the card and mail use it', async () => {
+    const made = await request(app).post('/api/v1/events').set(bearer()).send(body({ templateId: dynamicId, hostName: '  Iconic Events  ', contactNumber: '9007000891' }));
+    expect(made.status).toBe(201);
+    const id = made.body.data.eventId;
+    const stored: any = await mongoose.connection.collection('events').findOne({ _id: new mongoose.Types.ObjectId(id) });
+    expect(stored.hostName).toBe('Iconic Events');
+    expect((await request(app).patch(`/api/v1/events/${id}`).set(bearer()).send({ hostName: 'Renamed Host' })).status).toBe(200);
+    expect((await mongoose.connection.collection('events').findOne({ _id: new mongoose.Types.ObjectId(id) }) as any).hostName).toBe('Renamed Host');
+    expect((await request(app).patch(`/api/v1/events/${id}`).set(bearer()).send({ hostName: '' })).status).toBe(200);
+    expect((await request(app).post('/api/v1/events').set(bearer()).send(body({ templateId: dynamicId, hostName: 'x'.repeat(101) }))).status).toBe(400);
+  });
+});
+
 describe('uploaded card and invitation type', () => {
   it('Digital only may use an uploaded card; Print only and Both may not', async () => {
     const digital = await request(app).post('/api/v1/events').set(bearer()).send(body({ templateId: staticId, invitationType: 'DIGITAL' }));

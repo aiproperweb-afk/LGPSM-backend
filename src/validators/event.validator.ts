@@ -69,6 +69,7 @@ export const createEventSchema = z.object({
     format: z.nativeEnum(EventFormat).optional().default(EventFormat.PHYSICAL),
     location: z.union([z.string().max(EVENT_LOCATION_MAX_LENGTH), locationFieldsSchema]).optional(),
     contactNumber: z.string().trim().max(30, 'Contact number is too long').optional(),
+    hostName: z.string().trim().max(100, 'The host name is too long').optional(),
     schedule: z.object({
       start: z.string().optional(),
       end: z.string().optional()
@@ -125,6 +126,7 @@ export const updateEventSchema = z.object({
       ]).optional()
     }).optional(),
     contactNumber: z.string().trim().max(30, 'Contact number is too long').optional(),
+    hostName: z.string().trim().max(100, 'The host name is too long').optional(),
     schedule: z.object({
       start: z.string().datetime(),
       end: z.string().datetime()

@@ -72,7 +72,7 @@ describe('bill for sending to chosen guests', () => {
 
 describe('printed cards are paid for like invitations, and one payment covers either', () => {
   it('refuses a card download until paid, then charges nothing more for the same guests, in either order', async () => {
-    await Event.updateOne({ _id: ev._id }, { $set: { invitationType: 'BOTH' } });
+    await Event.updateOne({ _id: ev._id }, { $set: { invitationType: 'PRINT' } });
     const guests: any[] = await Invitee.insertMany([0, 1, 2].map((i) => ({ eventId: ev._id, name: `Print ${i}`, email: `print${i}@x.com`, mobile: `981110010${i}` })));
     const ids = guests.map((g) => String(g._id));
     const plan = () => request(app).post(`/api/v1/events/${ev._id}/invitation-cards/plan`).set(auth(org)).send({ inviteeIds: ids });

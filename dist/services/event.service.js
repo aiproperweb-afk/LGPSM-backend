@@ -46,7 +46,7 @@ const Media_1 = require("../models/Media");
 // Client-writable event fields. Anything else in a request body (organizerId, status flags,
 // operationalDataCleared, pricing, ...) is server-controlled and is dropped before it reaches the database.
 const EVENT_WRITABLE_FIELDS = [
-    'title', 'description', 'categoryId', 'subcategoryId', 'format', 'location', 'contactNumber',
+    'title', 'description', 'categoryId', 'subcategoryId', 'format', 'location', 'contactNumber', 'hostName',
     'schedule', 'admission', 'rsvp', 'attendeeSettings', 'dietaryPreference', 'templateId', 'invitationType', 'cardInfo', 'cardDisplay', 'media'
 ];
 /**

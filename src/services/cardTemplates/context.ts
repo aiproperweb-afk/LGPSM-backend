@@ -17,6 +17,7 @@ export interface CardContext {
 
 interface EventLike {
   title?: string;
+  hostName?: string;
   templateId?: unknown;
   organizerId?: unknown;
   categoryId?: unknown;
@@ -67,7 +68,8 @@ export async function loadCardContext(event: EventLike): Promise<CardContext> {
     categoryName,
     subcategoryName,
     designSpec,
-    organizerName: cardHostName(organizer)
+    // the host the organizer named for this event comes first; the organization's name is the fallback
+    organizerName: event.hostName?.trim() || cardHostName(organizer)
   };
 }
 

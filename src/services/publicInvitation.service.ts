@@ -100,7 +100,7 @@ export const publicInvitationService = {
       throw new Error('INVITATION_NOT_FOUND');
     }
 
-    const event = await Event.findById(invitee.eventId).select('title description format location contactNumber cardDisplay schedule admission status closedAt cancelledAt cancellationReason rsvp dietaryPreference organizerId templateId categoryId subcategoryId');
+    const event = await Event.findById(invitee.eventId).select('title description hostName format location contactNumber cardDisplay schedule admission status closedAt cancelledAt cancellationReason rsvp dietaryPreference organizerId templateId categoryId subcategoryId');
     if (!event) throw new Error('INVITATION_NOT_FOUND');
 
     const [sessions, organizer] = await Promise.all([
@@ -138,7 +138,7 @@ export const publicInvitationService = {
         format: event.format,
         location: event.location,
         contactNumber: event.contactNumber,
-        organizerName: cardHostName(organizer as any),
+        organizerName: (event as any).hostName?.trim() || cardHostName(organizer as any),
         schedule: event.schedule,
         timeZone: env.APP_TIMEZONE,
         // When guests can be admitted (defaults to the schedule): lets the page say "check-in opens at ..."

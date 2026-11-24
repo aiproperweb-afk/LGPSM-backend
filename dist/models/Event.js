@@ -64,6 +64,7 @@ const EventSchema = new mongoose_1.Schema({
         }
     },
     contactNumber: { type: String },
+    hostName: { type: String, trim: true, maxlength: 100 },
     schedule: {
         start: { type: Date, required: true },
         end: { type: Date, required: true }

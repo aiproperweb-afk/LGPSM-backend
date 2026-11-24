@@ -52,6 +52,7 @@ async function renderTemplatePreview(templateId, input, isAdmin, userId) {
             subcategoryName: input.subcategoryName,
             isVirtual: input.isVirtual,
             contactNumber: input.contactNumber,
+            organizerName: input.hostName?.trim() || undefined,
             photoBase64: input.logoKey ? await (0, resolveImageBase64_1.resolveImageKeyBase64)(input.logoKey) : undefined
         },
         sessions: [],

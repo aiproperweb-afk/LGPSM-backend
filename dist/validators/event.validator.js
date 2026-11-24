@@ -66,6 +66,7 @@ exports.createEventSchema = zod_1.z.object({
         format: zod_1.z.nativeEnum(Event_1.EventFormat).optional().default(Event_1.EventFormat.PHYSICAL),
         location: zod_1.z.union([zod_1.z.string().max(eventLimits_1.EVENT_LOCATION_MAX_LENGTH), locationFieldsSchema]).optional(),
         contactNumber: zod_1.z.string().trim().max(30, 'Contact number is too long').optional(),
+        hostName: zod_1.z.string().trim().max(100, 'The host name is too long').optional(),
         schedule: zod_1.z.object({
             start: zod_1.z.string().optional(),
             end: zod_1.z.string().optional()
@@ -121,6 +122,7 @@ exports.updateEventSchema = zod_1.z.object({
             ]).optional()
         }).optional(),
         contactNumber: zod_1.z.string().trim().max(30, 'Contact number is too long').optional(),
+        hostName: zod_1.z.string().trim().max(100, 'The host name is too long').optional(),
         schedule: zod_1.z.object({
             start: zod_1.z.string().datetime(),
             end: zod_1.z.string().datetime()
