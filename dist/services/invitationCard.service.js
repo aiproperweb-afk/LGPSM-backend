@@ -408,8 +408,8 @@ async function renderFromSpec(fullSpec, data, bottomInset = 0) {
     return result.png;
 }
 /**
- * The master card: its details are a column that closes up around whatever is switched off. The event's location is always printed
- * (it is mandatory); the guest's QR code, the logo, the title, the date and the additional information follow "Select data to show on card".
+ * The master card: its details are a column that closes up around whatever is switched off: the guest's QR code, the logo, the title, the
+ * date, the event's location and the additional information all follow "Select data to show on card".
  * Nothing is added under or over it: no details block, no guest band.
  */
 async function renderMasterFromData(data) {
@@ -424,7 +424,7 @@ async function renderMasterFromData(data) {
         secondary: data.invitee?.companyName || '',
         // (a preview with nothing entered yet shows where each detail will go)
         dateTime: show.dateTime ? (0, content_1.masterDateTime)(data.event.startIso, data.event.endIso) || (data.isPreview ? 'Event date and time' : '') : '',
-        location: (0, content_1.addressLine)({ design: 'CORPORATE_V1', title: '', venue: data.event.venue, locationSub: data.event.locationSub, isVirtual: data.event.isVirtual }) || (data.isPreview ? 'Event location' : ''),
+        location: show.location ? (0, content_1.addressLine)({ design: 'CORPORATE_V1', title: '', venue: data.event.venue, locationSub: data.event.locationSub, isVirtual: data.event.isVirtual }) || (data.isPreview ? 'Event location' : '') : '',
         logo,
         // the designers' placeholder logo only ever stands in on previews, never on a card that is sent
         useSampleLogo: show.logo && !logo && data.isPreview === true,

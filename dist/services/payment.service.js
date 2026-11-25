@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.paymentService = void 0;
 exports.getRazorpayCredentials = getRazorpayCredentials;
 exports.createRazorpayOrder = createRazorpayOrder;
+const alert_service_1 = require("./alert.service");
 const currency_1 = require("../constants/currency");
 const crypto_1 = __importDefault(require("crypto"));
 const order_repository_1 = require("../repositories/order.repository");
@@ -58,8 +59,11 @@ async function settlePaid(providerOrderId, providerPaymentId) {
     }
     const existing = await invoice_repository_1.invoiceRepository.findByPaymentId(payment._id.toString());
     if (!existing) {
+        const event = await Event_1.Event.findById(payment.eventId).select('title').lean();
+        const invoiceNumber = `INV-${Date.now()}-${crypto_1.default.randomInt(1000, 10000)}`;
         await invoice_repository_1.invoiceRepository.create({
-            invoiceNumber: `INV-${Date.now()}-${crypto_1.default.randomInt(1000, 10000)}`,
+            invoiceNumber,
+            eventName: event?.title,
             paymentId: payment._id,
             userId: payment.userId,
             eventId: payment.eventId,
@@ -71,6 +75,15 @@ async function settlePaid(providerOrderId, providerPaymentId) {
             paymentStatus: 'PAID',
             issuedAt: new Date()
         });
+        if (order?.kind === 'EVENT_BILL') {
+            await alert_service_1.alertService.notifyUser(payment.userId, {
+                type: 'PAYMENT',
+                title: 'Payment received',
+                message: `We received ₹${Number(payment.totalAmount).toLocaleString('en-IN', { maximumFractionDigits: 2 })} for "${event?.title || 'your event'}" (invoice ${invoiceNumber}).`,
+                entityType: 'Event',
+                entityId: payment.eventId
+            });
+        }
     }
 }
 exports.paymentService = {

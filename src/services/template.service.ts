@@ -4,6 +4,7 @@ import { templateRepository, TemplateViewer } from '../repositories/template.rep
 import { ITemplate, Template } from '../models/Template';
 import { masterCardOnly } from '../constants/masterCard';
 import { ensureMasterTemplate } from './cardTemplates/defaultTemplates';
+import { shareAdminUpload } from './cardTemplates/uploadedTemplate';
 
 /** Can this viewer see/use this template? Mirrors the list rules in template.repository.ts. */
 export function templateVisibleTo(template: Pick<ITemplate, 'ownerId' | 'isPublished' | 'isSystemTemplate' | 'isActive'>, viewer: TemplateViewer): boolean {
@@ -55,8 +56,10 @@ export const templateService = {
 
   async updateTemplate(id: string, updateData: Partial<ITemplate>): Promise<ITemplate> {
     const before: any = updateData.isPublished === true ? await Template.findById(id).select('isPublished').lean() : null;
-    const template = await templateRepository.update(id, updateData);
+    let template = await templateRepository.update(id, updateData);
     if (!template) throw new Error('TEMPLATE_NOT_FOUND');
+    // publishing an administrator's own private card is what shares it with the organizers
+    if (before && before.isPublished === false && (await shareAdminUpload(id))) template = (await templateRepository.update(id, {})) ?? template;
     // a template that has just been published (it was a draft) is announced
     if (before && before.isPublished === false) await announceTemplate(template);
     return template;

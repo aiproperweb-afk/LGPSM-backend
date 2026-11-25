@@ -68,7 +68,7 @@ describe('upload your own template', () => {
 
   it('an admin upload is dynamic and shared at once: organizers can use it, and once its wording is found or marked the event\'s details replace that wording', async () => {
     const key = await upload(admin);
-    const res = await make(admin, { name: 'Admin Dynamic', imageKey: key });
+    const res = await make(admin, { publish: true, name: 'Admin Dynamic', imageKey: key });
     expect(res.status).toBe(201);
     let t: any = await Template.findById(res.body.data._id).lean();
     expect(t.templateData).toMatchObject({ uploaded: true, dynamicDetails: true, textAreas: 'NONE' });

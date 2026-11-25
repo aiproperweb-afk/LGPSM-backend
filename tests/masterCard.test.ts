@@ -41,7 +41,7 @@ describe('the master card', () => {
     expect(dark(withQr)).toBeGreaterThan(dark(without) + 500);
   });
 
-  it('is what an event gets as a card: nothing is added under it, the location is always printed, and the QR follows the checkbox', async () => {
+  it('is what an event gets as a card: nothing is added under it, the QR and the location follow their checkboxes', async () => {
     const data = {
       invitee: { name: 'Guest One', companyName: 'PWT' },
       event: { title: 'Gala', venue: 'Grand Ballroom', startIso: '2030-12-31T08:30:00Z', endIso: '2031-01-01T10:30:00Z' },
@@ -52,7 +52,9 @@ describe('the master card', () => {
     const noQr = await invitationCardService.generateInvitationCardPNG({ ...data, cardDisplay: { qr: false } });
     const noLocationFlag = await invitationCardService.generateInvitationCardPNG({ ...data, cardDisplay: { location: false } });
     expect(await hash(noQr)).not.toBe(await hash(withQr));
-    expect(await hash(noLocationFlag)).toBe(await hash(withQr));
+    expect(await hash(noLocationFlag)).not.toBe(await hash(withQr));
+    // with the location off, what the venue says makes no difference
+    expect(await hash(await invitationCardService.generateInvitationCardPNG({ ...data, event: { ...data.event, venue: 'Somewhere else' }, cardDisplay: { location: false } }))).toBe(await hash(noLocationFlag));
   });
 
   it('writes the date the way the design shows it', () => {

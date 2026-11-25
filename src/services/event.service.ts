@@ -1,3 +1,4 @@
+import { Invoice } from '../models/Invoice';
 import { deleteMedia } from './mediaStorage';
 import { activeAssignmentsOf } from './systemUserAssignment.service';
 import { canUseCategory } from './category.service';
@@ -199,6 +200,10 @@ export class EventService {
       entityType: 'Event',
       entityId: created._id
     });
+    // the organizer's own actions are on their notification list too
+    if (!adminActorId || String(adminActorId) === String(targetOrganizer)) {
+      await alertService.notifyUser(targetOrganizer, { type: 'EVENT', title: 'Event created', message: `"${created.title}" was created successfully.`, entityType: 'Event', entityId: created._id });
+    }
     // an administrator created it on the organizer's behalf: the organizer is told
     if (adminActorId && String(adminActorId) !== String(targetOrganizer)) {
       await alertService.notifyUser(targetOrganizer, {
@@ -367,6 +372,11 @@ export class EventService {
         entityId: updatedEvent._id
       });
     }
+    // the organizer's own edit: one notice for a run of saves, and none for the saves that finish creating a new event
+    const madeAt = (existingEvent as any).createdAt ? new Date((existingEvent as any).createdAt).getTime() : 0;
+    if (String(existingEvent.organizerId) === String(organizerId) && Date.now() - madeAt > 2 * 60_000) {
+      await alertService.rollup([existingEvent.organizerId], { type: 'EVENT_UPDATED', entityType: 'Event', entityId: updatedEvent._id, windowMinutes: 10, title: 'Event updated', describe: () => `"${updatedEvent.title}" was updated.` });
+    }
     return updatedEvent;
   }
 
@@ -457,7 +467,10 @@ export class EventService {
         entityId: event._id
       };
       if (byAdmin) await alertService.notifyUser(event.organizerId, content);
-      else await alertService.notifyAdmins('eventCancelled', content, { email: false });
+      else {
+        await alertService.notifyAdmins('eventCancelled', content, { email: false });
+        await alertService.notifyUser(event.organizerId, { ...content, message: `You cancelled "${event.title}"${cleanReason ? `: ${cleanReason}` : '.'}` });
+      }
     }
 
     // Stored first, sent afterwards: a provider outage can never undo or block the cancellation
@@ -505,10 +518,10 @@ export class EventService {
    * event record itself is kept so reports of what existed remain attributable.
    */
   /**
-   * "Delete event" for an event that is over: the event itself and all of its data are removed for good (its guests, sessions,
-   * invitations, check-ins, staff assignments, passes and notices, and its uploaded image). The owning organizer or an admin,
-   * only after the event has ended, and only with the event title typed to confirm. The audit trail is kept, so who deleted
-   * what stays on record.
+   * "Delete event" for an event that is over or cancelled: the event itself and all of its data are removed for good (its guests,
+   * sessions, invitations, check-ins, staff assignments, passes and notices, and its uploaded image). The owning organizer or an
+   * admin, and only with the event title typed to confirm. Payments and invoices are kept (they carry the event's name), and so is
+   * the audit trail, so who deleted what stays on record.
    */
   async deleteEventPermanently(eventId: string, actor: { userId: string; role: string }, confirmTitle?: string): Promise<{ title: string }> {
     if (actor.role !== Role.ADMIN && actor.role !== Role.ORGANIZER) throw new Error('EVENT_NOT_FOUND');
@@ -517,14 +530,23 @@ export class EventService {
     // past = closed, or its end time has passed (a cancelled event that is over counts too)
     const endAt = event.schedule?.end ? new Date(event.schedule.end).getTime() : NaN;
     const isPast = event.status === EventStatus.COMPLETED || (!Number.isNaN(endAt) && endAt <= Date.now());
-    if (!isPast) throw new Error('EVENT_NOT_CLOSED');
+    const cancelled = event.status === EventStatus.CANCELLED;
+    if (!isPast && !cancelled) throw new Error('EVENT_NOT_CLOSED');
     if (!confirmTitle || confirmTitle.trim() !== String(event.title).trim()) throw new Error('CONFIRMATION_REQUIRED');
+    // deleting removes the cancellation messages still waiting to go out: the guests would never hear of it
+    if (cancelled && (await CancellationNotice.exists({ eventId: event._id, $or: [{ 'email.status': { $in: ['PENDING', 'SENDING'] } }, { 'whatsapp.status': { $in: ['PENDING', 'SENDING'] } }] }))) {
+      throw new Error('NOTICES_PENDING');
+    }
+    await Invoice.updateMany({ eventId: event._id }, { $set: { eventName: event.title } }, { timestamps: false });
     await purgeOperationalData(eventId);
     const logoKey = (event as any).media?.logoKey;
     if (typeof logoKey === 'string' && /^media:[0-9a-fA-F]{24}$/.test(logoKey)) {
       await deleteMedia({ _id: logoKey.slice(6), purpose: MediaPurpose.EVENT_LOGO });
     }
     await Event.deleteOne({ _id: event._id });
+    // (no link to the event: there is nothing left to open)
+    const byOwner = String((event as any).organizerId) === String(actor.userId);
+    await alertService.notifyUser((event as any).organizerId, { type: 'EVENT', title: 'Event deleted', message: byOwner ? `You deleted "${event.title}" permanently.` : `"${event.title}" was deleted by an administrator.` });
     return { title: String(event.title) };
   }
 

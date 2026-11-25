@@ -1,3 +1,4 @@
+import { alertService } from './alert.service';
 import mongoose from 'mongoose';
 import archiver from 'archiver';
 import sharp from 'sharp';
@@ -165,6 +166,11 @@ export async function writePartZip(actor: Actor, event: any, guests: any[], firs
   }
 }
 
+/** The organizer's notification list records a card download once, however many files it comes in */
+export async function tellCardsDownloaded(event: any, count: number): Promise<void> {
+  await alertService.notifyUser(event.organizerId, { type: 'CARDS', title: 'Invitation cards downloaded', message: `${count} invitation card${count === 1 ? ' was' : 's were'} prepared for download for "${event.title}".`, entityType: 'Event', entityId: event._id });
+}
+
 export const cardDownloadService = {
   /** Keeps the chosen guests under a plan id and says how many zip files they make. Only guests of this event are kept. */
   async plan(actor: Actor, eventId: string, inviteeIds: string[], sessionId?: string | null) {
@@ -230,5 +236,6 @@ export const cardDownloadService = {
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, X-Zip-Part, X-Zip-Count, X-Guests-Total');
 
     await writePartZip(actor, event, guests, firstIndex, res, undefined, isCardFormat((opts as any).format) ? (opts as any).format : 'PRINT_PDF');
+    if (part === 1) await tellCardsDownloaded(event, total);
   }
 };

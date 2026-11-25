@@ -58,9 +58,10 @@ describe('the assigned system users flow: rules, counts and notices stay consist
     const first: any = await Notification.findOne({ userId: staff._id, type: 'STAFF_ASSIGNED' }).lean();
     expect(first.message).toMatch(/Gala/);
     expect(first.message).toMatch(/Lunch/);
-    // the organizer working their own event is not sent a notice about their own action
+    // the organizer's list records who was put on the event; assigning themselves adds nothing
+    expect(await noticesOf(org)).toEqual(['STAFF_ASSIGNMENT']);
     await assign(tOrg, org._id);
-    expect(await noticesOf(org)).toEqual([]);
+    expect(await noticesOf(org)).toEqual(['STAFF_ASSIGNMENT']);
   });
 
   it('deleting a session takes it off staff assignments: never leaves a stale id, and never widens "some sessions" into "all sessions"', async () => {

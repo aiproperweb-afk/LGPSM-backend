@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CARD_INFO_FIELDS = void 0;
 exports.cardGuestLines = cardGuestLines;
+exports.wantedGuestDetails = wantedGuestDetails;
 const columnMeaning_1 = require("./columnMeaning");
 // "Additional Info" on the invitation card (Figma Event_Add event-5 / Event_Edit event-4: "Customize Information"):
 // the organiser picks which guest detail goes on the card's two guest lines. Every card design already prints a
@@ -116,4 +117,13 @@ function legacyGuestLines(guest, cardInfo) {
         return labelled(detailOf(guest, field, cardInfo), field, cardInfo);
     };
     return { name: value(cardInfo.primary), companyName: value(cardInfo.secondary) };
+}
+/**
+ * The guest details beyond name, email and mobile that an event actually uses, from its card settings. An upload stores only these.
+ * An event with no card settings at all (made before they existed) has nothing to go by, so it keeps every detail as it always did.
+ */
+function wantedGuestDetails(cardInfo, cardDisplay) {
+    const chosen = [cardInfo?.primary, cardInfo?.secondary];
+    const unset = cardDisplay?.inviteeName === undefined && cardInfo?.primary === undefined && cardInfo?.secondary === undefined;
+    return { company: unset || chosen.includes('COMPANY_NAME'), identity: unset || chosen.includes('PROFESSIONAL_IDENTITY'), identity2: unset || chosen.includes('SECONDARY_IDENTITY') };
 }

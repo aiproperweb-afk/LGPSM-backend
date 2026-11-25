@@ -107,14 +107,18 @@ function channelsForInvitee(channel, invitee) {
         whatsapp: whatsapp_service_1.whatsappService.normalizePhoneNumber(invitee.mobile).length >= 10,
     };
 }
-/** The organizer's logo for the bottom of invitation emails (null when none was uploaded or it cannot be read) */
+/**
+ * What the guest's email shows of the organizer. A logo and organisation name belong to organisation accounts only; an individual's
+ * email and card carry neither. The logo is null when none was uploaded or it cannot be read.
+ */
 async function organizerBrand(organizerId) {
     if (!organizerId)
         return { logo: null };
-    const organizer = await User_1.User.findById(organizerId).select('fullName profile.organizationName profile.logoKey').lean();
-    const organizationName = organizer?.profile?.organizationName?.trim() || undefined; // only when the organizer has set one
+    const organizer = await User_1.User.findById(organizerId).select('fullName profile.organizationName profile.organizationType profile.logoKey').lean();
+    const isOrganization = organizer?.profile?.organizationType ? organizer.profile.organizationType === 'ORGANIZATION' : !!organizer?.profile?.organizationName?.trim();
+    const organizationName = isOrganization ? organizer?.profile?.organizationName?.trim() || undefined : undefined;
     const name = organizationName || organizer?.fullName?.trim() || undefined;
-    const dataUrl = await (0, resolveImageBase64_1.resolveImageKeyBase64)(organizer?.profile?.logoKey).catch(() => '');
+    const dataUrl = isOrganization ? await (0, resolveImageBase64_1.resolveImageKeyBase64)(organizer?.profile?.logoKey).catch(() => '') : '';
     const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
     return { name, organizationName, logo: match ? { contentType: match[1], content: Buffer.from(match[2], 'base64') } : null };
 }
@@ -518,6 +522,7 @@ exports.invitationService = {
         // the administrators hear what was sent, for whom, and what it comes to at the event's locked rate
         const sentCount = results.filter((r) => r.status === 'SENT').length;
         if (sentCount > 0) {
+            await alert_service_1.alertService.notifyUser(event.organizerId, { type: 'INVITATION', title: 'Invitations sent', message: `${sentCount} invitation${sentCount === 1 ? ' was' : 's were'} sent for "${event.title}".`, entityType: 'Event', entityId: event._id });
             const rate = Number(event.pricing?.ratePerInvitee);
             const organizer = await User_1.User.findById(event.organizerId).select('fullName profile.organizationName').lean();
             const who = organizer?.profile?.organizationName || organizer?.fullName || 'An organizer';
@@ -810,6 +815,10 @@ exports.invitationService = {
             };
             await alert_service_1.alertService.notifyUser(event.organizerId, content);
             await alert_service_1.alertService.notifyAdmins('invitationSendFailed', content);
+        }
+        const resentCount = results.filter((r) => r.status === 'SENT').length;
+        if (resentCount > 0) {
+            await alert_service_1.alertService.notifyUser(event.organizerId, { type: 'INVITATION', title: 'Invitations resent', message: `${resentCount} invitation${resentCount === 1 ? ' was' : 's were'} sent again for "${event.title}".`, entityType: 'Event', entityId: event._id });
         }
         return results;
     },

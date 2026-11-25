@@ -106,6 +106,10 @@ export const inviteeService = {
     invitation?: 'SENT' | 'NOT_SENT';
     /** Only the guests of one uploaded list (an ObjectId), or 'MANUAL' for the guests added by hand (they belong to no list) */
     inviteeSet?: string;
+    /** Printed cards: only the guests whose card was downloaded, or only those whose card was not */
+    cards?: 'DOWNLOADED' | 'NOT_DOWNLOADED';
+    /** Only the guests who chose this answer to this food question */
+    food?: { title: string; value: string };
   } = {}, role?: string) {
     const event = await findManageableEvent(eventId, organizerId, role);
     if (!event) {
@@ -143,6 +147,21 @@ export const inviteeService = {
       // dispatch records, not "exists in the database": a guest counts as invited only if an invitation was actually delivered
       const sentIds = await Invitation.find({ eventId, status: InvitationDeliveryStatus.SENT }).distinct('inviteeId');
       andConditions.push({ _id: options.invitation === 'SENT' ? { $in: sentIds } : { $nin: sentIds } });
+    }
+
+    if (options.cards) andConditions.push({ cardDownloadedAt: options.cards === 'DOWNLOADED' ? { $ne: null } : null });
+
+    if (options.food) {
+      const { title, value } = options.food;
+      const safe = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      andConditions.push({
+        $or: [
+          { dietarySelections: { $elemMatch: { title, value } } },
+          // answers saved before the choices were stored one by one: "Title: value · Title: value", or just the value for a single question
+          { 'dietarySelections.title': { $ne: title }, dietaryPreference: { $regex: `(^| · )${safe(title)}: ${safe(value)}($| · )` } },
+          { 'dietarySelections.title': { $ne: title }, dietaryPreference: value },
+        ],
+      });
     }
 
     if (options.search) {

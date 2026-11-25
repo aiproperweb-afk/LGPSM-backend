@@ -11,8 +11,8 @@ const sharp_1 = __importDefault(require("sharp"));
 const assetPath_1 = require("../../utils/assetPath");
 const publicUrl_1 = require("../../utils/publicUrl");
 /**
- * The small images the invitation email uses besides the card: Material-style icons for the details rows and the LGPSM logo
- * (shown at the top until the organizer uploads their own). Gmail strips inline SVG, so each icon is drawn once to a PNG
+ * The small images the invitation email uses besides the card: Material-style icons for the details rows. (The old LGPSM logo is
+ * no longer put in new emails; it is still served because emails sent earlier link to it.) Gmail strips inline SVG, so each icon is drawn once to a PNG
  * (3x for sharp phone screens) and attached inline by cid. The email HTML refers to them by the ids below, and
  * `inlineImagesFor(html)` attaches exactly the ones a given email uses, so no unused image shows up as a loose attachment.
  */

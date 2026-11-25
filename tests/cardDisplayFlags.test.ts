@@ -3,15 +3,14 @@ import sharp from 'sharp';
 import { renderTemplatePreview } from '../src/services/cardTemplates/preview';
 jest.setTimeout(120_000);
 
-// "Select data to show on card": each checkbox must change what the Add Event preview draws, in every kind of event. (The event location is mandatory on
-// the master card, so it is not a choice.)
+// "Select data to show on card": each checkbox must change what the Add Event preview draws, in every kind of event.
 const events: Array<[string, { categoryName?: string; subcategoryName?: string; title: string }]> = [
   ['corporate', { categoryName: 'Corporate', subcategoryName: 'Awards & Recognition', title: 'Annual Awards' }],
   ['wedding', { categoryName: 'Social', subcategoryName: 'Wedding', title: 'Moloy & Dola' }],
   ['general', { title: 'abcd event' }],
 ];
 const hash = async (b: Buffer) => crypto.createHash('sha1').update(await sharp(b).raw().toBuffer()).digest('hex');
-const FLAGS = ['title', 'qr', 'dateTime', 'inviteeName'] as const;
+const FLAGS = ['title', 'qr', 'dateTime', 'location', 'inviteeName'] as const;
 
 describe('card display checkboxes in the preview', () => {
   beforeAll(() => { process.env.MASTER_CARD_ONLY = 'true'; });
@@ -27,8 +26,6 @@ describe('card display checkboxes in the preview', () => {
       expect([flag, h === full]).toEqual([flag, false]); // unticking it changes the picture
       seen.add(h);
     }
-    expect(seen.size).toBe(5); // and each box changes it differently
-    // the location is always printed
-    expect(await hash(await renderTemplatePreview(null, { ...base, cardDisplay: { ...all, location: false } }, true))).toBe(full);
+    expect(seen.size).toBe(FLAGS.length + 1); // and each box changes it differently
   });
 });

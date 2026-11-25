@@ -49,8 +49,10 @@ describe('the invitation email', () => {
     expect(unnamed).not.toMatch(/<td[^>]*><img src="cid:logo-1"/); // the logo alone, as before (no side-by-side row)
     expect(unnamed).toContain('<img src="cid:logo-1"');
     expect(buildInvitationEmail({ ...base, organizationName: '   ' })).not.toMatch(/<td[^>]*><img src="cid:logo-1"/);
-    // beside the LGPSM logo too, when the organizer has a name but no logo yet
-    expect(buildInvitationEmail({ ...base, organizerLogoCid: undefined, organizationName: 'Iconic Events' })).toMatch(/cid:lgpsm-logo"[^>]*\/><\/td>\s*<td[^>]*>Iconic Events<\/td>/);
+    // an organisation with no logo yet: its name alone, no stand-in picture
+    const nameOnly = buildInvitationEmail({ ...base, organizerLogoCid: undefined, organizationName: 'Iconic Events' });
+    expect(nameOnly).toMatch(/<tr>\s*<td[^>]*>Iconic Events<\/td>/);
+    expect(nameOnly).not.toContain('lgpsm-logo');
     // what a person typed is escaped
     const hostile = buildInvitationEmail({ ...base, organizationName: '<img src=x onerror=alert(1)> & Co' });
     expect(hostile).not.toContain('<img src=x');
@@ -69,11 +71,13 @@ describe('the invitation email', () => {
     expect(buildInvitationEmail(base)).not.toContain('cid:lgpsm-icon-restaurant');
   });
 
-  it("has the organizer's logo at the top (LGPSM's until they upload one), the card, and one button to the invitation", () => {
+  it("has the organization's logo at the top (nothing there without one), the card, and one button to the invitation", () => {
     const html = buildInvitationEmail(base);
     expect(html.match(/cid:logo-1/g)?.length).toBe(1);
     expect(html).not.toContain('cid:lgpsm-logo');
-    expect(buildInvitationEmail({ ...base, organizerLogoCid: undefined })).toContain('src="cid:lgpsm-logo"');
+    const bare = buildInvitationEmail({ ...base, organizerLogoCid: undefined, organizationName: undefined });
+    expect(bare).not.toContain('lgpsm-logo');
+    expect(bare).not.toContain('alt="Logo"');
     expect(html).toContain('cid:card-1');
     expect(html.match(/href="https:\/\/lgpsm.example\/invitation\/abc"/g)?.length).toBe(2); // the button and the fallback link
     expect(html).toContain('href="https://lgpsm.example/invitation/abc?view=card"');
@@ -129,7 +133,7 @@ describe('the inline images', () => {
     const html = buildInvitationEmail({ ...base, organizerLogoCid: undefined, contactNumber: undefined });
     const files = await inlineImagesFor(html);
     const cids = files.map((f) => f.cid).sort();
-    expect(cids).toEqual(['lgpsm-icon-event', 'lgpsm-icon-info', 'lgpsm-icon-person', 'lgpsm-icon-place', 'lgpsm-icon-qr', 'lgpsm-logo']);
+    expect(cids).toEqual(['lgpsm-icon-event', 'lgpsm-icon-info', 'lgpsm-icon-person', 'lgpsm-icon-place', 'lgpsm-icon-qr']);
     for (const f of files) expect((f.content as Buffer).subarray(1, 4).toString()).toBe('PNG');
   });
 });

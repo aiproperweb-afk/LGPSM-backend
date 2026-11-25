@@ -16,9 +16,16 @@ exports.updateProfileSchema = zod_1.z.object({
         whatsapp: phone_validator_1.optionalPhoneSchema,
         email: zod_1.z.string().trim().email('Enter a valid organization email').max(150).optional().or(zod_1.z.literal('')),
         address: zod_1.z.string().trim().max(300).optional(),
-        website: zod_1.z.string().trim().max(200).regex(/^https?:\/\/[^\s]+$/i, 'Website must start with http:// or https://').optional().or(zod_1.z.literal(''))
+        website: zod_1.z.string().trim().max(200).regex(/^https?:\/\/[^\s]+$/i, 'Website must start with http:// or https://').optional().or(zod_1.z.literal('')),
+        // optional, and not verified yet: only its shape is checked (a GST number is 15 letters and digits)
+        gstNumber: zod_1.z.string().trim().regex(/^[0-9A-Za-z]{15}$/, 'A GST number has 15 letters and digits').optional().or(zod_1.z.literal(''))
     }).strict().optional()
-}).strict();
+}).strict().superRefine((d, ctx) => {
+    const type = d.profile?.organizationType;
+    if (type !== undefined && type !== 'INDIVIDUAL' && type !== 'ORGANIZATION') {
+        ctx.addIssue({ code: zod_1.z.ZodIssueCode.custom, path: ['profile', 'organizationType'], message: 'Choose Individual or Organization' });
+    }
+});
 exports.createUserSchema = zod_1.z.object({
     fullName: zod_1.z.string().trim().min(2, 'Full name must be at least 2 characters').max(120, 'Full name is too long'),
     email: zod_1.z.string().email('Invalid email address'),

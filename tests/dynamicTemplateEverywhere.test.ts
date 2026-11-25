@@ -31,7 +31,7 @@ describe('a ready dynamic template works for organizers everywhere', () => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920"><rect width="1080" height="1920" fill="#f6c9d8"/><rect x="140" y="940" width="800" height="120" fill="#222222"/></svg>';
     const data = await sharp(Buffer.from(svg)).png().toBuffer();
     const m = await Media.create({ ownerId: admin._id, purpose: MediaPurpose.TEMPLATE, contentType: 'image/png', size: data.length, width: 1080, height: 1920, data });
-    const made = await request(app).post('/api/v1/templates/upload').set(auth(admin)).send({ name: 'Ready', imageKey: `media:${m._id}` });
+    const made = await request(app).post('/api/v1/templates/upload').set(auth(admin)).send({ publish: true, name: 'Ready', imageKey: `media:${m._id}` });
     expect(made.status).toBe(201);
     tpl = made.body.data;
     await request(app).put(`/api/v1/templates/${tpl._id}/text-zones`).set(auth(admin)).send({ zones: [{ role: 'title', x: 130, y: 930, w: 820, h: 140, lines: 1, color: '#5a2030', fontFamily: 'Playfair Display', fontWeight: 700, align: 'center' }] });
@@ -69,7 +69,7 @@ describe('a ready dynamic template works for organizers everywhere', () => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920"><rect width="1080" height="1920" fill="#f6c9d8"/><rect x="390" y="1000" width="300" height="300" fill="#ffffff" stroke="#5a2030" stroke-width="6"/></svg>';
     const data = await sharp(Buffer.from(svg)).png().toBuffer();
     const m = await Media.create({ ownerId: admin._id, purpose: MediaPurpose.TEMPLATE, contentType: 'image/png', size: data.length, width: 1080, height: 1920, data });
-    const made = await request(app).post('/api/v1/templates/upload').set(auth(admin)).send({ name: 'Boxed', imageKey: `media:${m._id}` });
+    const made = await request(app).post('/api/v1/templates/upload').set(auth(admin)).send({ publish: true, name: 'Boxed', imageKey: `media:${m._id}` });
     const on = await request(app).post(`/api/v1/templates/${made.body.data._id}/preview`).set(auth(org)).send({ title: 'Hello', cardDisplay: { qr: true } }).buffer(true).parse(buf);
     const off = await request(app).post(`/api/v1/templates/${made.body.data._id}/preview`).set(auth(org)).send({ title: 'Hello', cardDisplay: { qr: false } }).buffer(true).parse(buf);
     expect(await px(on.body, 392, 1002)).not.toEqual([0xf6, 0xc9, 0xd8]); // the box (and its border) are there

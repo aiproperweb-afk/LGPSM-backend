@@ -9,6 +9,7 @@ exports.buildDynamicUploadedSpec = buildDynamicUploadedSpec;
 exports.buildUploadedSpec = buildUploadedSpec;
 exports.titleCharLimit = titleCharLimit;
 exports.createUploadedTemplate = createUploadedTemplate;
+exports.shareAdminUpload = shareAdminUpload;
 exports.getTextZones = getTextZones;
 exports.setTextZones = setTextZones;
 exports.redetectTextZones = redetectTextZones;
@@ -140,7 +141,10 @@ async function createUploadedTemplate(actor, input) {
     // someone else's custom category is treated as missing
     if (input.categoryId && !(await (0, category_service_1.canUseCategory)(input.categoryId, input.subcategoryId, actor.userId)))
         throw new UploadError(400, 'That category was not found.');
-    const dynamic = actor.role === 'ADMIN';
+    // Only an administrator who asks to publish (from the Templates page) makes a shared design, with the event's details written over it.
+    // Every other upload, an administrator's included, is a private card sent exactly as it is. An administrator's private card stays a draft
+    // until they publish it from the Templates page (see shareAdminUpload).
+    const dynamic = actor.role === 'ADMIN' && input.publish === true;
     const { width: W, height: H } = designSpec_1.CANVAS_PRESETS[presetFor(media.width, media.height)];
     // the layout of the picture is read for everyone: where the QR code goes, and (for admins) where the event's wording is
     const found = await detectInUpload(input.imageKey, W, H);
@@ -158,15 +162,31 @@ async function createUploadedTemplate(actor, input) {
         // lets the Templates screen tell an uploaded design from an AI-made one
         templateData: { uploaded: true, layoutVersion: 2, ...(dynamic ? { dynamicDetails: true, textAreas: detection.detected ? 'AUTO' : 'NONE', ...(titleCharLimit(spec) ? { titleMaxChars: titleCharLimit(spec) } : {}) } : {}) },
         ownerId: new mongoose_1.default.Types.ObjectId(actor.userId),
-        // an organizer's upload is private to them; an admin's is shared: every organizer can use it (for its category / subcategory)
+        // a published design is shared: every organizer can use it (for its category / subcategory); any other upload is private to its owner
         isSystemTemplate: dynamic,
-        isPublished: true,
+        isPublished: dynamic || actor.role !== 'ADMIN',
         isActive: true
     });
-    // an administrator's upload is shared with every organizer: they are told
+    // a design shared with every organizer is announced to them
     if (dynamic)
         await (0, template_service_1.announceTemplate)(created);
     return Object.assign(created.toObject(), { detection });
+}
+/**
+ * An administrator publishes a private card of their own (one uploaded during Add Event) from the Templates page: it becomes a shared design,
+ * laid out like any design uploaded there. Events already made with the card are not touched: each organizer's event uses its own copy.
+ * Anything else (an organizer's card, a design that is already shared, a template that is not an upload) is left exactly as it is.
+ */
+async function shareAdminUpload(templateId) {
+    if (!mongoose_1.default.isValidObjectId(templateId))
+        return false;
+    const t = await Template_1.Template.findOne({ _id: templateId, 'templateData.uploaded': true, isActive: { $ne: false } }).select('ownerId isSystemTemplate templateData designSpec').lean();
+    if (!t || t.isSystemTemplate || t.templateData?.dynamicDetails || !t.ownerId || !t.designSpec?.canvas)
+        return false;
+    if (!(await User_1.User.exists({ _id: t.ownerId, role: 'ADMIN' })))
+        return false;
+    await rebuildUploadedLayout(templateId, { makeShared: true });
+    return true;
 }
 /** The picture as the card draws it (cropped to the canvas), for finding the wording */
 async function canvasPicture(imageKey, width, height) {
@@ -244,19 +264,20 @@ async function redetectTextZones(actor, id) {
  * Lays an existing uploaded design out again with the current rules (used by scripts/migrate-uploaded-layout.js): the picture is read, the QR
  * code gets its place, and for an admin upload the wording is found. Whether the template is published is left as it is.
  */
-async function rebuildUploadedLayout(templateId) {
+async function rebuildUploadedLayout(templateId, options = {}) {
     const t = (await Template_1.Template.findOne({ _id: templateId, 'templateData.uploaded': true }));
     if (!t || !t.designSpec?.canvas)
         throw new UploadError(404, 'Template not found');
     const { width: W, height: H } = t.designSpec.canvas;
-    const dynamic = t.templateData?.dynamicDetails === true;
+    const dynamic = options.makeShared === true || t.templateData?.dynamicDetails === true;
     const found = await detectInUpload(t.previewImageKey, W, H);
     const light = await isLightAtBottom(t.previewImageKey, W, H);
     const next = dynamic ? buildDynamicUploadedSpec(t.previewImageKey, W, H, light, found.zones) : buildUploadedSpec(t.previewImageKey, W, H, found.zones, light);
     // An upload by an administrator is shared with every organizer (a few older ones were saved as private): repaired here, so it can be chosen and used
     const owner = t.ownerId ? await User_1.User.findById(t.ownerId).select('role').lean() : null;
-    const shareIt = owner?.role === 'ADMIN' && t.isSystemTemplate !== true;
-    await Template_1.Template.findByIdAndUpdate(t._id, { designSpec: next, 'templateData.layoutVersion': 2, ...(dynamic ? { 'templateData.textAreas': found.detected ? 'AUTO' : 'NONE', ...withTitleLimit(next) } : {}), ...(shareIt ? { isSystemTemplate: true } : {}) });
+    // (a card that is private on purpose, not a shared design, stays private)
+    const shareIt = dynamic && owner?.role === 'ADMIN' && t.isSystemTemplate !== true;
+    await Template_1.Template.findByIdAndUpdate(t._id, { designSpec: next, 'templateData.layoutVersion': 2, ...(dynamic ? { 'templateData.dynamicDetails': true, 'templateData.textAreas': found.detected ? 'AUTO' : 'NONE', ...withTitleLimit(next) } : {}), ...(shareIt ? { isSystemTemplate: true } : {}) });
     return { dynamic, detected: found.detected, zones: found.zones.map((z) => z.role), reason: found.reason, shared: shareIt };
 }
 /**

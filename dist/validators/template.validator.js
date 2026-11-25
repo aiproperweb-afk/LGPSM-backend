@@ -36,7 +36,9 @@ exports.uploadTemplateSchema = zod_1.z.object({
     name: zod_1.z.string().trim().min(2).max(100).optional().or(zod_1.z.literal('')),
     categoryId: zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
     subcategoryId: zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
-    imageKey: zod_1.z.string().refine((k) => /^media:[0-9a-fA-F]{24}$/.test(k), 'Upload the design as an image first')
+    imageKey: zod_1.z.string().refine((k) => /^media:[0-9a-fA-F]{24}$/.test(k), 'Upload the design as an image first'),
+    // an administrator only: share the design with every organizer (sent by the Templates page, never by Add Event)
+    publish: zod_1.z.boolean().optional()
 }).strict();
 exports.updateTemplateSchema = exports.createTemplateSchema.partial();
 // An organizer editing their own AI template: a name, whether it is available for their events, and (re-validated

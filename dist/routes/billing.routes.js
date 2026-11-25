@@ -5,6 +5,7 @@ const authenticate_1 = require("../middlewares/authenticate");
 const authorizeRoles_1 = require("../middlewares/authorizeRoles");
 const User_1 = require("../models/User");
 const billing_service_1 = require("../services/billing.service");
+const billingPdf_service_1 = require("../services/billingPdf.service");
 const zod_1 = require("zod");
 const userRateLimit_1 = require("../middlewares/userRateLimit");
 const router = (0, express_1.Router)();
@@ -63,6 +64,24 @@ router.get('/billing/invoices', organizerOnly, async (req, res) => {
         return res.json({ success: true, data: await billing_service_1.billingService.listInvoices(req.user.userId) });
     }
     catch (e) {
+        return fail(res, e);
+    }
+});
+// One PDF: an invoice, or a statement of several payments for the same event (?ids=a,b,c)
+router.get('/billing/statement.pdf', organizerOnly, (0, userRateLimit_1.perUserLimit)('billing-pdf', { windowMs: 60_000, max: 60 }), async (req, res) => {
+    const ids = String(req.query.ids || '').split(',').map((s) => s.trim()).filter(Boolean);
+    if (ids.length === 0 || ids.some((i) => !objectId.safeParse(i).success))
+        return res.status(400).json({ success: false, message: 'Choose at least one invoice.' });
+    try {
+        const { pdf, fileName } = await (0, billingPdf_service_1.buildBillingPdf)(req.user.userId, ids);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+        return res.send(pdf);
+    }
+    catch (e) {
+        if (e?.statusCode)
+            return res.status(e.statusCode).json({ success: false, message: e.message });
         return fail(res, e);
     }
 });

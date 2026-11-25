@@ -36,7 +36,9 @@ export const uploadTemplateSchema = z.object({
   name: z.string().trim().min(2).max(100).optional().or(z.literal('')),
   categoryId: z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
   subcategoryId: z.string().regex(/^[0-9a-fA-F]{24}$/).optional(),
-  imageKey: z.string().refine((k) => /^media:[0-9a-fA-F]{24}$/.test(k), 'Upload the design as an image first')
+  imageKey: z.string().refine((k) => /^media:[0-9a-fA-F]{24}$/.test(k), 'Upload the design as an image first'),
+  // an administrator only: share the design with every organizer (sent by the Templates page, never by Add Event)
+  publish: z.boolean().optional()
 }).strict();
 
 export const updateTemplateSchema = createTemplateSchema.partial();

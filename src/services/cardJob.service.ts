@@ -8,7 +8,7 @@ import { kv } from '../infra/kv';
 import { Invitee } from '../models/Invitee';
 import { Session } from '../models/Session';
 import { CardDownloadPlan } from '../models/CardDownloadPlan';
-import { loadEvent, fail, writePartZip, zipSizes, zipFileNames, isCardFormat, type CardFormat, type Actor } from './cardDownload.service';
+import { tellCardsDownloaded, loadEvent, fail, writePartZip, zipSizes, zipFileNames, isCardFormat, type CardFormat, type Actor } from './cardDownload.service';
 
 /**
  * Printable cards as ONE download. The cards are built in the background (so no web request runs for minutes, which a shared host would cut
@@ -162,6 +162,7 @@ async function runJob(actor: Actor, event: any, plan: any, sizes: number[], part
     job.filePath = finalPath;
     job.size = (await fs.promises.stat(finalPath)).size;
     await save(job);
+    await tellCardsDownloaded(event, plan.inviteeIds.length);
     // the file is kept for a little while so it can be downloaded (and downloaded again), then removed
     setTimeout(() => { void fs.promises.rm(finalPath, { force: true }); void kv.del(jobKey(job.id)).catch(() => undefined); }, FILE_KEEP_MS).unref?.();
   } catch (err: any) {

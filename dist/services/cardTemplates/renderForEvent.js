@@ -16,6 +16,7 @@ const template_service_1 = require("../template.service");
 const content_1 = require("./content");
 const designSpec_1 = require("./designSpec");
 const uploadedTemplate_1 = require("./uploadedTemplate");
+const cardDisplay_1 = require("../../utils/cardDisplay");
 const context_1 = require("./context");
 const cardInfo_1 = require("../../utils/cardInfo");
 const specRenderer_1 = require("./specRenderer");
@@ -40,7 +41,7 @@ async function renderTemplateForEvent(input) {
         throw new Error('EVENT_NOT_FOUND');
     const organizer = event.organizerId ? await User_1.User.findById(event.organizerId).select('profile.organizationName').lean() : null;
     const content = (0, invitationContent_1.buildInvitationContent)(event, [], null); // the same venue wording the invitation workflow prints
-    const texts = (0, content_1.buildSpecTexts)({
+    const allTexts = (0, content_1.buildSpecTexts)({
         title: event.title,
         description: event.description,
         startIso: event.schedule?.start,
@@ -51,6 +52,8 @@ async function renderTemplateForEvent(input) {
         organizerName: event.hostName?.trim() || (0, context_1.cardHostName)(organizer),
         invitee: parsed.spec.kind === 'INVITATION' ? (0, cardInfo_1.cardGuestLines)(null, event.cardInfo, event.cardDisplay) : { name: undefined }
     });
+    // the location left off the card is left off here too
+    const texts = (0, cardDisplay_1.withoutHidden)(allTexts, (0, cardDisplay_1.cardDisplayOf)({ location: event.cardDisplay?.location }));
     let qr;
     let qrKind = 'NONE';
     if (parsed.spec.kind === 'POSTER') {

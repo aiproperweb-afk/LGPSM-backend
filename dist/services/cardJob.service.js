@@ -165,6 +165,7 @@ async function runJob(actor, event, plan, sizes, partNames, job, format) {
         job.filePath = finalPath;
         job.size = (await fs_1.default.promises.stat(finalPath)).size;
         await save(job);
+        await (0, cardDownload_service_1.tellCardsDownloaded)(event, plan.inviteeIds.length);
         // the file is kept for a little while so it can be downloaded (and downloaded again), then removed
         setTimeout(() => { void fs_1.default.promises.rm(finalPath, { force: true }); void kv_1.kv.del(jobKey(job.id)).catch(() => undefined); }, FILE_KEEP_MS).unref?.();
     }

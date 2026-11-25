@@ -101,13 +101,17 @@ export function channelsForInvitee(channel: DeliveryChannel, invitee: { email?: 
   };
 }
 
-/** The organizer's logo for the bottom of invitation emails (null when none was uploaded or it cannot be read) */
+/**
+ * What the guest's email shows of the organizer. A logo and organisation name belong to organisation accounts only; an individual's
+ * email and card carry neither. The logo is null when none was uploaded or it cannot be read.
+ */
 async function organizerBrand(organizerId: unknown): Promise<{ name?: string; organizationName?: string; logo: { content: Buffer; contentType: string } | null }> {
   if (!organizerId) return { logo: null };
-  const organizer: any = await User.findById(organizerId as never).select('fullName profile.organizationName profile.logoKey').lean();
-  const organizationName = organizer?.profile?.organizationName?.trim() || undefined; // only when the organizer has set one
+  const organizer: any = await User.findById(organizerId as never).select('fullName profile.organizationName profile.organizationType profile.logoKey').lean();
+  const isOrganization = organizer?.profile?.organizationType ? organizer.profile.organizationType === 'ORGANIZATION' : !!organizer?.profile?.organizationName?.trim();
+  const organizationName = isOrganization ? organizer?.profile?.organizationName?.trim() || undefined : undefined;
   const name = organizationName || organizer?.fullName?.trim() || undefined;
-  const dataUrl = await resolveImageKeyBase64(organizer?.profile?.logoKey).catch(() => '');
+  const dataUrl = isOrganization ? await resolveImageKeyBase64(organizer?.profile?.logoKey).catch(() => '') : '';
   const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl || '');
   return { name, organizationName, logo: match ? { contentType: match[1], content: Buffer.from(match[2], 'base64') } : null };
 }
@@ -528,6 +532,7 @@ export const invitationService = {
     // the administrators hear what was sent, for whom, and what it comes to at the event's locked rate
     const sentCount = results.filter((r: any) => r.status === 'SENT').length;
     if (sentCount > 0) {
+      await alertService.notifyUser(event.organizerId, { type: 'INVITATION', title: 'Invitations sent', message: `${sentCount} invitation${sentCount === 1 ? ' was' : 's were'} sent for "${event.title}".`, entityType: 'Event', entityId: event._id });
       const rate = Number((event as any).pricing?.ratePerInvitee);
       const organizer: any = await User.findById(event.organizerId).select('fullName profile.organizationName').lean();
       const who = organizer?.profile?.organizationName || organizer?.fullName || 'An organizer';
@@ -834,6 +839,10 @@ export const invitationService = {
       };
       await alertService.notifyUser(event.organizerId, content);
       await alertService.notifyAdmins('invitationSendFailed', content);
+    }
+    const resentCount = results.filter((r: any) => r.status === 'SENT').length;
+    if (resentCount > 0) {
+      await alertService.notifyUser(event.organizerId, { type: 'INVITATION', title: 'Invitations resent', message: `${resentCount} invitation${resentCount === 1 ? ' was' : 's were'} sent again for "${event.title}".`, entityType: 'Event', entityId: event._id });
     }
     return results;
   },

@@ -157,15 +157,23 @@ export const userService = {
   async updateProfile(userId: string, data: any) {
     const { organization, ...personal } = data || {};
     let payload: any = personal.phone !== undefined ? { ...personal, phone: normalizePhoneNumber(personal.phone) } : { ...personal };
+    // an individual has no organization name (it would still be shown as the host on cards and emails); the other details are kept
+    if (payload.profile?.organizationType === 'INDIVIDUAL') {
+      const { organizationName: _gone, ...rest } = payload.profile;
+      payload.profile = rest;
+    }
     if (organization) {
       const me = await userRepository.findById(userId);
       if (!me) throw { statusCode: 404, message: 'User not found' };
       if (me.role !== Role.ORGANIZER && me.role !== Role.ADMIN) throw { statusCode: 403, message: 'Only organizers can set organization details' };
       // dotted paths: the rest of the profile (logo, avatar) is left exactly as it is
       payload['profile.organizationName'] = organization.name;
+      // a screen that does not have the GST field (an older app) leaves the saved number alone; an empty one removes it
+      const gstNumber = organization.gstNumber === undefined ? (me as any).profile?.organization?.gstNumber : organization.gstNumber.toUpperCase();
       payload['profile.organization'] = {
         phone: organization.phone || undefined, whatsapp: organization.whatsapp || undefined, email: organization.email || undefined,
-        address: organization.address || undefined, website: organization.website || undefined
+        address: organization.address || undefined, website: organization.website || undefined,
+        ...(gstNumber ? { gstNumber } : {})
       };
       // the name is changed only through `organization`; the other profile fields sent with it are set one by one, because
       // MongoDB refuses a single update that sets both `profile` and `profile.organization`

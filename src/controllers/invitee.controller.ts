@@ -166,6 +166,8 @@ export const inviteeController = {
         sessionAccessId: queryObjectId(req.query.sessionAccessId, 'sessionAccessId'),
         inviteeSet: queryString(req.query.inviteeSet) === 'MANUAL' ? 'MANUAL' : queryObjectId(req.query.inviteeSet, 'inviteeSet'),
         invitation: req.query.invitation === 'SENT' || req.query.invitation === 'NOT_SENT' ? (req.query.invitation as 'SENT' | 'NOT_SENT') : undefined,
+        cards: req.query.cards === 'DOWNLOADED' || req.query.cards === 'NOT_DOWNLOADED' ? (req.query.cards as 'DOWNLOADED' | 'NOT_DOWNLOADED') : undefined,
+        food: queryString(req.query.foodTitle) && queryString(req.query.foodValue) ? { title: queryString(req.query.foodTitle)!.slice(0, 200), value: queryString(req.query.foodValue)!.slice(0, 200) } : undefined,
       };
 
       const result = await inviteeService.getInvitees(eventId, organizerId, options, (req as any).user.role);

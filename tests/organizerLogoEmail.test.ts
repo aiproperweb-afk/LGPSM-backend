@@ -1,6 +1,6 @@
 /**
- * The organizer's logo in the invitation email: the LGPSM logo until the organizer uploads their organization logo
- * (Settings > Logo), then theirs, for every invitation and reminder sent after that. Goes through the real routes the Settings
+ * The organizer's logo in the invitation email: an organisation's own logo once uploaded (Settings > Logo), for every invitation and
+ * reminder sent after that; no picture at all before that, and none for an individual. Goes through the real routes the Settings
  * page uses (upload, then save the profile). Mail is mocked: nothing is sent.
  */
 import request from 'supertest';
@@ -41,10 +41,11 @@ const sendOne = async (email: string) => {
 };
 
 describe("the organizer's logo in the invitation email", () => {
-  it('shows the LGPSM logo until a logo is uploaded, then the organization logo in its place', async () => {
+  it('shows no logo until one is uploaded, then the organization logo', async () => {
     const before = await sendOne('first@x.com');
-    expect(before.html).toContain('src="cid:lgpsm-logo"');
-    expect(before.attachments.some((a) => a.cid === 'lgpsm-logo')).toBe(true);
+    expect(before.html).not.toContain('lgpsm-logo');
+    expect(before.html).not.toContain('cid:organizer-logo-');
+    expect(before.attachments.some((a) => a.cid === 'lgpsm-logo')).toBe(false);
 
     // what Settings > Logo does: upload the picture, then save it on the profile
     const logo = await sharp({ create: { width: 240, height: 120, channels: 3, background: '#123C8F' } }).png().toBuffer();
@@ -69,20 +70,25 @@ describe("the organizer's logo in the invitation email", () => {
     expect(after.html).toMatch(/<img src="cid:organizer-logo-[^>]*\/><\/td>\s*<td[^>]*>Iconic Events<\/td>/);
   });
 
-  it('with no organization name set, the logo stands alone (no name beside it)', async () => {
-    await User.updateOne({ _id: org._id }, { $unset: { 'profile.organizationName': '' } });
-    const e = await sendOne('noname@x.com');
-    expect(e.html).toContain('src="cid:lgpsm-logo"');
-    expect(e.html).not.toMatch(/cid:lgpsm-logo"[^>]*\/><\/td>\s*<td/);
+  it('an individual shows neither a logo nor an organization name, even with a logo saved earlier', async () => {
+    const logo = await sharp({ create: { width: 200, height: 100, channels: 3, background: '#0A7' } }).png().toBuffer();
+    const up = await request(app).post('/api/v1/media/upload').set(auth()).field('purpose', 'ORGANIZATION_LOGO').attach('file', logo, { filename: 'logo.png', contentType: 'image/png' });
+    await User.updateOne({ _id: org._id }, { $set: { 'profile.organizationType': 'INDIVIDUAL', 'profile.logoKey': up.body.data.key } });
+    const e = await sendOne('solo@x.com');
+    expect(e.html).not.toContain('lgpsm-logo');
+    expect(e.html).not.toContain('cid:organizer-logo-');
+    expect(e.attachments.some((a) => String(a.cid).startsWith('organizer-logo-'))).toBe(false);
   });
 
-  it('goes back to the LGPSM logo when the organizer removes theirs', async () => {
+  it('shows no picture again when the organizer removes theirs', async () => {
     const logo = await sharp({ create: { width: 200, height: 200, channels: 3, background: '#E3340F' } }).png().toBuffer();
     const up = await request(app).post('/api/v1/media/upload').set(auth()).field('purpose', 'ORGANIZATION_LOGO').attach('file', logo, { filename: 'logo.png', contentType: 'image/png' });
     await request(app).patch('/api/users/profile').set(auth()).send({ profile: { organizationName: 'Iconic Events', logoKey: up.body.data.key } });
     expect((await sendOne('a@x.com')).html).not.toContain('cid:lgpsm-logo');
     // Settings > Logo "Remove": the profile is saved without the logo
     await request(app).patch('/api/users/profile').set(auth()).send({ profile: { organizationName: 'Iconic Events' } });
-    expect((await sendOne('b@x.com')).html).toContain('src="cid:lgpsm-logo"');
+    const after = (await sendOne('b@x.com')).html;
+    expect(after).not.toContain('lgpsm-logo');
+    expect(after).not.toContain('cid:organizer-logo-');
   });
 });

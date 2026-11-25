@@ -3,6 +3,7 @@ import { authenticate } from '../middlewares/authenticate';
 import { authorizeRoles } from '../middlewares/authorizeRoles';
 import { Role } from '../models/User';
 import { billingService } from '../services/billing.service';
+import { buildBillingPdf } from '../services/billingPdf.service';
 import { z } from 'zod';
 import { perUserLimit, dedupeWindow } from '../middlewares/userRateLimit';
 
@@ -55,6 +56,22 @@ router.get('/billing/invoices', organizerOnly, async (req: Request, res: Respons
   try {
     return res.json({ success: true, data: await billingService.listInvoices((req as any).user.userId) });
   } catch (e) { return fail(res, e); }
+});
+
+// One PDF: an invoice, or a statement of several payments for the same event (?ids=a,b,c)
+router.get('/billing/statement.pdf', organizerOnly, perUserLimit('billing-pdf', { windowMs: 60_000, max: 60 }), async (req: Request, res: Response) => {
+  const ids = String(req.query.ids || '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (ids.length === 0 || ids.some((i) => !objectId.safeParse(i).success)) return res.status(400).json({ success: false, message: 'Choose at least one invoice.' });
+  try {
+    const { pdf, fileName } = await buildBillingPdf((req as any).user.userId, ids);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+    return res.send(pdf);
+  } catch (e: any) {
+    if (e?.statusCode) return res.status(e.statusCode).json({ success: false, message: e.message });
+    return fail(res, e);
+  }
 });
 
 export default router;

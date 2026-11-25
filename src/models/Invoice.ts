@@ -5,6 +5,8 @@ export interface IInvoice extends Document {
   paymentId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   eventId: mongoose.Types.ObjectId;
+  /** the event's title, kept so the invoice still names it after the event is deleted */
+  eventName?: string;
   /** invitations the payment covers (event bills) */
   invitees?: number;
   subtotal: number;
@@ -23,6 +25,7 @@ const InvoiceSchema: Schema = new Schema(
     paymentId: { type: Schema.Types.ObjectId, ref: 'Payment', required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     eventId: { type: Schema.Types.ObjectId, ref: 'Event', required: true },
+    eventName: { type: String },
     invitees: { type: Number },
     subtotal: { type: Number, required: true },
     tax: { type: Number, default: 0 },

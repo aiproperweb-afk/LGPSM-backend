@@ -97,16 +97,23 @@ exports.billingService = {
     /** The organizer's events with what is billed, paid and due for each. */
     async listEventBills(organizerId) {
         const gst = await platformSettings_service_1.platformSettingsService.gstPercent();
-        const events = await Event_1.Event.find({ organizerId, status: { $ne: 'CANCELLED' } })
-            .select('title schedule createdAt pricing organizerId')
+        const all = await Event_1.Event.find({ organizerId })
+            .select('title schedule createdAt pricing organizerId status')
             .sort({ 'schedule.start': -1 })
             .lean();
+        // a cancelled event has nothing left to pay; its past payments still count below
+        const events = all.filter((e) => e.status !== 'CANCELLED');
         const rows = [];
         for (const e of events)
             rows.push(await eventBill(e, gst));
         const shown = rows.filter((r) => r.invitesSent > 0 || r.paid > 0);
         // the payments themselves (only ones that went through), newest first: the dashboard's "this month" and "last billed" come from these
-        const titleOf = new Map(events.map((e) => [String(e._id), e.title]));
+        const titleOf = new Map(all.map((e) => [String(e._id), e.title]));
+        // a deleted event is named from its invoices
+        const kept = await Invoice_1.Invoice.find({ userId: new mongoose_1.default.Types.ObjectId(organizerId), eventName: { $exists: true } }).select('eventId eventName').lean();
+        for (const i of kept)
+            if (!titleOf.has(String(i.eventId)))
+                titleOf.set(String(i.eventId), i.eventName);
         const paidOrders = await Order_1.Order.find({ userId: organizerId, kind: 'EVENT_BILL', status: Order_1.OrderStatus.PAID }).sort({ updatedAt: -1 }).limit(100).select('eventId amount updatedAt').lean();
         const payments = paidOrders.map((o) => ({ eventId: String(o.eventId), eventName: titleOf.get(String(o.eventId)) || 'Event', amount: round2(o.amount || 0), at: o.updatedAt }));
         const paidSum = await Order_1.Order.aggregate([{ $match: { userId: new mongoose_1.default.Types.ObjectId(organizerId), kind: 'EVENT_BILL', status: Order_1.OrderStatus.PAID } }, { $group: { _id: null, amount: { $sum: '$amount' } } }]);
@@ -200,11 +207,14 @@ exports.billingService = {
     },
     /** The organizer's paid invoices, shaped for the Billing list and statement. */
     async listInvoices(organizerId) {
-        const invoices = await Invoice_1.Invoice.find({ userId: new mongoose_1.default.Types.ObjectId(organizerId) }).populate('eventId', 'title').sort({ issuedAt: -1 }).lean();
+        const invoices = await Invoice_1.Invoice.find({ userId: new mongoose_1.default.Types.ObjectId(organizerId) }).sort({ issuedAt: -1 }).lean();
+        const found = await Event_1.Event.find({ _id: { $in: invoices.map((i) => i.eventId) } }).select('title').lean();
+        const titles = new Map(found.map((e) => [String(e._id), e.title]));
         return invoices.map((i) => ({
             id: String(i._id),
             invoiceId: i.invoiceNumber,
-            eventName: i.eventId?.title || 'Event',
+            eventId: String(i.eventId),
+            eventName: titles.get(String(i.eventId)) || i.eventName || 'Event',
             invitees: i.invitees ?? 0,
             paymentDate: new Date(i.issuedAt).toISOString(),
             subtotal: i.subtotal,

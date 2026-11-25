@@ -10,6 +10,7 @@ import { templateVisibleTo } from '../template.service';
 import { buildSpecTexts } from './content';
 import { safeParseDesignSpec } from './designSpec';
 import { asStaticUpload } from './uploadedTemplate';
+import { cardDisplayOf, withoutHidden } from '../../utils/cardDisplay';
 import { cardHostName } from './context';
 import { cardGuestLines } from '../../utils/cardInfo';
 import { renderDesignSpec } from './specRenderer';
@@ -55,7 +56,7 @@ export async function renderTemplateForEvent(input: RenderForEventInput): Promis
 
   const organizer = event.organizerId ? await User.findById(event.organizerId).select('profile.organizationName').lean() : null;
   const content = buildInvitationContent(event as any, [], null); // the same venue wording the invitation workflow prints
-  const texts = buildSpecTexts({
+  const allTexts = buildSpecTexts({
     title: event.title,
     description: (event as any).description,
     startIso: event.schedule?.start,
@@ -66,6 +67,9 @@ export async function renderTemplateForEvent(input: RenderForEventInput): Promis
     organizerName: (event as any).hostName?.trim() || cardHostName(organizer as any),
     invitee: parsed.spec.kind === 'INVITATION' ? cardGuestLines(null, (event as any).cardInfo, (event as any).cardDisplay) : { name: undefined }
   });
+
+  // the location left off the card is left off here too
+  const texts = withoutHidden(allTexts, cardDisplayOf({ location: (event as any).cardDisplay?.location }));
 
   let qr: Buffer | undefined;
   let qrKind: RenderForEventResult['qr'] = 'NONE';

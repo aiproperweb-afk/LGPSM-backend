@@ -169,7 +169,7 @@ describe('custom (per-organizer) categories', () => {
       return `media:${m._id}`;
     };
     const event = (extra: any = {}) => ({ title: 'Event', description: 'd', categoryId: String(corporate._id), format: 'PHYSICAL', contactNumber: '9007000891', location: { address: 'Kolkata' }, schedule: { start: new Date(Date.now() + 864e5), end: new Date(Date.now() + 2 * 864e5) }, ...extra });
-    const adminDesign = async () => (await request(app).post('/api/v1/templates/upload').set(auth(admin)).send({ name: 'Admin design', imageKey: await upload(admin), categoryId: String(corporate._id) })).body.data;
+    const adminDesign = async () => (await request(app).post('/api/v1/templates/upload').set(auth(admin)).send({ publish: true, name: 'Admin design', imageKey: await upload(admin), categoryId: String(corporate._id) })).body.data;
 
     it('is shared: every organizer sees it, events use it directly (no copies), and the card uses it', async () => {
       const t = await adminDesign();

@@ -47,6 +47,7 @@ const Event_1 = require("../models/Event");
 const Session_1 = require("../models/Session");
 const mongoose_1 = __importDefault(require("mongoose"));
 const xlsx = __importStar(require("xlsx"));
+const cardInfo_1 = require("../utils/cardInfo");
 const eventAccess_1 = require("../utils/eventAccess");
 const Session_2 = require("../models/Session");
 const Invitee_2 = require("../models/Invitee");
@@ -159,6 +160,20 @@ exports.inviteeService = {
             // dispatch records, not "exists in the database": a guest counts as invited only if an invitation was actually delivered
             const sentIds = await Invitation_1.Invitation.find({ eventId, status: Invitation_1.InvitationDeliveryStatus.SENT }).distinct('inviteeId');
             andConditions.push({ _id: options.invitation === 'SENT' ? { $in: sentIds } : { $nin: sentIds } });
+        }
+        if (options.cards)
+            andConditions.push({ cardDownloadedAt: options.cards === 'DOWNLOADED' ? { $ne: null } : null });
+        if (options.food) {
+            const { title, value } = options.food;
+            const safe = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            andConditions.push({
+                $or: [
+                    { dietarySelections: { $elemMatch: { title, value } } },
+                    // answers saved before the choices were stored one by one: "Title: value · Title: value", or just the value for a single question
+                    { 'dietarySelections.title': { $ne: title }, dietaryPreference: { $regex: `(^| · )${safe(title)}: ${safe(value)}($| · )` } },
+                    { 'dietarySelections.title': { $ne: title }, dietaryPreference: value },
+                ],
+            });
         }
         if (options.search) {
             const escaped = options.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -438,6 +453,7 @@ exports.inviteeService = {
             throw { statusCode: 400, message: 'The sheet has no invitee rows' };
         }
         // Header matching (same rules as the frontend preview in utils/inviteeSheet.ts)
+        const wanted = (0, cardInfo_1.wantedGuestDetails)(event.cardInfo, event.cardDisplay);
         let nameColIdx = -1, emailColIdx = -1, mobileColIdx = -1, companyColIdx = -1, identityColIdx = -1, secondIdentityColIdx = -1;
         const sessionColMap = new Map();
         const firstRowCols = nonBlankRows[0].map((c) => cleanCellValue(c).toLowerCase());
@@ -476,14 +492,14 @@ exports.inviteeService = {
                     }
                 }
             });
-            // Extra columns whose heading is not one of the known words (e.g. "Employee ID", "Department") still carry the card's
-            // additional information: they fill the free primary / secondary slot in sheet order so the card never prints a blank line
+            // A card detail the event asks for may sit under a heading of the organizer's own (e.g. "Employee ID" or "Department"): the
+            // columns nobody else claimed fill the asked-for primary / secondary slot in sheet order, so the card never prints a blank line
             const taken = new Set([nameColIdx, emailColIdx, mobileColIdx, companyColIdx, identityColIdx, secondIdentityColIdx, ...sessionColMap.keys()]);
             const extras = firstRowCols.map((c, i) => (c && !taken.has(i) ? i : -1)).filter((i) => i !== -1);
             for (const idx of extras) {
-                if (identityColIdx === -1)
+                if (wanted.identity && identityColIdx === -1)
                     identityColIdx = idx;
-                else if (secondIdentityColIdx === -1)
+                else if (wanted.identity2 && secondIdentityColIdx === -1)
                     secondIdentityColIdx = idx;
             }
         }
@@ -493,6 +509,13 @@ exports.inviteeService = {
             mobileColIdx = 2;
             companyColIdx = 3;
         }
+        // Only what the event's settings ask for is taken from the file; any other column is ignored, not stored
+        if (!wanted.company)
+            companyColIdx = -1;
+        if (!wanted.identity)
+            identityColIdx = -1;
+        if (!wanted.identity2)
+            secondIdentityColIdx = -1;
         const dataRows = isHeaderPresent ? nonBlankRows.slice(1) : nonBlankRows;
         // A sheet with only its heading row has nothing to import. Refuse it before anything is read or written, so a Replace can never be
         // taken for "replace the list with nothing".

@@ -15,9 +15,16 @@ export const updateProfileSchema = z.object({
     whatsapp: optionalPhoneSchema,
     email: z.string().trim().email('Enter a valid organization email').max(150).optional().or(z.literal('')),
     address: z.string().trim().max(300).optional(),
-    website: z.string().trim().max(200).regex(/^https?:\/\/[^\s]+$/i, 'Website must start with http:// or https://').optional().or(z.literal(''))
+    website: z.string().trim().max(200).regex(/^https?:\/\/[^\s]+$/i, 'Website must start with http:// or https://').optional().or(z.literal('')),
+    // optional, and not verified yet: only its shape is checked (a GST number is 15 letters and digits)
+    gstNumber: z.string().trim().regex(/^[0-9A-Za-z]{15}$/, 'A GST number has 15 letters and digits').optional().or(z.literal(''))
   }).strict().optional()
-}).strict();
+}).strict().superRefine((d, ctx) => {
+  const type = d.profile?.organizationType;
+  if (type !== undefined && type !== 'INDIVIDUAL' && type !== 'ORGANIZATION') {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['profile', 'organizationType'], message: 'Choose Individual or Organization' });
+  }
+});
 
 export const createUserSchema = z.object({
   fullName: z.string().trim().min(2, 'Full name must be at least 2 characters').max(120, 'Full name is too long'),

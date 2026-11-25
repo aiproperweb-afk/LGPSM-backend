@@ -268,7 +268,9 @@ exports.eventController = {
             if (error.message === 'EVENT_NOT_FOUND')
                 res.status(404).json({ success: false, error: 'Not Found', message: 'Event not found or inaccessible' });
             else if (error.message === 'EVENT_NOT_CLOSED')
-                res.status(409).json({ success: false, error: 'Conflict', code: 'EVENT_NOT_CLOSED', message: 'Only an event that has ended can be deleted. Cancel it instead.' });
+                res.status(409).json({ success: false, error: 'Conflict', code: 'EVENT_NOT_CLOSED', message: 'Only an event that has ended or been cancelled can be deleted. Cancel it first.' });
+            else if (error.message === 'NOTICES_PENDING')
+                res.status(409).json({ success: false, error: 'Conflict', code: 'NOTICES_PENDING', message: 'Guests are still being told that this event is cancelled. Try again in a few minutes.' });
             else if (error.message === 'CONFIRMATION_REQUIRED')
                 res.status(400).json({ success: false, error: 'Bad Request', code: 'CONFIRMATION_REQUIRED', message: 'Type the event title exactly to confirm deletion.' });
             else

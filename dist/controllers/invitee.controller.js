@@ -183,6 +183,8 @@ exports.inviteeController = {
                 sessionAccessId: (0, query_1.queryObjectId)(req.query.sessionAccessId, 'sessionAccessId'),
                 inviteeSet: (0, query_1.queryString)(req.query.inviteeSet) === 'MANUAL' ? 'MANUAL' : (0, query_1.queryObjectId)(req.query.inviteeSet, 'inviteeSet'),
                 invitation: req.query.invitation === 'SENT' || req.query.invitation === 'NOT_SENT' ? req.query.invitation : undefined,
+                cards: req.query.cards === 'DOWNLOADED' || req.query.cards === 'NOT_DOWNLOADED' ? req.query.cards : undefined,
+                food: (0, query_1.queryString)(req.query.foodTitle) && (0, query_1.queryString)(req.query.foodValue) ? { title: (0, query_1.queryString)(req.query.foodTitle).slice(0, 200), value: (0, query_1.queryString)(req.query.foodValue).slice(0, 200) } : undefined,
             };
             const result = await invitee_service_1.inviteeService.getInvitees(eventId, organizerId, options, req.user.role);
             res.status(200).json({

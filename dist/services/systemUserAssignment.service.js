@@ -209,6 +209,10 @@ exports.systemUserAssignmentService = {
                 where = names.length ? names.join(', ') : `${sessionIds.length} session${sessionIds.length === 1 ? '' : 's'}`;
             }
             const title = event.title || 'an event';
+            // the organizer's list records who was put on their event
+            if (what === 'ASSIGNED' && event.organizerId && String(event.organizerId) !== String(userId)) {
+                void alert_service_1.alertService.notifyUser(event.organizerId, { type: 'STAFF_ASSIGNMENT', title: 'System user assigned', message: `${target.fullName || target.email} was assigned to "${title}" (${where}).`, entityType: 'Event', entityId: event._id }).catch(() => undefined);
+            }
             const copy = {
                 ASSIGNED: { title: 'You were assigned to an event', message: `You are now assigned to "${title}" (${where}).` },
                 CHANGED: { title: 'Your assignment changed', message: `Your assignment on "${title}" now covers ${where}.` },

@@ -133,7 +133,7 @@ describe('an admin upload: the event\'s details replace the wording in place', (
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920"><rect width="1080" height="1920" fill="#f6c9d8"/><rect x="140" y="940" width="800" height="120" fill="#222222"/><rect x="40" y="40" width="60" height="60" fill="#0044aa"/></svg>';
     const data = await sharp(Buffer.from(svg)).png().toBuffer();
     const m = await Media.create({ ownerId: admin._id, purpose: MediaPurpose.TEMPLATE, contentType: 'image/png', size: data.length, width: 1080, height: 1920, data });
-    const made = await request(app).post('/api/v1/templates/upload').set(auth()).send({ name: 'Gala', imageKey: `media:${m._id}` });
+    const made = await request(app).post('/api/v1/templates/upload').set(auth()).send({ publish: true, name: 'Gala', imageKey: `media:${m._id}` });
     expect(made.status).toBe(201);
     const id = made.body.data._id;
     // the stand-in picture has no readable wording: nothing is detected, the admin is asked to mark the areas
@@ -189,7 +189,7 @@ describe('an admin upload: the event\'s details replace the wording in place', (
     const other = await User.create({ fullName: 'B', email: 'b@x.com', role: Role.ADMIN, isActive: true });
     const data = await sharp({ create: { width: 1080, height: 1920, channels: 3, background: '#ffffff' } }).png().toBuffer();
     const m = await Media.create({ ownerId: admin._id, purpose: MediaPurpose.TEMPLATE, contentType: 'image/png', size: data.length, width: 1080, height: 1920, data });
-    const made = await request(app).post('/api/v1/templates/upload').set(auth()).send({ imageKey: `media:${m._id}` });
+    const made = await request(app).post('/api/v1/templates/upload').set(auth()).send({ publish: true, imageKey: `media:${m._id}` });
     const intruder = { Authorization: `Bearer ${generateAccessToken(String(other._id), other.role)}` };
     expect((await request(app).get(`/api/v1/templates/${made.body.data._id}/text-zones`).set(intruder)).status).toBe(404);
     expect((await request(app).put(`/api/v1/templates/${made.body.data._id}/text-zones`).set(intruder).send({ zones: [] })).status).toBe(404);

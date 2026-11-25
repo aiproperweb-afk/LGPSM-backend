@@ -12,6 +12,7 @@ const template_repository_1 = require("../repositories/template.repository");
 const Template_1 = require("../models/Template");
 const masterCard_1 = require("../constants/masterCard");
 const defaultTemplates_1 = require("./cardTemplates/defaultTemplates");
+const uploadedTemplate_1 = require("./cardTemplates/uploadedTemplate");
 /** Can this viewer see/use this template? Mirrors the list rules in template.repository.ts. */
 function templateVisibleTo(template, viewer) {
     if (template.isActive === false && !viewer.isAdmin)
@@ -57,9 +58,12 @@ exports.templateService = {
     },
     async updateTemplate(id, updateData) {
         const before = updateData.isPublished === true ? await Template_1.Template.findById(id).select('isPublished').lean() : null;
-        const template = await template_repository_1.templateRepository.update(id, updateData);
+        let template = await template_repository_1.templateRepository.update(id, updateData);
         if (!template)
             throw new Error('TEMPLATE_NOT_FOUND');
+        // publishing an administrator's own private card is what shares it with the organizers
+        if (before && before.isPublished === false && (await (0, uploadedTemplate_1.shareAdminUpload)(id)))
+            template = (await template_repository_1.templateRepository.update(id, {})) ?? template;
         // a template that has just been published (it was a draft) is announced
         if (before && before.isPublished === false)
             await announceTemplate(template);

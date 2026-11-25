@@ -1,3 +1,4 @@
+import { alertService } from './alert.service';
 import { PLATFORM_CURRENCY } from '../constants/currency';
 import crypto from 'crypto';
 import { orderRepository } from '../repositories/order.repository';
@@ -55,8 +56,11 @@ async function settlePaid(providerOrderId: string, providerPaymentId: string): P
 
   const existing = await invoiceRepository.findByPaymentId((payment._id as any).toString());
   if (!existing) {
+    const event: any = await Event.findById(payment.eventId as any).select('title').lean();
+    const invoiceNumber = `INV-${Date.now()}-${crypto.randomInt(1000, 10000)}`;
     await invoiceRepository.create({
-      invoiceNumber: `INV-${Date.now()}-${crypto.randomInt(1000, 10000)}`,
+      invoiceNumber,
+      eventName: event?.title,
       paymentId: payment._id as any,
       userId: payment.userId as any,
       eventId: payment.eventId as any,
@@ -68,6 +72,15 @@ async function settlePaid(providerOrderId: string, providerPaymentId: string): P
       paymentStatus: 'PAID',
       issuedAt: new Date()
     });
+    if (order?.kind === 'EVENT_BILL') {
+      await alertService.notifyUser(payment.userId, {
+        type: 'PAYMENT',
+        title: 'Payment received',
+        message: `We received ₹${Number(payment.totalAmount).toLocaleString('en-IN', { maximumFractionDigits: 2 })} for "${event?.title || 'your event'}" (invoice ${invoiceNumber}).`,
+        entityType: 'Event',
+        entityId: payment.eventId
+      });
+    }
   }
 }
 

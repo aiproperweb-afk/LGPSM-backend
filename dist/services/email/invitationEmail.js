@@ -61,7 +61,7 @@ function buildInvitationEmail(input) {
     const standaloneQr = showQr && !input.cardCid;
     const link = e(input.invitationUrl);
     const cardLink = e(`${input.invitationUrl}${input.invitationUrl.includes('?') ? '&' : '?'}view=card`);
-    const logoCid = input.organizerLogoCid || emailImages_1.PLATFORM_LOGO_CID;
+    const logoCid = input.organizerLogoCid; // an organisation's own logo; there is no stand-in
     const orgName = input.organizationName?.trim() ? e(input.organizationName.trim()) : '';
     const b = (t) => `<strong style="font-weight:700;color:${INK};">${t}</strong>`;
     const text = (html, extra = '') => `<p style="margin:0 0 16px 0;font-family:${FONT};font-size:15px;line-height:1.6;color:${INK};${extra}">${html}</p>`;
@@ -149,10 +149,10 @@ function buildInvitationEmail(input) {
         <tr><td align="center" class="pad" style="padding:32px 24px 0 24px;">
           ${orgName
         ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;max-width:100%;"><tr>
-            <td valign="middle" style="padding:0 12px 0 0;"><img src="cid:${logoCid}" alt="${host ? `${host} logo` : 'Logo'}" height="48" style="display:block;height:48px;width:auto;max-width:120px;border:0;" /></td>
+            ${logoCid ? `<td valign="middle" style="padding:0 12px 0 0;"><img src="cid:${logoCid}" alt="${orgName} logo" height="48" style="display:block;height:48px;width:auto;max-width:120px;border:0;" /></td>` : ''}
             <td valign="middle" align="left" style="font-family:${FONT};font-size:20px;line-height:1.25;font-weight:500;color:${INK};">${orgName}</td>
           </tr></table>`
-        : `<img src="cid:${logoCid}" alt="${host ? `${host} logo` : 'LGPSM'}" height="48" style="display:block;height:48px;width:auto;max-width:180px;border:0;margin:0 auto;" />`}
+        : logoCid ? `<img src="cid:${logoCid}" alt="${host ? `${host} logo` : 'Logo'}" height="48" style="display:block;height:48px;width:auto;max-width:180px;border:0;margin:0 auto;" />` : ''}
           <h1 style="margin:20px 0 16px 0;font-family:${FONT};font-size:24px;line-height:1.35;font-weight:400;color:${INK};">${headline}</h1>
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
             <td valign="middle" width="26" height="26" align="center" bgcolor="#0F3190" style="width:26px;height:26px;border-radius:13px;background:#0F3190;font-family:${FONT};font-size:13px;line-height:26px;color:#FFFFFF;">${initial}</td>
