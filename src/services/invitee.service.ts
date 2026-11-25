@@ -8,6 +8,7 @@ import { Event } from '../models/Event';
 import { Session } from '../models/Session';
 import mongoose from 'mongoose';
 import * as xlsx from 'xlsx';
+import { wantedGuestDetails } from '../utils/cardInfo';
 import { findManageableEvent } from '../utils/eventAccess';
 import { InviteeSource } from '../models/Session';
 import { InvitationStatus, RsvpStatus } from '../models/Invitee';
@@ -457,6 +458,7 @@ export const inviteeService = {
     }
 
     // Header matching (same rules as the frontend preview in utils/inviteeSheet.ts)
+    const wanted = wantedGuestDetails((event as any).cardInfo, (event as any).cardDisplay);
     let nameColIdx = -1, emailColIdx = -1, mobileColIdx = -1, companyColIdx = -1, identityColIdx = -1, secondIdentityColIdx = -1;
     const sessionColMap = new Map<number, string>();
     const firstRowCols = nonBlankRows[0].map((c: any) => cleanCellValue(c).toLowerCase());
@@ -487,17 +489,21 @@ export const inviteeService = {
           }
         }
       });
-      // Extra columns whose heading is not one of the known words (e.g. "Employee ID", "Department") still carry the card's
-      // additional information: they fill the free primary / secondary slot in sheet order so the card never prints a blank line
+      // A card detail the event asks for may sit under a heading of the organizer's own (e.g. "Employee ID" or "Department"): the
+      // columns nobody else claimed fill the asked-for primary / secondary slot in sheet order, so the card never prints a blank line
       const taken = new Set<number>([nameColIdx, emailColIdx, mobileColIdx, companyColIdx, identityColIdx, secondIdentityColIdx, ...sessionColMap.keys()]);
       const extras = firstRowCols.map((c: string, i: number) => (c && !taken.has(i) ? i : -1)).filter((i: number) => i !== -1);
       for (const idx of extras) {
-        if (identityColIdx === -1) identityColIdx = idx;
-        else if (secondIdentityColIdx === -1) secondIdentityColIdx = idx;
+        if (wanted.identity && identityColIdx === -1) identityColIdx = idx;
+        else if (wanted.identity2 && secondIdentityColIdx === -1) secondIdentityColIdx = idx;
       }
     } else {
       nameColIdx = 0; emailColIdx = 1; mobileColIdx = 2; companyColIdx = 3;
     }
+    // Only what the event's settings ask for is taken from the file; any other column is ignored, not stored
+    if (!wanted.company) companyColIdx = -1;
+    if (!wanted.identity) identityColIdx = -1;
+    if (!wanted.identity2) secondIdentityColIdx = -1;
 
     const dataRows = isHeaderPresent ? nonBlankRows.slice(1) : nonBlankRows;
     // A sheet with only its heading row has nothing to import. Refuse it before anything is read or written, so a Replace can never be

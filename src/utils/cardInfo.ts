@@ -123,3 +123,13 @@ function legacyGuestLines(guest: GuestDetails | null, cardInfo?: CardInfo | null
   };
   return { name: value(cardInfo!.primary), companyName: value(cardInfo!.secondary) };
 }
+
+/**
+ * The guest details beyond name, email and mobile that an event actually uses, from its card settings. An upload stores only these.
+ * An event with no card settings at all (made before they existed) has nothing to go by, so it keeps every detail as it always did.
+ */
+export function wantedGuestDetails(cardInfo?: CardInfo | null, cardDisplay?: { inviteeName?: boolean } | null): { company: boolean; identity: boolean; identity2: boolean } {
+  const chosen = [cardInfo?.primary, cardInfo?.secondary];
+  const unset = cardDisplay?.inviteeName === undefined && cardInfo?.primary === undefined && cardInfo?.secondary === undefined;
+  return { company: unset || chosen.includes('COMPANY_NAME'), identity: unset || chosen.includes('PROFESSIONAL_IDENTITY'), identity2: unset || chosen.includes('SECONDARY_IDENTITY') };
+}
