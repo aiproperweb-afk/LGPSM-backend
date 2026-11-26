@@ -332,8 +332,10 @@ export const userService = {
       query._id = { $in: await staffVisibleToOrganizer(actor.userId) };
     }
 
-    // An admin looking at one organizer's staff: the same list that organizer sees
-    if (actor.role === Role.ADMIN && options.organizerId && mongoose.Types.ObjectId.isValid(options.organizerId)) {
+    // An admin looking at one organizer's staff: the same list that organizer sees. (An event under an administrator's own account has no
+    // organizer to keep to, so its staff list is not narrowed.)
+    if (actor.role === Role.ADMIN && options.organizerId && mongoose.Types.ObjectId.isValid(options.organizerId)
+      && !(await User.exists({ _id: options.organizerId, role: Role.ADMIN }))) {
       query.role = Role.SYSTEM_USER;
       query._id = { $in: await staffVisibleToOrganizer(options.organizerId) };
     }

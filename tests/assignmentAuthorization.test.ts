@@ -107,8 +107,27 @@ describe('assigning staff to events (bulk selection on User Management)', () => 
     expect((await assign(tA, eventA._id, staffA[0]._id, [String(session._id)])).status).toBe(201);
   });
 
-  it('an administrator may assign across tenants', async () => {
+  it('an administrator works on any organizer\'s event, with that organizer\'s own staff', async () => {
     expect((await assign(tAdmin, eventB._id, staffB._id)).status).toBe(201);
+    expect((await assign(tAdmin, eventA._id, staffA[0]._id)).status).toBe(201);
+  });
+
+  it('an administrator cannot assign another organizer\'s staff to an organizer\'s event', async () => {
+    const res = await assign(tAdmin, eventA._id, staffB._id);
+    expect([res.status, res.body.code]).toEqual([403, 'OTHER_ORGANIZER_STAFF']);
+    expect(await SystemUserAssignment.countDocuments()).toBe(0);
+    // someone already working that organizer's events is on that organizer's list, so can be given another of them
+    const second = await Event.create({ organizerId: orgA._id, title: 'A second', description: 'd', categoryId: new mongoose.Types.ObjectId(), format: EventFormat.PHYSICAL, schedule: eventA.schedule, status: EventStatus.PUBLISHED });
+    await SystemUserAssignment.create({ userId: staffB._id, eventId: eventA._id, sessionIds: [], assignedBy: orgA._id });
+    expect((await assign(tAdmin, second._id, staffB._id)).status).toBe(201);
+  });
+
+  it('an event under an administrator\'s own account takes any system user, and its staff list is not narrowed', async () => {
+    const own = await Event.create({ organizerId: admin._id, title: 'Platform event', description: 'd', categoryId: new mongoose.Types.ObjectId(), format: EventFormat.PHYSICAL, schedule: eventA.schedule, status: EventStatus.PUBLISHED });
+    expect((await assign(tAdmin, own._id, staffA[0]._id)).status).toBe(201);
+    expect((await assign(tAdmin, own._id, staffB._id)).status).toBe(201);
+    const listed = await request(app).get(`/api/users?role=SYSTEM_USER&organizerId=${admin._id}`).set(auth(tAdmin));
+    expect(listed.body.data.map((u: any) => u.fullName)).toEqual(expect.arrayContaining(['Staff 1', 'Staff of B']));
   });
 
   it('staff cannot be assigned to a cancelled event, so it never looks like live work', async () => {

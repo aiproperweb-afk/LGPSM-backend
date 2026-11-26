@@ -61,9 +61,20 @@ export const systemUserAssignmentService = {
       throw new Error('INVALID_USER');
     }
     // Organizers can assign themselves or staff visible to their organization.
-    if ((await getUserRole(organizerId)) === Role.ORGANIZER && data.userId !== organizerId) {
+    const actorRole = await getUserRole(organizerId);
+    if (actorRole === Role.ORGANIZER && data.userId !== organizerId) {
       const visible = await staffVisibleToOrganizer(organizerId);
       if (!visible.some((id) => String(id) === data.userId)) throw new Error('INVALID_USER');
+    }
+    // An administrator working on an organizer's event assigns only that organizer's system users, never another organizer's. The one
+    // exception is the organizer's own system user account (same email): a person may work the events they run, whoever added that account.
+    if (actorRole === Role.ADMIN && targetUser.role === Role.SYSTEM_USER) {
+      const owner: any = await User.findOne({ _id: (event as any).organizerId, role: Role.ORGANIZER }).select('email').lean();
+      const ownAccount = !!owner?.email && !!targetUser.email && owner.email.toLowerCase() === targetUser.email.toLowerCase();
+      if (owner && !ownAccount) {
+        const theirs = await staffVisibleToOrganizer(String(owner._id));
+        if (!theirs.some((id) => String(id) === data.userId)) throw new Error('OTHER_ORGANIZER_STAFF');
+      }
     }
 
     // Switched off for now: a small event may be run entirely by its organizer, who then also works it as a system user (an organizer
