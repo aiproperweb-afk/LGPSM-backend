@@ -80,7 +80,7 @@ describe('deleting and renaming an uploaded list', () => {
     const listing = await request(app).get(sets(String(ev._id))).set(auth(org));
     expect(listing.body.data.sets.some((s: any) => s.id === String(set._id))).toBe(false);
     expect(listing.body.data.removedLists).toHaveLength(1);
-    expect(listing.body.data.removedLists[0].name).toBe('guests.xlsx');
+    expect(listing.body.data.removedLists[0]).toMatchObject({ name: 'All sessions_set_1', fileName: 'guests.xlsx' });
   });
 
   it('refuses a locked list (an invitation was sent from it), for delete and for rename', async () => {
@@ -121,11 +121,11 @@ describe('lists follow the guests that are deleted', () => {
     const b = await list('Beta', 2);
     await request(app).delete(`/api/v1/invitees/${a.guests[0]._id}`).set(auth(org)).send({});
     let data = await lists();
-    const alpha = data.sets.find((s: any) => s.name === 'Alpha');
+    const alpha = data.sets.find((s: any) => s.fileName === 'Alpha');
     expect(alpha).toMatchObject({ total: 2, importedCount: 2 });
     for (const g of a.guests.slice(1)) await request(app).delete(`/api/v1/invitees/${g._id}`).set(auth(org)).send({});
     data = await lists();
-    expect(data.sets.map((s: any) => s.name)).toEqual(['Beta']);
+    expect(data.sets.map((s: any) => s.fileName)).toEqual(['Beta']);
     expect(data.removedLists).toHaveLength(0); // nothing was ever sent from it: no trace
     expect(await InviteeSet.findById(a.set._id)).toBeNull();
     expect(data.sets[0]).toMatchObject({ total: 2 });
@@ -138,8 +138,8 @@ describe('lists follow the guests that are deleted', () => {
     const c = await list('Gamma', 1, { invitationStatus: 'SENT' });
     await request(app).delete(`/api/v1/invitees/${c.guests[0]._id}`).set(auth(org)).send({ reason: 'x', notify: { email: false, whatsapp: false } });
     const data = await lists();
-    expect(data.sets.find((s: any) => s.name === 'Gamma')).toBeUndefined();
-    expect(data.removedLists.map((r: any) => r.name)).toEqual(['Gamma']);
+    expect(data.sets.find((s: any) => s.fileName === 'Gamma')).toBeUndefined();
+    expect(data.removedLists.map((r: any) => r.fileName)).toEqual(['Gamma']);
   });
 });
 

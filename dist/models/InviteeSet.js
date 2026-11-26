@@ -44,6 +44,7 @@ const InviteeSetSchema = new mongoose_1.Schema({
     eventId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Event', required: true, index: true },
     sessionId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'Session', default: null },
     name: { type: String, required: true, trim: true, maxlength: 200 },
+    renamed: { type: Boolean, default: false },
     mode: { type: String, enum: Object.values(ImportMode), required: true },
     createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
     createdByRole: { type: String },

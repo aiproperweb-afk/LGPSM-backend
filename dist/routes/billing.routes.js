@@ -48,13 +48,29 @@ router.get('/billing/rate', organizerOnly, (0, userRateLimit_1.perUserLimit)('bi
 });
 // Starts a Razorpay payment for what is due on one event; the client then confirms it through POST /payments/verify
 const objectId = zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/);
-const payBody = zod_1.z.object({ eventId: objectId, inviteeIds: zod_1.z.array(objectId).max(5000).optional() });
-router.post('/billing/quote', organizerOnly, (0, userRateLimit_1.perUserLimit)('billing-quote', { windowMs: 60_000, max: 30 }), async (req, res) => {
+// `channel` is how the invitations would go (email is free); `purpose: "CARDS"` is a printed card download
+const payBody = zod_1.z.object({ eventId: objectId, inviteeIds: zod_1.z.array(objectId).max(5000).optional(), channel: zod_1.z.enum(['EMAIL', 'WHATSAPP', 'BOTH']).optional(), purpose: zod_1.z.literal('CARDS').optional() });
+const purposeOf = (b) => (b.purpose === 'CARDS' || !b.channel ? 'CARDS' : b.channel === 'EMAIL' ? 'EMAIL' : 'WHATSAPP');
+// an organizer's own bill; an administrator may look at it too (to ask the organizer to pay), but never pays it
+router.post('/billing/quote', authenticate_1.authenticate, (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ORGANIZER, User_1.Role.ADMIN), (0, userRateLimit_1.perUserLimit)('billing-quote', { windowMs: 60_000, max: 60 }), async (req, res) => {
     const parsed = payBody.safeParse(req.body);
     if (!parsed.success)
         return res.status(400).json({ success: false, message: 'A valid eventId is required.' });
     try {
-        return res.json({ success: true, data: await billing_service_1.billingService.quote(req.user.userId, parsed.data.eventId, parsed.data.inviteeIds || []) });
+        const user = req.user;
+        return res.json({ success: true, data: await billing_service_1.billingService.quote(user.role === User_1.Role.ADMIN ? null : user.userId, parsed.data.eventId, parsed.data.inviteeIds || [], purposeOf(parsed.data)) });
+    }
+    catch (e) {
+        return fail(res, e);
+    }
+});
+// An administrator asks the organizer to pay for the guests to be invited on WhatsApp: it shows as due on the organizer's Billing
+router.post('/billing/request', authenticate_1.authenticate, (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ADMIN), (0, userRateLimit_1.perUserLimit)('billing-request', { windowMs: 60_000, max: 20 }), (0, userRateLimit_1.dedupeWindow)('billing-request', 3_000), async (req, res) => {
+    const parsed = payBody.safeParse(req.body);
+    if (!parsed.success || !parsed.data.inviteeIds?.length)
+        return res.status(400).json({ success: false, message: 'A valid eventId and the guests are required.' });
+    try {
+        return res.status(201).json({ success: true, data: await billing_service_1.billingService.requestPayment(req.user.userId, parsed.data.eventId, parsed.data.inviteeIds) });
     }
     catch (e) {
         return fail(res, e);
@@ -65,7 +81,7 @@ router.post('/billing/pay', organizerOnly, (0, userRateLimit_1.perUserLimit)('bi
     if (!parsed.success)
         return res.status(400).json({ success: false, message: 'A valid eventId is required.' });
     try {
-        return res.status(201).json({ success: true, data: await billing_service_1.billingService.createBillOrder(req.user.userId, parsed.data.eventId, parsed.data.inviteeIds) });
+        return res.status(201).json({ success: true, data: await billing_service_1.billingService.createBillOrder(req.user.userId, parsed.data.eventId, parsed.data.inviteeIds, purposeOf(parsed.data)) });
     }
     catch (e) {
         return fail(res, e);

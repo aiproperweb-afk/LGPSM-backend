@@ -44,13 +44,26 @@ router.get('/billing/rate', organizerOnly, perUserLimit('billing-rate', { window
 
 // Starts a Razorpay payment for what is due on one event; the client then confirms it through POST /payments/verify
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/);
-const payBody = z.object({ eventId: objectId, inviteeIds: z.array(objectId).max(5000).optional() });
+// `channel` is how the invitations would go (email is free); `purpose: "CARDS"` is a printed card download
+const payBody = z.object({ eventId: objectId, inviteeIds: z.array(objectId).max(5000).optional(), channel: z.enum(['EMAIL', 'WHATSAPP', 'BOTH']).optional(), purpose: z.literal('CARDS').optional() });
+const purposeOf = (b: { channel?: string; purpose?: string }) => (b.purpose === 'CARDS' || !b.channel ? 'CARDS' as const : b.channel === 'EMAIL' ? 'EMAIL' as const : 'WHATSAPP' as const);
 
-router.post('/billing/quote', organizerOnly, perUserLimit('billing-quote', { windowMs: 60_000, max: 30 }), async (req: Request, res: Response) => {
+// an organizer's own bill; an administrator may look at it too (to ask the organizer to pay), but never pays it
+router.post('/billing/quote', authenticate, authorizeRoles(Role.ORGANIZER, Role.ADMIN), perUserLimit('billing-quote', { windowMs: 60_000, max: 60 }), async (req: Request, res: Response) => {
   const parsed = payBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'A valid eventId is required.' });
   try {
-    return res.json({ success: true, data: await billingService.quote((req as any).user.userId, parsed.data.eventId, parsed.data.inviteeIds || []) });
+    const user = (req as any).user;
+    return res.json({ success: true, data: await billingService.quote(user.role === Role.ADMIN ? null : user.userId, parsed.data.eventId, parsed.data.inviteeIds || [], purposeOf(parsed.data)) });
+  } catch (e) { return fail(res, e); }
+});
+
+// An administrator asks the organizer to pay for the guests to be invited on WhatsApp: it shows as due on the organizer's Billing
+router.post('/billing/request', authenticate, authorizeRoles(Role.ADMIN), perUserLimit('billing-request', { windowMs: 60_000, max: 20 }), dedupeWindow('billing-request', 3_000), async (req: Request, res: Response) => {
+  const parsed = payBody.safeParse(req.body);
+  if (!parsed.success || !parsed.data.inviteeIds?.length) return res.status(400).json({ success: false, message: 'A valid eventId and the guests are required.' });
+  try {
+    return res.status(201).json({ success: true, data: await billingService.requestPayment((req as any).user.userId, parsed.data.eventId, parsed.data.inviteeIds) });
   } catch (e) { return fail(res, e); }
 });
 
@@ -58,7 +71,7 @@ router.post('/billing/pay', organizerOnly, perUserLimit('billing-pay', { windowM
   const parsed = payBody.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ success: false, message: 'A valid eventId is required.' });
   try {
-    return res.status(201).json({ success: true, data: await billingService.createBillOrder((req as any).user.userId, parsed.data.eventId, parsed.data.inviteeIds) });
+    return res.status(201).json({ success: true, data: await billingService.createBillOrder((req as any).user.userId, parsed.data.eventId, parsed.data.inviteeIds, purposeOf(parsed.data)) });
   } catch (e) { return fail(res, e); }
 });
 

@@ -96,7 +96,7 @@ describe('admin: events (items 10, 11)', () => {
 });
 
 describe('admin: invitation email and cards (items 7, 15)', () => {
-  it('an admin sending an organizer\'s invitations uses the ORGANIZER\'s logo and name, never the admin\'s', async () => {
+  it('an admin sending an organizer\'s invitations names the ORGANIZER, never the admin, with no logo at the top', async () => {
     const logo = await sharp({ create: { width: 200, height: 100, channels: 3, background: '#123C8F' } }).png().toBuffer();
     const up = await request(app).post('/api/v1/media/upload').set(auth(org)).field('purpose', 'ORGANIZATION_LOGO').attach('file', logo, { filename: 'l.png', contentType: 'image/png' });
     await request(app).patch('/api/users/profile').set(auth(org)).send({ profile: { organizationName: 'Iconic Events', logoKey: up.body.data.key } });
@@ -105,10 +105,10 @@ describe('admin: invitation email and cards (items 7, 15)', () => {
     const sent = await request(app).post(`/api/v1/events/${ev._id}/invitations/send`).set(auth(admin)).send({ inviteeIds: [String(g._id)], channel: 'EMAIL' });
     expect(sent.status).toBe(200);
     const [, , html, attachments] = mockSendEmail.mock.calls[0];
-    expect(html).toContain(`src="cid:organizer-logo-${g._id}"`);
+    expect(html).not.toContain('cid:organizer-logo-');
     expect(html).not.toContain('cid:lgpsm-logo');
     expect(html).toContain('Organized by <strong>Iconic Events</strong>');
-    expect(attachments.some((a: any) => a.cid === `organizer-logo-${g._id}`)).toBe(true);
+    expect(attachments.some((a: any) => String(a.cid).startsWith('organizer-logo-'))).toBe(false);
   });
   it('the card preview for an admin keeps its size with the QR on or off', async () => {
     const body = (qr: boolean) => ({ title: 'Summit', startIso: new Date(Date.now() + day).toISOString(), endIso: new Date(Date.now() + 2 * day).toISOString(), venue: 'Kolkata', cardDisplay: { qr } });

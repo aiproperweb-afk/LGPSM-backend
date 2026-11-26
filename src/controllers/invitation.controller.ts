@@ -11,6 +11,13 @@ const deliverySummary = (results: { status: string }[]) => ({
   skipped: results.filter((r) => r.status === 'SKIPPED').length,
 });
 
+const paymentRequired = (req: Request, res: Response) => res.status(402).json({
+  success: false, error: 'Payment Required', code: 'PAYMENT_REQUIRED',
+  message: (req as any).user?.role === 'ADMIN'
+    ? 'The organizer has to pay for these WhatsApp invitations first. Nothing was sent. Email invitations are free.'
+    : 'Please pay the bill for these WhatsApp invitations first. Nothing was sent. Email invitations are free.'
+});
+
 export const invitationController = {
   async sendInvitations(req: Request, res: Response) {
     try {
@@ -38,7 +45,7 @@ export const invitationController = {
       return res.status(200).json({ success: true, message: 'Invitations processed successfully', results, summary: deliverySummary(results) });
     } catch (error: any) {
       if (error.message === 'EVENT_NOT_FOUND') return res.status(404).json({ error: 'Not Found', message: 'Event not found or access denied' });
-      if (error.message === 'PAYMENT_REQUIRED') return res.status(402).json({ success: false, error: 'Payment Required', code: 'PAYMENT_REQUIRED', message: 'Please pay the bill for these invitations first. Nothing was sent.' });
+      if (error.message === 'PAYMENT_REQUIRED') return paymentRequired(req, res);
       if (error.message === 'PRINT_ONLY_EVENT') return res.status(409).json({ success: false, error: 'Conflict', code: 'PRINT_ONLY_EVENT', message: 'This event is set to print only, so its cards are downloaded, not sent. Use Download Invitee Cards.' });
       if (error.message === 'EVENT_CANCELLED') return res.status(409).json({ success: false, error: 'Conflict', code: 'EVENT_CANCELLED', message: 'This event has been cancelled. Invitations can no longer be sent.' });
       if (error.message === 'EVENT_ENDED') return res.status(409).json({ success: false, error: 'Conflict', code: 'EVENT_ENDED', message: 'This event is over, so invitations can no longer be sent.' });
@@ -64,6 +71,7 @@ export const invitationController = {
       if (error.message === 'PRINT_ONLY_EVENT') return res.status(409).json({ success: false, error: 'Conflict', code: 'PRINT_ONLY_EVENT', message: 'This event is set to print only, so its cards are downloaded, not sent. Use Download Invitee Cards.' });
       if (error.message === 'EVENT_CANCELLED') return res.status(409).json({ success: false, error: 'Conflict', code: 'EVENT_CANCELLED', message: 'This event has been cancelled. Invitations can no longer be sent.' });
       if (error.message === 'EVENT_ENDED') return res.status(409).json({ success: false, error: 'Conflict', code: 'EVENT_ENDED', message: 'This event is over, so invitations can no longer be sent.' });
+      if (error.message === 'PAYMENT_REQUIRED') return paymentRequired(req, res);
       if (error.message === 'INVALID_INVITATIONS') return res.status(400).json({ error: 'Bad Request', message: 'One or more invitations do not belong to this event' });
       console.error('Request failed:', error?.message);
       return res.status(500).json({ error: 'Internal Server Error', message: 'Something went wrong. Please try again.' });
@@ -118,8 +126,9 @@ export const invitationController = {
       res.setHeader('Content-Type', shaped.contentType);
       // ISSUED: the QR is the guest's current check-in pass; SAMPLE: placeholder, not valid for check-in
       res.setHeader('X-Invitation-Qr', qr);
-      // a sample card may be reused by the browser for a minute; a guest's own pass never is
-      res.setHeader('Cache-Control', qr === 'SAMPLE' ? 'private, max-age=60' : 'private, no-store');
+      // A sample card is asked for again each time (unchanged ones answer "not modified"), so an edited event never shows its old card;
+      // a guest's own pass is never kept at all
+      res.setHeader('Cache-Control', qr === 'SAMPLE' ? 'private, no-cache' : 'private, no-store');
       res.setHeader('Content-Disposition', `inline; filename="invitation-card-preview.${shaped.contentType === 'image/webp' ? 'webp' : 'png'}"`);
       return res.status(200).send(shaped.body);
     } catch (error: any) {

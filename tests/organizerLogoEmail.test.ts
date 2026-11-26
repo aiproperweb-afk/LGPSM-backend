@@ -1,7 +1,7 @@
 /**
- * The organizer's logo in the invitation email: an organisation's own logo once uploaded (Settings > Logo), for every invitation and
- * reminder sent after that; no picture at all before that, and none for an individual. Goes through the real routes the Settings
- * page uses (upload, then save the profile). Mail is mocked: nothing is sent.
+ * The top of the invitation email carries no logo and no organizer name, whatever the organizer has saved on their profile, and no logo
+ * is attached (an unused inline picture would show as a loose attachment). Goes through the real routes the Settings page uses (upload,
+ * then save the profile). Mail is mocked: nothing is sent.
  */
 import request from 'supertest';
 import mongoose from 'mongoose';
@@ -40,55 +40,25 @@ const sendOne = async (email: string) => {
   return { html: html as string, attachments: attachments as any[], id: String(g._id) };
 };
 
-describe("the organizer's logo in the invitation email", () => {
-  it('shows no logo until one is uploaded, then the organization logo', async () => {
-    const before = await sendOne('first@x.com');
-    expect(before.html).not.toContain('lgpsm-logo');
-    expect(before.html).not.toContain('cid:organizer-logo-');
-    expect(before.attachments.some((a) => a.cid === 'lgpsm-logo')).toBe(false);
-
-    // what Settings > Logo does: upload the picture, then save it on the profile
+describe('the top of the invitation email', () => {
+  it('has no logo, organizer name or logo attachment, even after a logo is uploaded', async () => {
     const logo = await sharp({ create: { width: 240, height: 120, channels: 3, background: '#123C8F' } }).png().toBuffer();
     const up = await request(app).post('/api/v1/media/upload').set(auth()).field('purpose', 'ORGANIZATION_LOGO').attach('file', logo, { filename: 'logo.png', contentType: 'image/png' });
     expect(up.status).toBeLessThan(300);
-    const key = up.body.data.key;
-    expect(key).toMatch(/^media:[0-9a-f]{24}$/);
-    const saved = await request(app).patch('/api/users/profile').set(auth()).send({ profile: { organizationName: 'Iconic Events', logoKey: key } });
+    const saved = await request(app).patch('/api/users/profile').set(auth()).send({ profile: { organizationName: 'Iconic Events', logoKey: up.body.data.key } });
     expect(saved.status).toBe(200);
 
-    const after = await sendOne('second@x.com');
-    const cid = `organizer-logo-${after.id}`;
-    expect(after.html).toContain(`src="cid:${cid}"`); // at the top, where the LGPSM logo was
-    expect(after.html).not.toContain('cid:lgpsm-logo');
-    expect(after.attachments.some((a) => a.cid === 'lgpsm-logo')).toBe(false);
-    const att = after.attachments.find((a) => a.cid === cid);
-    expect(att).toBeDefined();
-    const meta = await sharp(att.content).metadata();
-    expect(meta.width).toBeGreaterThan(0); // the organizer's picture itself
-    expect(after.html).toContain('alt="Iconic Events logo"');
-    // beside the logo: the organization's name, because this organizer has set one
-    expect(after.html).toMatch(/<img src="cid:organizer-logo-[^>]*\/><\/td>\s*<td[^>]*>Iconic Events<\/td>/);
-  });
-
-  it('an individual shows neither a logo nor an organization name, even with a logo saved earlier', async () => {
-    const logo = await sharp({ create: { width: 200, height: 100, channels: 3, background: '#0A7' } }).png().toBuffer();
-    const up = await request(app).post('/api/v1/media/upload').set(auth()).field('purpose', 'ORGANIZATION_LOGO').attach('file', logo, { filename: 'logo.png', contentType: 'image/png' });
-    await User.updateOne({ _id: org._id }, { $set: { 'profile.organizationType': 'INDIVIDUAL', 'profile.logoKey': up.body.data.key } });
-    const e = await sendOne('solo@x.com');
-    expect(e.html).not.toContain('lgpsm-logo');
+    const e = await sendOne('first@x.com');
+    const top = e.html.slice(e.html.indexOf('class="sheet"'), e.html.indexOf('<h1'));
+    expect(top).not.toContain('<img');
+    expect(top).not.toContain('Iconic Events');
     expect(e.html).not.toContain('cid:organizer-logo-');
-    expect(e.attachments.some((a) => String(a.cid).startsWith('organizer-logo-'))).toBe(false);
-  });
-
-  it('shows no picture again when the organizer removes theirs', async () => {
-    const logo = await sharp({ create: { width: 200, height: 200, channels: 3, background: '#E3340F' } }).png().toBuffer();
-    const up = await request(app).post('/api/v1/media/upload').set(auth()).field('purpose', 'ORGANIZATION_LOGO').attach('file', logo, { filename: 'logo.png', contentType: 'image/png' });
-    await request(app).patch('/api/users/profile').set(auth()).send({ profile: { organizationName: 'Iconic Events', logoKey: up.body.data.key } });
-    expect((await sendOne('a@x.com')).html).not.toContain('cid:lgpsm-logo');
-    // Settings > Logo "Remove": the profile is saved without the logo
-    await request(app).patch('/api/users/profile').set(auth()).send({ profile: { organizationName: 'Iconic Events' } });
-    const after = (await sendOne('b@x.com')).html;
-    expect(after).not.toContain('lgpsm-logo');
-    expect(after).not.toContain('cid:organizer-logo-');
+    expect(e.html).not.toContain('cid:lgpsm-logo');
+    expect(e.attachments.some((a) => String(a.cid).startsWith('organizer-logo-') || a.cid === 'lgpsm-logo')).toBe(false);
+    // the guest is named under the headline; their address is not shown
+    expect(e.html).toContain('>Guest</td>');
+    expect(e.html).not.toContain('first@x.com');
+    // the organizer is still named further down
+    expect(e.html).toContain('Organized by <strong>Iconic Events</strong>');
   });
 });

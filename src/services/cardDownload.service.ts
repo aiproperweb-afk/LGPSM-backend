@@ -193,7 +193,7 @@ export const cardDownloadService = {
     // Cards are paid for before they are made, just like sending: the same per-guest charge, and a guest already paid for (sent or downloaded) is not charged again
     if (actor.role !== 'ADMIN') {
       const { billingService } = await import('./billing.service');
-      await billingService.assertPaidFor(event, found.map((g: any) => String(g._id))).catch((e: any) => {
+      await billingService.assertPaidFor(event, found.map((g: any) => String(g._id)), 'CARDS').catch((e: any) => {
         if (e?.message === 'PAYMENT_REQUIRED') throw fail(402, 'Please pay the bill for these cards first. Nothing was downloaded.', 'PAYMENT_REQUIRED');
         throw e;
       });

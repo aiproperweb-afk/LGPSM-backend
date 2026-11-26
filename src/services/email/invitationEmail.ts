@@ -5,8 +5,8 @@ import { EmailIconKey, iconCid } from './emailImages';
 
 /**
  * The invitation (and reminder) email a guest receives, laid out the way Google's account notices are: a white page with one
- * thin-bordered sheet, an organisation's logo and name centred at the top (nothing there for an individual organizer), a large headline
- * and the guest's own chip, the event's card design where those notices put their illustration, a soft blue note saying why the
+ * thin-bordered sheet, a large headline and the guest's own chip (their name; no logo or organizer name above), the event's card design
+ * where those notices put their illustration, a soft blue note saying why the
  * guest got this email, a rounded details panel with an icon per line, an oval button, and a bordered entry-pass card.
  * Only inline-styled tables and PNG icons (attached by cid, see emailImages.ts) are used, so Gmail and phone apps render it as is.
  * Everything that came from a person (event title, names, venue, description) is escaped before it reaches the HTML.
@@ -14,8 +14,6 @@ import { EmailIconKey, iconCid } from './emailImages';
 export interface InvitationEmailInput {
   eventTitle: string;
   inviteeName: string;
-  /** shown under the headline, beside the guest's initial */
-  inviteeEmail?: string;
   /** The event's start and end; written out in the platform's time zone */
   startIso?: string | Date | null;
   endIso?: string | Date | null;
@@ -34,10 +32,7 @@ export interface InvitationEmailInput {
   /** inline image ids (cid:) of the attachments */
   qrCid: string;
   cardCid?: string;
-  organizerLogoCid?: string;
   organizerName?: string;
-  /** the organization's name when the organizer has set one: shown beside the logo at the top (nothing extra when it is not set) */
-  organizationName?: string;
   /** false when the organizer chose cards without a QR ("Select data to show on card"): the email then has no QR either */
   showQr?: boolean;
   isReminder?: boolean;
@@ -79,7 +74,6 @@ export function buildInvitationEmail(input: InvitationEmailInput): string {
   const e = escapeHtml;
   const title = e(input.eventTitle);
   const guest = e(input.inviteeName);
-  const guestEmail = input.inviteeEmail?.trim() ? e(input.inviteeEmail.trim()) : '';
   const initial = e((input.inviteeName.trim()[0] || '?').toUpperCase());
   const host = input.organizerName?.trim() ? e(input.organizerName.trim()) : '';
   const when = whenSentence(input.startIso, input.endIso);
@@ -99,8 +93,6 @@ export function buildInvitationEmail(input: InvitationEmailInput): string {
   const standaloneQr = showQr && !input.cardCid;
   const link = e(input.invitationUrl);
   const cardLink = e(`${input.invitationUrl}${input.invitationUrl.includes('?') ? '&' : '?'}view=card`);
-  const logoCid = input.organizerLogoCid; // an organisation's own logo; there is no stand-in
-  const orgName = input.organizationName?.trim() ? e(input.organizationName.trim()) : '';
 
   const b = (t: string) => `<strong style="font-weight:700;color:${INK};">${t}</strong>`;
   const text = (html: string, extra = '') => `<p style="margin:0 0 16px 0;font-family:${FONT};font-size:15px;line-height:1.6;color:${INK};${extra}">${html}</p>`;
@@ -190,18 +182,12 @@ export function buildInvitationEmail(input: InvitationEmailInput): string {
     <tr><td align="center" class="wrap" style="padding:24px 8px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="sheet" style="max-width:640px;background:#FFFFFF;border:1px solid ${LINE};border-radius:8px;">
 
-        <!-- logo, headline and the guest's chip -->
+        <!-- headline and the guest's chip -->
         <tr><td align="center" class="pad" style="padding:32px 24px 0 24px;">
-          ${orgName
-            ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;max-width:100%;"><tr>
-            ${logoCid ? `<td valign="middle" style="padding:0 12px 0 0;"><img src="cid:${logoCid}" alt="${orgName} logo" height="48" style="display:block;height:48px;width:auto;max-width:120px;border:0;" /></td>` : ''}
-            <td valign="middle" align="left" style="font-family:${FONT};font-size:20px;line-height:1.25;font-weight:500;color:${INK};">${orgName}</td>
-          </tr></table>`
-            : logoCid ? `<img src="cid:${logoCid}" alt="${host ? `${host} logo` : 'Logo'}" height="48" style="display:block;height:48px;width:auto;max-width:180px;border:0;margin:0 auto;" />` : ''}
-          <h1 style="margin:20px 0 16px 0;font-family:${FONT};font-size:24px;line-height:1.35;font-weight:400;color:${INK};">${headline}</h1>
+          <h1 style="margin:0 0 16px 0;font-family:${FONT};font-size:24px;line-height:1.35;font-weight:400;color:${INK};">${headline}</h1>
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr>
             <td valign="middle" width="26" height="26" align="center" bgcolor="#0F3190" style="width:26px;height:26px;border-radius:13px;background:#0F3190;font-family:${FONT};font-size:13px;line-height:26px;color:#FFFFFF;">${initial}</td>
-            <td valign="middle" style="padding-left:10px;font-family:${FONT};font-size:14px;font-weight:500;color:${INK};">${guestEmail || guest}</td>
+            <td valign="middle" style="padding-left:10px;font-family:${FONT};font-size:14px;font-weight:500;color:${INK};">${guest}</td>
           </tr></table>
         </td></tr>
         <tr><td class="pad" style="padding:24px 24px 0 24px;"><div style="border-top:1px solid ${LINE};font-size:0;line-height:0;">&nbsp;</div></td></tr>

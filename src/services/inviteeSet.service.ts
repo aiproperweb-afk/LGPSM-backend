@@ -121,6 +121,29 @@ const nameMap = async (ids: unknown[]) => {
 
 const REASON_TEXT: Record<string, string> = { SUPERSEDED_BY_UPLOAD: 'Replaced by a newer upload', REMOVED_BY_ORGANIZER: 'Removed from the guest list' };
 
+/**
+ * What each uploaded list of an event is called: "<session>_set_1", "_set_2" ... counted per session in the order they were uploaded.
+ * A list uploaded to the whole event is counted under its only session, or under "All sessions" when it has several. Deleted lists keep
+ * their place, so the numbers of the others do not move. A list someone renamed shows the name they gave it.
+ */
+export async function listNames(eventId: unknown): Promise<Map<string, string>> {
+  const [sets, sessions] = await Promise.all([
+    InviteeSet.find({ eventId: eventId as never }).select('name renamed sessionId').sort({ createdAt: 1, _id: 1 }).lean(),
+    Session.find({ eventId: eventId as never }).select('name').sort({ 'schedule.start': 1 }).lean()
+  ]);
+  const sessionName = new Map((sessions as any[]).map((s) => [String(s._id), s.name as string]));
+  const only = sessions.length === 1 ? String((sessions[0] as any)._id) : '';
+  const counted = new Map<string, number>();
+  const names = new Map<string, string>();
+  for (const set of sets as any[]) {
+    const own = set.sessionId && sessionName.has(String(set.sessionId)) ? String(set.sessionId) : only;
+    const n = (counted.get(own) ?? 0) + 1;
+    counted.set(own, n);
+    names.set(String(set._id), set.renamed ? set.name : `${sessionName.get(own) ?? 'All sessions'}_set_${n}`);
+  }
+  return names;
+}
+
 export const inviteeSetService = {
   async list(actor: Actor, eventId: string) {
     await manageableEvent(actor, eventId);
@@ -161,6 +184,7 @@ export const inviteeSetService = {
       rows.set(k, r);
     }
     const people = await nameMap(sets.map((s: any) => s.createdBy));
+    const shown = await listNames(eid);
     const shape = (id: string, base: Record<string, unknown>) => {
       const r = rows.get(id) || { total: 0, sent: 0, notSent: 0, failed: 0, unknown: 0, rsvp: 0, checkedIn: 0 };
       const why = reasons.get(id);
@@ -176,7 +200,7 @@ export const inviteeSetService = {
       };
     };
     const out: any[] = (sets as any[]).map((s) => shape(String(s._id), {
-      name: s.name, source: 'EXCEL', mode: s.mode, sessionId: s.sessionId ? String(s.sessionId) : null, createdAt: s.createdAt,
+      name: shown.get(String(s._id)) ?? s.name, fileName: s.name, source: 'EXCEL', mode: s.mode, sessionId: s.sessionId ? String(s.sessionId) : null, createdAt: s.createdAt,
       uploadedBy: s.createdBy ? people.get(String(s.createdBy)) || null : null, importedCount: s.importedCount ?? null
     }));
     // guests added by hand have no file: show when the first of them was added
@@ -213,7 +237,7 @@ export const inviteeSetService = {
     }
     const removedBy = await nameMap(removedSets.map((s: any) => s.removedBy));
     const removedLists = removedSets.map((s: any) => ({
-      id: String(s._id), name: s.name, source: 'EXCEL', createdAt: s.createdAt, importedCount: s.importedCount ?? null, removedAt: s.removedAt,
+      id: String(s._id), name: shown.get(String(s._id)) ?? s.name, fileName: s.name, source: 'EXCEL', createdAt: s.createdAt, importedCount: s.importedCount ?? null, removedAt: s.removedAt,
       uploadedBy: s.createdBy ? people.get(String(s.createdBy)) || null : null, removedBy: s.removedBy ? removedBy.get(String(s.removedBy)) || null : null,
       setAside: asideBySet.get(String(s._id)) || 0
     }));
@@ -273,7 +297,7 @@ export const inviteeSetService = {
       list.removedAt = new Date();
       list.removedBy = mongoose.Types.ObjectId.isValid(actor.userId) ? new mongoose.Types.ObjectId(actor.userId) : null;
       await list.save();
-      return { id: String(list._id), name: list.name, removedAt: list.removedAt, guestsRemoved: members.length };
+      return { id: String(list._id), name: (await listNames(list.eventId)).get(String(list._id)) ?? list.name, removedAt: list.removedAt, guestsRemoved: members.length };
     });
   },
 
@@ -308,6 +332,7 @@ export const inviteeSetService = {
     const members = await Invitee.find({ eventId, inviteeSetId: list._id }).select('invitationStatus rsvpStatus qrTokenHash inviteeSetId');
     if (lockedSetKeys(members, await loadActivity(list.eventId, members)).size > 0) throw fail(409, 'This list is locked: invitations were sent from it, so it is kept as it is.', 'SET_LOCKED');
     list.name = clean;
+    list.renamed = true;
     await list.save();
     return { id: String(list._id), name: list.name };
   },
@@ -341,9 +366,7 @@ export const inviteeSetService = {
     const eventSessions = await Session.find({ eventId: eid }).sort({ 'schedule.start': 1 });
     const sessionNamesOf = (g: any): string[] => eventSessions.filter((sess) => inviteeAllowedInSession(g, sess as any)).map((sess) => sess.name);
     // which uploaded list each guest came from (guests added by hand have no list and are shown as "Manual")
-    const listIds = [...new Set(guests.map((g) => g.inviteeSetId).filter(Boolean).map(String))];
-    const lists = listIds.length ? await InviteeSet.find({ _id: { $in: listIds } }).select('name').lean() : [];
-    const listName = new Map((lists as any[]).map((l) => [String(l._id), l.name as string]));
+    const listName = guests.some((g) => g.inviteeSetId) ? await listNames(eid) : new Map<string, string>();
     return {
       total, page, limit: lim,
       members: guests.map((g) => {
@@ -367,9 +390,7 @@ export const inviteeSetService = {
       Invitee.find(filter).setOptions({ includeArchived: true } as any).select('name email mobile inviteeSetId archivedAt archivedReason supersededBySetId archivedBy archivedByRole').sort({ archivedAt: -1 }).skip((page - 1) * limit).limit(limit).lean<IInvitee[]>(),
       Invitee.countDocuments(filter).setOptions({ includeArchived: true } as any)
     ]);
-    const setIds = [...new Set(guests.flatMap((g) => [g.inviteeSetId, g.supersededBySetId]).filter(Boolean).map(String))];
-    const sets = setIds.length ? await InviteeSet.find({ _id: { $in: setIds } }).select('name').lean() : [];
-    const setName = new Map((sets as any[]).map((s) => [String(s._id), s.name as string]));
+    const setName = guests.some((g) => g.inviteeSetId || g.supersededBySetId) ? await listNames(eid) : new Map<string, string>();
     const people = await nameMap(guests.map((g) => g.archivedBy));
     return {
       restorable: restoreBlock(event) === null,

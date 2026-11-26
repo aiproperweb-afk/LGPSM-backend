@@ -76,7 +76,7 @@ beforeEach(async () => {
 });
 
 describe('list state: Open / Locked and the counts behind it', () => {
-  const stateOf = async (name: string) => (await sets()).body.data.sets.find((s: any) => s.name === name);
+  const stateOf = async (name: string) => (await sets()).body.data.sets.find((s: any) => s.fileName === name);
 
   it('a failed send alone leaves the list Open and counts the failure', async () => {
     await upload([HEAD, ['Fail Fred', 'fred@x.com', ''], ['Idle Ida', 'ida@x.com', '']], 'REPLACE', 'a.xlsx');
@@ -121,12 +121,12 @@ describe('list state: Open / Locked and the counts behind it', () => {
   it('reports who uploaded it, how, when, how many were added, and how many guests were set aside', async () => {
     await seedSetAside();
     const all = (await sets()).body.data;
-    const draft = all.sets.find((s: any) => s.name === 'draft.xlsx');
+    const draft = all.sets.find((s: any) => s.fileName === 'draft.xlsx');
     expect(draft).toMatchObject({ mode: 'APPEND', source: 'EXCEL', total: 0, setAside: 2, importedCount: 2, locked: false });
     expect(draft.uploadedBy).toMatchObject({ name: 'Org A' });
     expect(new Date(draft.createdAt).getTime()).toBeGreaterThan(0);
     expect(all.archivedCount).toBe(2);
-    const sent = all.sets.find((s: any) => s.name === 'sent.xlsx');
+    const sent = all.sets.find((s: any) => s.fileName === 'sent.xlsx');
     expect(sent).toMatchObject({ locked: true, total: 2, sent: 1, notSent: 1 });
   });
 
@@ -166,7 +166,7 @@ describe('Replace keeps everything that was attempted, and a failed Replace chan
     const res = await upload([HEAD, ['New Nat', 'nat@x.com', '']], 'REPLACE', 'b.xlsx');
     expect(res.body.data).toMatchObject({ archived: 0, failedKept: 2, imported: 1 });
     const s = (await sets()).body.data.sets;
-    expect(s.map((x: any) => [x.name, x.total, x.locked])).toEqual([['a.xlsx', 2, false], ['b.xlsx', 1, false]]);
+    expect(s.map((x: any) => [x.fileName, x.total, x.locked])).toEqual([['a.xlsx', 2, false], ['b.xlsx', 1, false]]);
     expect(s[0].failed).toBe(2);
   });
 
@@ -208,7 +208,7 @@ describe('set-aside guests: who can see them', () => {
     const res = await asideList();
     expect(res.status).toBe(200);
     const g = res.body.data.guests.find((x: any) => x.name === 'Draft Dee');
-    expect(g).toMatchObject({ email: 'dee@x.com', fromSet: { name: 'draft.xlsx' }, reason: 'SUPERSEDED_BY_UPLOAD', replacedBy: { name: 'fresh.xlsx' }, setAsideBy: { name: 'Org A', role: 'ORGANIZER' } });
+    expect(g).toMatchObject({ email: 'dee@x.com', fromSet: { name: 'All sessions_set_2' }, reason: 'SUPERSEDED_BY_UPLOAD', replacedBy: { name: 'All sessions_set_3' }, setAsideBy: { name: 'Org A', role: 'ORGANIZER' } });
     expect(new Date(g.setAsideAt).getTime()).toBeGreaterThan(0);
     expect(res.body.data).toMatchObject({ total: 2, restorable: true });
     expect(JSON.stringify(res.body)).not.toMatch(/qrToken|tokenHash|cipher|password/i);

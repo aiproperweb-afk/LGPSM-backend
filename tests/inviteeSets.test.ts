@@ -156,7 +156,7 @@ describe('invitee lists: Replace and Append', () => {
     const res = await request(app).get(`/api/v1/events/${event._id}/invitees/sets`).set(bearer(tok));
     expect(res.status).toBe(200);
     expect(res.body.data.hasSent).toBe(true);
-    const byName = Object.fromEntries(res.body.data.sets.map((s: any) => [s.name, s]));
+    const byName = Object.fromEntries(res.body.data.sets.map((s: any) => [s.fileName, s]));
     expect(byName['one.xlsx']).toMatchObject({ total: 2, sent: 1, locked: true });
     expect(byName['two.xlsx']).toMatchObject({ total: 1, sent: 0, locked: false });
   });
@@ -171,7 +171,7 @@ describe('invitee lists: Replace and Append', () => {
       await Invitation.create({ eventId: event._id, inviteeId: inv!._id, channel: DeliveryChannel.EMAIL, status: InvitationDeliveryStatus.SENT, tokenHash: `th-${inv!.email}`, sentAt: at } as any);
     }
     const res = await request(app).get(`/api/v1/events/${event._id}/invitees/sets`).set(bearer(tok));
-    const byName = Object.fromEntries(res.body.data.sets.map((x: any) => [x.name, x]));
+    const byName = Object.fromEntries(res.body.data.sets.map((x: any) => [x.fileName, x]));
     expect(new Date(byName['one.xlsx'].firstSentAt).getTime()).toBe(t1.getTime());
     expect(new Date(byName['one.xlsx'].lastSentAt).getTime()).toBe(t2.getTime());
     expect(byName['one.xlsx'].createdAt).toBeTruthy();
@@ -182,7 +182,7 @@ describe('invitee lists: Replace and Append', () => {
     await upload([HEAD, ['Alice A', 'a@x.com', ''], ['Bobby B', 'b@x.com', '']], 'REPLACE', 'one.xlsx');
     await upload([HEAD, ['Carol C', 'c@x.com', '']], 'APPEND', 'two.xlsx');
     const sets = (await request(app).get(`/api/v1/events/${event._id}/invitees/sets`).set(bearer(tok))).body.data.sets;
-    const one = sets.find((x: any) => x.name === 'one.xlsx');
+    const one = sets.find((x: any) => x.fileName === 'one.xlsx');
     const get = (id: string, qs = '') => request(app).get(`/api/v1/events/${event._id}/invitees/sets/${id}/members${qs}`).set(bearer(tok));
     expect((await get(one.id)).body.data.members.map((m: any) => m.name)).toEqual(['Alice A', 'Bobby B']);
     const all = await get('all', '?limit=2');
@@ -320,7 +320,7 @@ describe('a session that uses the guests of other sessions has its own dataset e
     ]);
     const res = await request(app).get(`/api/v1/events/${event._id}/invitees/sets`).set(bearer(tok));
     expect(res.status).toBe(200);
-    expect(res.body.data.sets.map((x: any) => [x.name, x.total])).toEqual([['Lunch', 2], ['Dinner', 2]]);
+    expect(res.body.data.sets.map((x: any) => [x.name, x.total])).toEqual([['Lunch_set_1', 2], ['Dinner_set_1', 2]]);
     expect(res.body.data.sessionLists.map((x: any) => [x.name, x.total, x.source])).toEqual([['Activity & Fun', 4, 'SESSION']]);
     // its guests can be previewed, whichever upload each came from
     const view = await request(app).get(`/api/v1/events/${event._id}/invitees/sets/${res.body.data.sessionLists[0].id}/members`).set(bearer(tok));
@@ -328,6 +328,32 @@ describe('a session that uses the guests of other sessions has its own dataset e
     expect(view.body.data.total).toBe(4);
     expect(view.body.data.members.map((m: any) => m.name).sort()).toEqual(['Amit', 'Chanchal', 'Moloy', 'Sayan']);
   });
+  it('names each list after its session and the order it was uploaded in, keeps the numbers when one is deleted, and respects a rename', async () => {
+    const t = (h: number) => new Date(Date.now() + 864e5 + h * 36e5);
+    const [lunch, dinner] = await Session.create([{ eventId: event._id, name: 'Lunch', schedule: { start: t(1), end: t(2) } }, { eventId: event._id, name: 'Dinner', schedule: { start: t(3), end: t(4) } }]);
+    const add = async (name: string, sessionId: unknown, minute: number) => {
+      const set = await InviteeSet.create({ eventId: event._id, name, sessionId, mode: 'APPEND', createdBy: org._id, importedCount: 1 } as any);
+      await InviteeSet.collection.updateOne({ _id: set._id }, { $set: { createdAt: t(minute / 60) } });
+      await Invitee.create({ eventId: event._id, name: `Guest of ${name}`, email: `${minute}@x.com`, inviteeSetId: set._id });
+      return set;
+    };
+    // created out of order on purpose: the numbers follow the upload times
+    await add('second lunch file.xlsx', lunch._id, 20);
+    const first = await add('first lunch file.xlsx', lunch._id, 10);
+    await add('dinner.xlsx', dinner._id, 15);
+    await add('everyone.xlsx', null, 30);
+    const base = `/api/v1/events/${event._id}/invitees/sets`;
+    const shown = async () => Object.fromEntries((await request(app).get(base).set(bearer(tok))).body.data.sets.map((x: any) => [x.fileName, x.name]));
+    expect(await shown()).toEqual({ 'first lunch file.xlsx': 'Lunch_set_1', 'second lunch file.xlsx': 'Lunch_set_2', 'dinner.xlsx': 'Dinner_set_1', 'everyone.xlsx': 'All sessions_set_1' });
+    const members = await request(app).get(`${base}/all/members`).set(bearer(tok));
+    expect(members.body.data.members.map((m: any) => m.setName).sort()).toEqual(['All sessions_set_1', 'Dinner_set_1', 'Lunch_set_1', 'Lunch_set_2']);
+    expect((await request(app).delete(`${base}/${first._id}`).set(bearer(tok))).status).toBe(200);
+    expect((await shown())['second lunch file.xlsx']).toBe('Lunch_set_2');
+    const second: any = await InviteeSet.findOne({ name: 'second lunch file.xlsx' });
+    expect((await request(app).patch(`${base}/${second._id}`).set(bearer(tok)).send({ name: 'VIP guests' })).status).toBe(200);
+    expect((await shown())['VIP guests']).toBe('VIP guests');
+  });
+
   it('an event with a single list for all sessions shows no extra entries', async () => {
     const t = (h: number) => new Date(Date.now() + 864e5 + h * 36e5);
     await Session.create([{ eventId: event._id, name: 'A', schedule: { start: t(1), end: t(2) } }, { eventId: event._id, name: 'B', schedule: { start: t(3), end: t(4) } }]);

@@ -38,6 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reportService = void 0;
 const systemUserAssignment_service_1 = require("./systemUserAssignment.service");
+const billing_service_1 = require("./billing.service");
 const currency_1 = require("../constants/currency");
 const sessionAccess_1 = require("../utils/sessionAccess");
 const invitationContent_1 = require("../utils/invitationContent");
@@ -178,7 +179,7 @@ exports.reportService = {
             sessionReports
         };
     },
-    // Platform earnings per event: invitations sent x the event's locked per-invitee rate.
+    // Platform earnings per event: guests billed for (WhatsApp invitation or printed card) x the event's locked per-invitee rate.
     // Events created before rates were locked use the rate that was in effect when they were created.
     async getEarnings(filter = {}) {
         const query = { status: { $ne: 'CANCELLED' } };
@@ -200,17 +201,14 @@ exports.reportService = {
             .populate('organizerId', 'fullName email phone profile')
             .sort({ 'schedule.start': -1 })
             .lean();
-        const sentCounts = await Invitee_1.Invitee.aggregate([
-            { $match: { eventId: { $in: events.map((e) => e._id) }, invitationStatus: Invitee_1.InvitationStatus.SENT } },
-            { $group: { _id: '$eventId', count: { $sum: 1 } } }
-        ]);
-        const sentByEvent = new Map(sentCounts.map((c) => [String(c._id), c.count]));
+        // what is charged for: guests invited on WhatsApp or given a printed card (email is free)
+        const billed = await (0, billing_service_1.billedGuestsByEvent)(events.map((e) => e._id));
         const settings = await PlatformSettings_1.PlatformSettings.findOne({ key: 'global' }).lean();
         const currency = currency_1.PLATFORM_CURRENCY; // one platform currency; the stored setting is not consulted for it
         const rows = await Promise.all(events.map(async (e) => {
             const locked = e.pricing && e.pricing.lockedAt;
             const rate = locked ? e.pricing.ratePerInvitee ?? null : await platformSettings_service_1.platformSettingsService.rateInEffectAt(new Date(e.createdAt));
-            const invites = sentByEvent.get(String(e._id)) || 0;
+            const invites = billed.get(String(e._id))?.size || 0;
             const org = e.organizerId || {};
             return {
                 eventId: String(e._id),

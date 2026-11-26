@@ -154,6 +154,12 @@ const EventSchema: Schema = new Schema(
       bannerKey: { type: String }
     },
     status: { type: String, enum: Object.values(EventStatus), default: EventStatus.DRAFT, required: true },
+    // guests an administrator wants to invite on WhatsApp and has asked the organizer to pay for (shown as due on the organizer's Billing)
+    paymentRequest: {
+      inviteeIds: { type: [{ type: Schema.Types.ObjectId, ref: 'Invitee' }], default: undefined },
+      requestedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+      requestedAt: { type: Date }
+    },
     pricing: {
       ratePerInvitee: { type: Number, default: null },
       currency: { type: String },

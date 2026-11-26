@@ -34,6 +34,10 @@ function describeWhatsAppError(message) {
 }
 exports.whatsappService = {
     normalizePhoneNumber,
+    /** Can this server send WhatsApp messages at all? Nobody is asked to pay for them while it cannot. */
+    isConfigured() {
+        return !!(process.env.WHATSAPP_ACCESS_TOKEN || env_1.env.WHATSAPP_ACCESS_TOKEN) && !!(process.env.WHATSAPP_PHONE_NUMBER_ID || env_1.env.WHATSAPP_PHONE_NUMBER_ID);
+    },
     async uploadMedia(qrBuffer) {
         const accessToken = process.env.WHATSAPP_ACCESS_TOKEN || env_1.env.WHATSAPP_ACCESS_TOKEN;
         const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || env_1.env.WHATSAPP_PHONE_NUMBER_ID;

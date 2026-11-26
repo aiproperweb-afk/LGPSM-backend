@@ -3,7 +3,7 @@ import { buildInvitationEmail, invitationEmailSubject, whenSentence } from '../s
 const base = {
   rsvpBy: '2026-11-23T00:00:00Z', // RSVP is on in these examples (the button is only shown then)
   eventTitle: 'Annual Leadership Summit 2026', inviteeName: 'Sayan Ghosh', invitationUrl: 'https://lgpsm.example/invitation/abc',
-  qrCid: 'qr-1', cardCid: 'card-1', organizerLogoCid: 'logo-1', organizerName: 'Iconic Events',
+  qrCid: 'qr-1', cardCid: 'card-1', organizerName: 'Iconic Events',
   startIso: '2026-11-21T13:30:00Z', endIso: '2026-11-21T16:30:00Z', venue: 'Taj Bengal', locationSub: 'Kolkata', contactNumber: '9007000891',
 };
 
@@ -21,10 +21,11 @@ describe('the invitation email', () => {
   });
 
   it('is laid out like a Google notice: white page, headline, blue note, rounded details panel and an oval button', () => {
-    const html = buildInvitationEmail({ ...base, inviteeEmail: 'sayan@example.com', dietaryPreference: 'Vegetarian' });
+    const html = buildInvitationEmail({ ...base, dietaryPreference: 'Vegetarian' });
     expect(html).toContain('<body style="margin:0;padding:0;background:#FFFFFF;">');
     expect(html).toContain("You're invited to Annual Leadership Summit 2026</h1>");
-    expect(html).toContain('sayan@example.com');
+    expect(html).toContain('>Sayan Ghosh</td>'); // the chip under the headline carries the guest's name, not their address
+    expect(html).not.toMatch(/[\w.]+@example\.com/);
     expect(html).toContain('Dear <strong style="font-weight:700;color:#1F1F1F;">Sayan Ghosh</strong>');
     expect(html).toContain('Iconic Events</strong> is delighted to invite you to');
     expect(html).toContain('background:#D3E3FD;border-radius:16px'); // the blue note
@@ -41,22 +42,14 @@ describe('the invitation email', () => {
     expect(html).not.toContain('OFFICIAL INVITATION');
   });
 
-  it("shows the organization's name beside the logo when it is set, and just the logo when it is not", () => {
-    const named = buildInvitationEmail({ ...base, organizationName: 'Iconic Events' });
-    // one row: the logo, then the name next to it
-    expect(named).toMatch(/<td[^>]*><img src="cid:logo-1"[^>]*\/><\/td>\s*<td[^>]*>Iconic Events<\/td>/);
-    const unnamed = buildInvitationEmail({ ...base, organizationName: undefined });
-    expect(unnamed).not.toMatch(/<td[^>]*><img src="cid:logo-1"/); // the logo alone, as before (no side-by-side row)
-    expect(unnamed).toContain('<img src="cid:logo-1"');
-    expect(buildInvitationEmail({ ...base, organizationName: '   ' })).not.toMatch(/<td[^>]*><img src="cid:logo-1"/);
-    // an organisation with no logo yet: its name alone, no stand-in picture
-    const nameOnly = buildInvitationEmail({ ...base, organizerLogoCid: undefined, organizationName: 'Iconic Events' });
-    expect(nameOnly).toMatch(/<tr>\s*<td[^>]*>Iconic Events<\/td>/);
-    expect(nameOnly).not.toContain('lgpsm-logo');
-    // what a person typed is escaped
-    const hostile = buildInvitationEmail({ ...base, organizationName: '<img src=x onerror=alert(1)> & Co' });
-    expect(hostile).not.toContain('<img src=x');
-    expect(hostile).toContain('&amp; Co');
+  it('has nothing above the headline: no logo and no organizer name', () => {
+    const html = buildInvitationEmail(base);
+    const top = html.slice(html.indexOf('class="sheet"'), html.indexOf('<h1'));
+    expect(top).not.toContain('<img');
+    expect(top).not.toContain('Iconic Events');
+    expect(html).not.toContain('lgpsm-logo');
+    // what a person typed in their name is escaped in the chip too
+    expect(buildInvitationEmail({ ...base, inviteeName: '<img src=x>' })).not.toContain('<img src=x>');
   });
 
   it('shows a food preference only once the guest has chosen one; before that it says where to choose', () => {
@@ -71,13 +64,8 @@ describe('the invitation email', () => {
     expect(buildInvitationEmail(base)).not.toContain('cid:lgpsm-icon-restaurant');
   });
 
-  it("has the organization's logo at the top (nothing there without one), the card, and one button to the invitation", () => {
+  it('has the card, and one button to the invitation', () => {
     const html = buildInvitationEmail(base);
-    expect(html.match(/cid:logo-1/g)?.length).toBe(1);
-    expect(html).not.toContain('cid:lgpsm-logo');
-    const bare = buildInvitationEmail({ ...base, organizerLogoCid: undefined, organizationName: undefined });
-    expect(bare).not.toContain('lgpsm-logo');
-    expect(bare).not.toContain('alt="Logo"');
     expect(html).toContain('cid:card-1');
     expect(html.match(/href="https:\/\/lgpsm.example\/invitation\/abc"/g)?.length).toBe(2); // the button and the fallback link
     expect(html).toContain('href="https://lgpsm.example/invitation/abc?view=card"');
@@ -117,7 +105,7 @@ describe('the invitation email', () => {
   });
 
   it('online events, missing organizer details and multi-day events still read properly', () => {
-    const html = buildInvitationEmail({ ...base, isVirtual: true, organizerName: undefined, organizerLogoCid: undefined, contactNumber: undefined });
+    const html = buildInvitationEmail({ ...base, isVirtual: true, organizerName: undefined, contactNumber: undefined });
     expect(html).toContain("We're delighted to invite you to");
     expect(html).toContain('>Online<');
     expect(html).not.toContain('cid:lgpsm-icon-call');
@@ -128,9 +116,9 @@ describe('the invitation email', () => {
 });
 
 describe('the inline images', () => {
-  it('attaches exactly the icons and logo an email uses, as PNGs', async () => {
+  it('attaches exactly the icons an email uses, as PNGs', async () => {
     const { inlineImagesFor } = await import('../src/services/email/emailImages');
-    const html = buildInvitationEmail({ ...base, organizerLogoCid: undefined, contactNumber: undefined });
+    const html = buildInvitationEmail({ ...base, contactNumber: undefined });
     const files = await inlineImagesFor(html);
     const cids = files.map((f) => f.cid).sort();
     expect(cids).toEqual(['lgpsm-icon-event', 'lgpsm-icon-info', 'lgpsm-icon-person', 'lgpsm-icon-place', 'lgpsm-icon-qr']);

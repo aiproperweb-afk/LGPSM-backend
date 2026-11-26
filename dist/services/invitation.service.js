@@ -227,7 +227,7 @@ exports.invitationService = {
         // The design follows the organizer's template, or the event's type when none was chosen (see cardTemplates/designs.ts)
         const cardContext = await (0, context_1.loadCardContext)(event);
         const cardDesign = cardContext.cardDesign;
-        // the organizer's logo goes at the bottom of each invitation email (read once per send)
+        // the organizer's name, for an event that names no host (read once per send)
         const brand = await organizerBrand(event.organizerId);
         // Resolved once per event (not per invitee) — the same organizer-uploaded photo goes on
         // every invitee's card for this event.
@@ -242,11 +242,6 @@ exports.invitationService = {
         const invitees = await Invitee_1.Invitee.find({ _id: { $in: validObjectIds }, eventId }).select('+qrTokenCipher +invitationTokenCipher');
         if (invitees.length === 0)
             throw new Error('INVALID_INVITEES');
-        // Nothing goes out unpaid: the organizer pays the bill (Razorpay) first. Administrators sending on an organizer's behalf are not billed here.
-        if (userRole !== User_1.Role.ADMIN && userRole !== 'ADMIN') {
-            const { billingService } = await Promise.resolve().then(() => __importStar(require('./billing.service')));
-            await billingService.assertPaidForSend(event, invitees.map((i) => String(i._id)));
-        }
         const results = [];
         // Load all sessions for this event once
         const allSessions = await Session_1.Session.find({ eventId }).sort({ 'schedule.start': 1 }).lean();
@@ -255,6 +250,12 @@ exports.invitationService = {
         // message. Re-delivery is the explicit Resend action.
         const alreadySent = new Set((await Invitation_1.Invitation.find({ eventId, inviteeId: { $in: invitees.map((i) => i._id) }, status: Invitation_1.InvitationDeliveryStatus.SENT }).select('inviteeId').lean())
             .map((i) => String(i.inviteeId)));
+        // No WhatsApp message goes out unpaid, whoever sends it: the organizer pays the bill first (an administrator asks them to). Email is free.
+        const onWhatsApp = invitees.filter((i) => !alreadySent.has(String(i._id)) && channelsForInvitee(channel, i).whatsapp).map((i) => String(i._id));
+        if (onWhatsApp.length) {
+            const { billingService } = await Promise.resolve().then(() => __importStar(require('./billing.service')));
+            await billingService.assertPaidFor(event, onWhatsApp, 'WHATSAPP');
+        }
         const deliverToInvitee = async (invitee) => {
             // A send that was already running when the event was cancelled stops here, before any token or provider call
             if (await eventIsCancelled(eventId)) {
@@ -342,7 +343,6 @@ exports.invitationService = {
                     const htmlContent = buildFormalInvitationEmailHTML({
                         eventTitle: event.title,
                         inviteeName: invitee.name,
-                        inviteeEmail: invitee.email,
                         eventDate,
                         eventTime,
                         venue,
@@ -352,9 +352,7 @@ exports.invitationService = {
                         cid,
                         cardCid,
                         isReminder: false,
-                        organizerLogoCid: brand.logo ? `organizer-logo-${invitee._id}` : undefined,
                         organizerName: event.hostName?.trim() || brand.name,
-                        organizationName: brand.organizationName,
                         startIso: event.schedule?.start,
                         endIso: event.schedule?.end,
                         locationSub,
@@ -365,7 +363,7 @@ exports.invitationService = {
                         showQr: (0, context_1.cardCarriesQr)(event, cardContext),
                         sessions: assignedSessions,
                     });
-                    // for a mail service used over HTTPS (it cannot embed images): where this guest's card, QR and logo are served, behind their own link token
+                    // for a mail service used over HTTPS (it cannot embed images): where this guest's card and QR are served, behind their own link token
                     const hostedImage = (what) => ((0, publicUrl_1.publicApiUrl)() ? `${(0, publicUrl_1.publicApiUrl)()}/api/v1/public/invitations/${invitationToken.raw}/${what}` : undefined);
                     const attachments = [
                         {
@@ -386,8 +384,7 @@ exports.invitationService = {
                                 url: hostedImage('qr'),
                                 essential: true
                             }] : []),
-                        ...(brand.logo ? [{ filename: 'organizer-logo', content: brand.logo.content, cid: `organizer-logo-${invitee._id}`, contentType: brand.logo.contentType, url: hostedImage('logo') }] : []),
-                        // the details icons, and the LGPSM logo while the organizer has none of their own
+                        // the details icons
                         ...(await (0, emailImages_1.inlineImagesFor)(htmlContent))
                     ];
                     await (0, email_provider_1.sendEmail)(invitee.email, (0, invitationEmail_1.invitationEmailSubject)(event.title), htmlContent, attachments);
@@ -526,7 +523,8 @@ exports.invitationService = {
             const rate = Number(event.pricing?.ratePerInvitee);
             const organizer = await User_1.User.findById(event.organizerId).select('fullName profile.organizationName').lean();
             const who = organizer?.profile?.organizationName || organizer?.fullName || 'An organizer';
-            const charge = Number.isFinite(rate) && rate > 0 ? ` At ${PLATFORM_CURRENCY_SYMBOL}${rate} per invitee that is ${PLATFORM_CURRENCY_SYMBOL}${(rate * sentCount).toLocaleString('en-IN')}.` : '';
+            const byWhatsApp = results.filter((r) => r.whatsappStatus === 'SENT').length;
+            const charge = Number.isFinite(rate) && rate > 0 && byWhatsApp > 0 ? ` ${byWhatsApp} went on WhatsApp: at ${PLATFORM_CURRENCY_SYMBOL}${rate} per invitee that is ${PLATFORM_CURRENCY_SYMBOL}${(rate * byWhatsApp).toLocaleString('en-IN')}.` : ' Email invitations are free.';
             await alert_service_1.alertService.notifyAdmins('invitationsSent', {
                 type: 'INVITATION',
                 title: 'Invitations sent',
@@ -558,7 +556,7 @@ exports.invitationService = {
         // The design follows the organizer's template, or the event's type when none was chosen (see cardTemplates/designs.ts)
         const cardContext = await (0, context_1.loadCardContext)(event);
         const cardDesign = cardContext.cardDesign;
-        // the organizer's logo goes at the bottom of each invitation email (read once per send)
+        // the organizer's name, for an event that names no host (read once per send)
         const brand = await organizerBrand(event.organizerId);
         // Resolved once per event (not per invitee) — the same organizer-uploaded photo goes on
         // every invitee's card for this event.
@@ -573,6 +571,14 @@ exports.invitationService = {
         const invitations = await Invitation_1.Invitation.find({ _id: { $in: validObjectIds }, eventId }).populate({ path: 'inviteeId', select: '+qrTokenCipher +invitationTokenCipher' });
         if (invitations.length === 0)
             throw new Error('INVALID_INVITATIONS');
+        // the same rule as a first send: a WhatsApp message is paid for before it goes
+        const onWhatsApp = invitations
+            .filter((i) => i.inviteeId && !i.inviteeId.credentialRevokedAt && channelsForInvitee((channelOverride || i.channel), i.inviteeId).whatsapp)
+            .map((i) => String(i.inviteeId._id));
+        if (onWhatsApp.length) {
+            const { billingService } = await Promise.resolve().then(() => __importStar(require('./billing.service')));
+            await billingService.assertPaidFor(event, onWhatsApp, 'WHATSAPP');
+        }
         const results = [];
         const outcomes = await (0, concurrency_1.mapLimit)(invitations, sendConcurrency(), async (invitation) => {
             const invitee = invitation.inviteeId;
@@ -667,7 +673,6 @@ exports.invitationService = {
                         const htmlContent = buildFormalInvitationEmailHTML({
                             eventTitle: event.title,
                             inviteeName: invitee.name,
-                            inviteeEmail: invitee.email,
                             eventDate,
                             eventTime,
                             venue,
@@ -677,9 +682,7 @@ exports.invitationService = {
                             cid,
                             cardCid,
                             isReminder: true,
-                            organizerLogoCid: brand.logo ? `organizer-logo-${invitee._id}` : undefined,
                             organizerName: event.hostName?.trim() || brand.name,
-                            organizationName: brand.organizationName,
                             startIso: event.schedule?.start,
                             endIso: event.schedule?.end,
                             locationSub,
@@ -690,7 +693,7 @@ exports.invitationService = {
                             showQr: (0, context_1.cardCarriesQr)(event, cardContext),
                             sessions: assignedSessions,
                         });
-                        // for a mail service used over HTTPS (it cannot embed images): where this guest's card, QR and logo are served, behind their own link token
+                        // for a mail service used over HTTPS (it cannot embed images): where this guest's card and QR are served, behind their own link token
                         const hostedImage = (what) => ((0, publicUrl_1.publicApiUrl)() ? `${(0, publicUrl_1.publicApiUrl)()}/api/v1/public/invitations/${invitationToken.raw}/${what}` : undefined);
                         const attachments = [
                             {
@@ -711,8 +714,7 @@ exports.invitationService = {
                                     url: hostedImage('qr'),
                                     essential: true
                                 }] : []),
-                            ...(brand.logo ? [{ filename: 'organizer-logo', content: brand.logo.content, cid: `organizer-logo-${invitee._id}`, contentType: brand.logo.contentType, url: hostedImage('logo') }] : []),
-                            // the details icons, and the LGPSM logo while the organizer has none of their own
+                            // the details icons
                             ...(await (0, emailImages_1.inlineImagesFor)(htmlContent))
                         ];
                         await (0, email_provider_1.sendEmail)(invitee.email, (0, invitationEmail_1.invitationEmailSubject)(event.title, true), htmlContent, attachments);
@@ -894,7 +896,7 @@ exports.invitationService = {
         // The design follows the organizer's template, or the event's type when none was chosen (see cardTemplates/designs.ts)
         const cardContext = await (0, context_1.loadCardContext)(event);
         const cardDesign = cardContext.cardDesign;
-        // the organizer's logo goes at the bottom of each invitation email (read once per send)
+        // the organizer's name, for an event that names no host (read once per send)
         const brand = await organizerBrand(event.organizerId);
         // Resolved once per event (not per invitee) — the same organizer-uploaded photo goes on
         // every invitee's card for this event.

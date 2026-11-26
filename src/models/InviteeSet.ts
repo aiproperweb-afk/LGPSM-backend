@@ -11,7 +11,10 @@ export interface IInviteeSet extends Document {
   eventId: mongoose.Types.ObjectId;
   /** Set when the list was uploaded for a single session */
   sessionId?: mongoose.Types.ObjectId | null;
+  /** the uploaded file's name; what the app shows is worked out from the session and upload order (see listNames), unless renamed */
   name: string;
+  /** true once someone renamed the list: their name is shown from then on */
+  renamed?: boolean;
   mode: ImportMode;
   createdBy?: mongoose.Types.ObjectId;
   createdByRole?: string;
@@ -28,6 +31,7 @@ const InviteeSetSchema = new Schema<IInviteeSet>(
     eventId: { type: Schema.Types.ObjectId, ref: 'Event', required: true, index: true },
     sessionId: { type: Schema.Types.ObjectId, ref: 'Session', default: null },
     name: { type: String, required: true, trim: true, maxlength: 200 },
+    renamed: { type: Boolean, default: false },
     mode: { type: String, enum: Object.values(ImportMode), required: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     createdByRole: { type: String },

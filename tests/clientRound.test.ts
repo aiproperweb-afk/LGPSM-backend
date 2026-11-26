@@ -260,17 +260,15 @@ describe('adding system users with shared contact details', () => {
 
 describe('invitation email footer', () => {
   const base = { eventTitle: 'Summit', inviteeName: 'Guest', eventDate: 'Fri', eventTime: '10 AM', venue: 'Kolkata', invitationUrl: 'https://example.com/i/x', cid: 'qr-1', cardCid: 'card-1' };
-  it('says who organized it, with their logo, for invitations and reminders', async () => {
+  it('says who organized it, for invitations and reminders', async () => {
     const { buildFormalInvitationEmailHTML } = await import('../src/services/invitation.service');
     for (const isReminder of [false, true]) {
-      const html = buildFormalInvitationEmailHTML({ ...base, isReminder, organizerLogoCid: 'organizer-logo-1', organizerName: 'Iconic <Events>' });
+      const html = buildFormalInvitationEmailHTML({ ...base, isReminder, organizerName: 'Iconic <Events>' });
       expect(html).toContain('Organized by <strong>Iconic &lt;Events&gt;</strong>');
-      expect(html).toContain('src="cid:organizer-logo-1"');
     }
-    // no organizer details: the platform line, and no broken image
+    // no organizer details: the platform line
     const plain = buildFormalInvitationEmailHTML(base);
     expect(plain).toContain('Organized via <strong>LGPSM Platform</strong>');
-    expect(plain).not.toContain('organizer-logo');
   });
 });
 

@@ -1,4 +1,5 @@
 import { activeAssignmentsOf } from './systemUserAssignment.service';
+import { billedGuestsByEvent } from './billing.service';
 import { PLATFORM_CURRENCY } from '../constants/currency';
 import { inviteesAllowedFilter } from '../utils/sessionAccess';
 import { startOfTodayInAppZone } from '../utils/invitationContent';
@@ -167,7 +168,7 @@ export const reportService = {
     };
   },
 
-  // Platform earnings per event: invitations sent x the event's locked per-invitee rate.
+  // Platform earnings per event: guests billed for (WhatsApp invitation or printed card) x the event's locked per-invitee rate.
   // Events created before rates were locked use the rate that was in effect when they were created.
   async getEarnings(filter: { from?: Date; to?: Date; eventId?: string; organizerId?: string } = {}) {
     const query: any = { status: { $ne: 'CANCELLED' } };
@@ -188,18 +189,15 @@ export const reportService = {
       .sort({ 'schedule.start': -1 })
       .lean();
 
-    const sentCounts = await Invitee.aggregate([
-      { $match: { eventId: { $in: events.map((e) => e._id) }, invitationStatus: InvitationStatus.SENT } },
-      { $group: { _id: '$eventId', count: { $sum: 1 } } }
-    ]);
-    const sentByEvent = new Map(sentCounts.map((c) => [String(c._id), c.count as number]));
+    // what is charged for: guests invited on WhatsApp or given a printed card (email is free)
+    const billed = await billedGuestsByEvent(events.map((e) => e._id));
     const settings = await PlatformSettings.findOne({ key: 'global' }).lean();
     const currency = PLATFORM_CURRENCY; // one platform currency; the stored setting is not consulted for it
 
     const rows = await Promise.all(events.map(async (e: any) => {
       const locked = e.pricing && e.pricing.lockedAt;
       const rate: number | null = locked ? e.pricing.ratePerInvitee ?? null : await platformSettingsService.rateInEffectAt(new Date(e.createdAt));
-      const invites = sentByEvent.get(String(e._id)) || 0;
+      const invites = billed.get(String(e._id))?.size || 0;
       const org = e.organizerId || {};
       return {
         eventId: String(e._id),

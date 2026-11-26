@@ -1,4 +1,5 @@
-// An organizer pays for the invitations sent on an event through Razorpay: due = sent x locked rate - already paid.
+// An organizer pays through Razorpay for guests invited on WhatsApp (and printed cards): due = those guests x locked rate - already paid.
+// Email invitations are free.
 // The Razorpay API is stubbed; no network call or real charge happens.
 import request from 'supertest';
 import mongoose from 'mongoose';
@@ -11,6 +12,9 @@ import { Event } from '../src/models/Event';
 import { Invitee } from '../src/models/Invitee';
 import { Order } from '../src/models/Order';
 import { PlatformSettings } from '../src/models/PlatformSettings';
+import { Invitation } from '../src/models/Invitation';
+import { Notification } from '../src/models/Notification';
+import { whatsappService } from '../src/services/whatsapp.service';
 import { generateAccessToken } from '../src/utils/token';
 
 jest.setTimeout(60000);
@@ -22,14 +26,20 @@ const stubRazorpay = () => jest.spyOn(global, 'fetch').mockImplementation(async 
   return { ok: true, json: async () => ({ id: `order_test_${++n}`, entity: 'order', amount: body.amount, currency: body.currency, receipt: body.receipt }) } as any;
 });
 const sign = (orderId: string, payId: string) => crypto.createHmac('sha256', 'rzp_test_secret').update(`${orderId}|${payId}`).digest('hex');
-const sendTo = (count: number) => Invitee.insertMany(Array.from({ length: count }, (_, i) => ({ eventId: ev._id, name: `G${n}${i}`, email: `g${n}${i}@x.com`, mobile: `98765${String(10000 + n * 100 + i).slice(-5)}`, invitationStatus: 'SENT' })));
+// guests whose invitation really went out on WhatsApp (what is billed)
+const sendTo = async (count: number) => {
+  const guests: any[] = await Invitee.insertMany(Array.from({ length: count }, (_, i) => ({ eventId: ev._id, name: `G${n}${i}`, email: `g${n}${i}@x.com`, mobile: `98765${String(10000 + n * 100 + i).slice(-5)}`, invitationStatus: 'SENT' })));
+  await Invitation.insertMany(guests.map((g, i) => ({ eventId: ev._id, inviteeId: g._id, channel: 'WHATSAPP', status: 'SENT', whatsappStatus: 'SENT', tokenHash: `t-${n}-${i}-${g._id}` })));
+  return guests;
+};
 
 beforeAll(async () => { mongo = await MongoMemoryServer.create(); await mongoose.connect(mongo.getUri()); });
 afterAll(async () => { await mongoose.disconnect(); await mongo.stop(); });
 beforeEach(async () => {
   process.env.RAZORPAY_KEY_ID = 'rzp_test_key';
   process.env.RAZORPAY_KEY_SECRET = 'rzp_test_secret';
-  await Promise.all([User.deleteMany({}), Category.deleteMany({}), Event.deleteMany({}), Invitee.deleteMany({}), Order.deleteMany({}), PlatformSettings.deleteMany({})]);
+  process.env.WHATSAPP_ACCESS_TOKEN = 'test-token';
+  await Promise.all([User.deleteMany({}), Category.deleteMany({}), Event.deleteMany({}), Invitee.deleteMany({}), Order.deleteMany({}), PlatformSettings.deleteMany({}), Invitation.deleteMany({}), Notification.deleteMany({})]);
   org = await User.create({ fullName: 'Org', email: 'o@x.com', role: Role.ORGANIZER, isActive: true });
   other = await User.create({ fullName: 'Other', email: 'p@x.com', role: Role.ORGANIZER, isActive: true });
   const cat = await Category.create({ name: 'Corporate', isActive: true });
@@ -65,6 +75,7 @@ describe('bill for sending to chosen guests', () => {
     expect(q.body.data).toMatchObject({ invitees: 0, total: 0, alreadyPaid: 5, payable: false });
     // once they are sent, nothing is due
     await Invitee.updateMany({ _id: { $in: ids } }, { $set: { invitationStatus: 'SENT' } });
+    await Invitation.insertMany(ids.map((id, i) => ({ eventId: ev._id, inviteeId: id, channel: 'BOTH', status: 'SENT', whatsappStatus: 'SENT', tokenHash: `q-${i}` })));
     const bills = await request(app).get('/api/v1/billing/events').set(auth(org));
     expect(bills.body.data.totalDue).toBe(0);
   });
@@ -124,11 +135,11 @@ describe('the default price per invitee', () => {
     process.env.DEFAULT_RATE_PER_INVITEE = '3';
     try {
       await Event.updateOne({ _id: ev._id }, { $unset: { pricing: 1 } });
-      const g: any[] = await Invitee.insertMany([{ eventId: ev._id, name: 'D0', email: 'd0@x.com' }]);
+      const g: any[] = await Invitee.insertMany([{ eventId: ev._id, name: 'D0', email: 'd0@x.com', mobile: '9811100077' }]);
       const ids = g.map((x) => String(x._id));
       const q = await request(app).post('/api/v1/billing/quote').set(auth(org)).send({ eventId: String(ev._id), inviteeIds: ids });
       expect(q.body.data).toMatchObject({ rate: 3, invitees: 1, subtotal: 3, payable: true });
-      const sent = await request(app).post(`/api/v1/events/${ev._id}/invitations/send`).set(auth(org)).send({ inviteeIds: ids, channel: 'EMAIL' });
+      const sent = await request(app).post(`/api/v1/events/${ev._id}/invitations/send`).set(auth(org)).send({ inviteeIds: ids, channel: 'WHATSAPP' });
       expect(sent.status).toBe(402);
       const price = await request(app).get('/api/v1/settings/pricing').set(auth(await User.create({ fullName: 'A', email: 'ad@x.com', role: Role.ADMIN, isActive: true })));
       expect(price.body.data.ratePerInvitee).toBe(3);
@@ -142,13 +153,14 @@ describe('an event created before any rate was set', () => {
   it('refuses to send unpaid invitations, whichever screen asks, and lets a paid or free send through', async () => {
     const guests: any[] = await Invitee.insertMany([0, 1].map((i) => ({ eventId: ev._id, name: `Unpaid ${i}`, email: `unpaid${i}@x.com`, mobile: `9811100000`.slice(0, 9) + i })));
     const ids = guests.map((g) => String(g._id));
-    const send = () => request(app).post(`/api/v1/events/${ev._id}/invitations/send`).set(auth(org)).send({ inviteeIds: ids, channel: 'EMAIL' });
+    const send = () => request(app).post(`/api/v1/events/${ev._id}/invitations/send`).set(auth(org)).send({ inviteeIds: ids, channel: 'BOTH' });
     const refused = await send();
     expect(refused.status).toBe(402);
     expect(refused.body.code).toBe('PAYMENT_REQUIRED');
     expect(await Invitee.countDocuments({ eventId: ev._id, invitationStatus: 'SENT' })).toBe(0);
     // no rate anywhere: nothing to charge, so the send is not held back for payment
     await Event.updateOne({ _id: ev._id }, { $set: { pricing: { ratePerInvitee: null, currency: 'INR', lockedAt: new Date() } } });
+    jest.spyOn(whatsappService, 'sendInvitationWhatsApp').mockResolvedValue({ messageId: 'wamid.ok', mediaId: 'media.ok' });
     expect((await send()).status).not.toBe(402);
   });
 
@@ -265,6 +277,82 @@ describe('event bill payment', () => {
     await Event.updateOne({ _id: ev._id }, { $set: { 'pricing.ratePerInvitee': null } });
     const norate = await request(app).post('/api/v1/billing/pay').set(auth(org)).send({ eventId: String(ev._id) });
     expect(norate.status).toBe(409);
+  });
+});
+
+describe('email is free; WhatsApp is paid for, whoever sends it', () => {
+  const guestsOf = () => Invitee.insertMany([
+    { eventId: ev._id, name: 'Both Ways', email: 'both@x.com', mobile: '9811100101' },
+    { eventId: ev._id, name: 'Email Only', email: 'mail@x.com' }
+  ]);
+  const send = (who: any, ids: string[], channel: string) => request(app).post(`/api/v1/events/${ev._id}/invitations/send`).set(auth(who)).send({ inviteeIds: ids, channel });
+  const mkAdmin = () => User.create({ fullName: 'Admin', email: 'wa-admin@x.com', role: Role.ADMIN, isActive: true });
+
+  it('sends by email without payment and counts nothing as due', async () => {
+    const ids = (await guestsOf()).map((g: any) => String(g._id));
+    const q = await request(app).post('/api/v1/billing/quote').set(auth(org)).send({ eventId: String(ev._id), inviteeIds: ids, channel: 'EMAIL' });
+    expect(q.body.data).toMatchObject({ free: true, payable: false, total: 0 });
+    expect((await send(org, ids, 'EMAIL')).status).toBe(200);
+    expect(await Invitation.countDocuments({ eventId: ev._id })).toBeGreaterThan(0);
+    const bills = await request(app).get('/api/v1/billing/events').set(auth(org));
+    expect(bills.body.data.totalDue).toBe(0);
+  });
+
+  it('charges "All" only for the guests who have a mobile number, and nothing goes out unpaid', async () => {
+    const ids = (await guestsOf()).map((g: any) => String(g._id));
+    const q = await request(app).post('/api/v1/billing/quote').set(auth(org)).send({ eventId: String(ev._id), inviteeIds: ids, channel: 'BOTH' });
+    expect(q.body.data).toMatchObject({ invitees: 1, subtotal: 3, tax: 0.54, total: 3.54, payable: true, free: false });
+    const refused = await send(org, ids, 'BOTH');
+    expect([refused.status, refused.body.code]).toEqual([402, 'PAYMENT_REQUIRED']);
+    expect(await Invitation.countDocuments({ eventId: ev._id })).toBe(0);
+  });
+
+  it('holds an administrator back until the organizer has paid the request, then lets the send through', async () => {
+    const admin = await mkAdmin();
+    const ids = (await guestsOf()).map((g: any) => String(g._id));
+    const refused = await send(admin, ids, 'WHATSAPP');
+    expect(refused.status).toBe(402);
+    expect(refused.body.message).toMatch(/organizer has to pay/);
+
+    // the administrator sees the organizer's bill but cannot pay it
+    const q = await request(app).post('/api/v1/billing/quote').set(auth(admin)).send({ eventId: String(ev._id), inviteeIds: ids, channel: 'WHATSAPP' });
+    expect(q.body.data).toMatchObject({ total: 3.54, payable: true, organizerName: 'Org' });
+    expect((await request(app).post('/api/v1/billing/pay').set(auth(admin)).send({ eventId: String(ev._id), inviteeIds: ids, channel: 'WHATSAPP' })).status).toBe(403);
+    expect((await request(app).post('/api/v1/billing/request').set(auth(org)).send({ eventId: String(ev._id), inviteeIds: ids })).status).toBe(403);
+
+    const asked = await request(app).post('/api/v1/billing/request').set(auth(admin)).send({ eventId: String(ev._id), inviteeIds: ids });
+    expect(asked.body.data).toMatchObject({ requested: true, invitees: 1, total: 3.54 });
+    expect(await Notification.countDocuments({ userId: org._id, type: 'PAYMENT' })).toBe(1);
+    let bills = await request(app).get('/api/v1/billing/events').set(auth(org));
+    expect(bills.body.data.events[0]).toMatchObject({ requestedInvitees: 1, dueInvitees: 1, due: 3.54, invitesSent: 0 });
+
+    // "Pay now" on the Billing page pays what was asked for
+    stubRazorpay();
+    const pay = await request(app).post('/api/v1/billing/pay').set(auth(org)).send({ eventId: String(ev._id) });
+    expect(pay.body.data).toMatchObject({ invitees: 1, total: 3.54 });
+    const o = pay.body.data.providerOrderId;
+    expect((await request(app).post('/api/v1/payments/verify').set(auth(org)).send({ providerOrderId: o, providerPaymentId: 'pay_w', signature: sign(o, 'pay_w') })).status).toBe(200);
+    jest.restoreAllMocks();
+    bills = await request(app).get('/api/v1/billing/events').set(auth(org));
+    expect(bills.body.data.totalDue).toBe(0);
+    const spy = jest.spyOn(whatsappService, 'sendInvitationWhatsApp').mockResolvedValue({ messageId: 'wamid.ok', mediaId: 'media.ok' });
+    expect((await send(admin, ids, 'WHATSAPP')).status).toBe(200);
+    expect(spy).toHaveBeenCalledTimes(1);
+    bills = await request(app).get('/api/v1/billing/events').set(auth(org));
+    expect(bills.body.data.events[0]).toMatchObject({ due: 0, invitesSent: 1 });
+  });
+
+  it('asks nobody to pay while the server cannot send WhatsApp, and never charges an administrator\'s own event', async () => {
+    const ids = (await guestsOf()).map((g: any) => String(g._id));
+    delete process.env.WHATSAPP_ACCESS_TOKEN;
+    const q = await request(app).post('/api/v1/billing/quote').set(auth(org)).send({ eventId: String(ev._id), inviteeIds: ids, channel: 'BOTH' });
+    expect(q.body.data).toMatchObject({ payable: false, whatsappUnavailable: true });
+    expect((await send(org, ids, 'BOTH')).status).toBe(200);
+    process.env.WHATSAPP_ACCESS_TOKEN = 'test-token';
+    const admin = await mkAdmin();
+    await Event.updateOne({ _id: ev._id }, { $set: { organizerId: admin._id } });
+    const own = await request(app).post('/api/v1/billing/quote').set(auth(admin)).send({ eventId: String(ev._id), inviteeIds: ids, channel: 'WHATSAPP' });
+    expect(own.body.data).toMatchObject({ payable: false });
   });
 });
 

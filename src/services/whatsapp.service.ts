@@ -53,6 +53,11 @@ export function describeWhatsAppError(message: string | undefined): string {
 export const whatsappService = {
   normalizePhoneNumber,
 
+  /** Can this server send WhatsApp messages at all? Nobody is asked to pay for them while it cannot. */
+  isConfigured(): boolean {
+    return !!(process.env.WHATSAPP_ACCESS_TOKEN || env.WHATSAPP_ACCESS_TOKEN) && !!(process.env.WHATSAPP_PHONE_NUMBER_ID || env.WHATSAPP_PHONE_NUMBER_ID);
+  },
+
   async uploadMedia(qrBuffer: Buffer): Promise<string> {
     const accessToken = process.env.WHATSAPP_ACCESS_TOKEN || env.WHATSAPP_ACCESS_TOKEN;
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || env.WHATSAPP_PHONE_NUMBER_ID;
