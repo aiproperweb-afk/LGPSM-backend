@@ -10,7 +10,8 @@ import { calmSpot, findQrFrame, inkBand, looksLikeLettering, Box } from './layou
  * (wording such as "Save the date" stays as the designer made it). When the title and one more detail cannot be found with confidence,
  * `detected` is false and the person marks the areas by hand instead.
  */
-export type ZoneRole = 'title' | 'dateTime' | 'venue' | 'inviteeName' | 'inviteeMeta' | 'qr';
+/** `logo` is only ever marked by hand: the event's logo is shown there */
+export type ZoneRole = 'title' | 'dateTime' | 'venue' | 'inviteeName' | 'inviteeMeta' | 'qr' | 'logo';
 export interface TextZone {
   role: ZoneRole;
   x: number; y: number; w: number; h: number;

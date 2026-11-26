@@ -1,8 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.googleAuthSchema = exports.verifyResetOtpSchema = exports.changePendingEmailSchema = exports.resendVerificationSchema = exports.verifyEmailSchema = exports.resetPasswordSchema = exports.forgotPasswordSchema = exports.refreshTokenSchema = exports.loginSchema = exports.registerSchema = void 0;
+exports.lostEmailSchema = exports.findAccountVerifySchema = exports.findAccountSchema = exports.changePendingPhoneSchema = exports.verifySignupPhoneSchema = exports.signupPhoneSchema = exports.googleAuthSchema = exports.verifyResetOtpSchema = exports.changePendingEmailSchema = exports.resendVerificationSchema = exports.verifyEmailSchema = exports.resetPasswordSchema = exports.forgotPasswordSchema = exports.refreshTokenSchema = exports.loginSchema = exports.registerSchema = exports.sixDigitCodeSchema = void 0;
 const zod_1 = require("zod");
 const phone_validator_1 = require("./phone.validator");
+// an Indian mobile number, with or without the country code or a leading 0
+const MOBILE = /^(?:91|0)?\d{10}$/;
+const mobileSchema = zod_1.z.string().trim().regex(MOBILE, 'Enter your 10-digit mobile number');
+const emailSchema = zod_1.z.string().trim().toLowerCase().email('Invalid email format');
+exports.sixDigitCodeSchema = zod_1.z.string().regex(/^\d{6}$/, 'Enter the 6-digit code');
 exports.registerSchema = zod_1.z.object({
     fullName: zod_1.z.string().trim().min(2, 'Full name must be at least 2 characters').max(120, 'Full name is too long'),
     email: zod_1.z.string().trim().toLowerCase().email('Invalid email format'),
@@ -13,7 +18,13 @@ exports.registerSchema = zod_1.z.object({
     organizationName: zod_1.z.string().trim().max(150, 'Organization name is too long').optional(),
     // How the organizer will send invitations (asked at signup); the send screen starts with this choice
     invitationChannel: zod_1.z.enum(['EMAIL', 'WHATSAPP', 'BOTH']).optional(),
+    // "web" or "app": a sign-up form where the mobile number is required (older app versions send neither)
+    channel: zod_1.z.enum(['web', 'app']).optional(),
+    marketingConsent: zod_1.z.boolean().optional(),
 }).superRefine((data, ctx) => {
+    if (data.channel && !MOBILE.test(data.phone || '')) {
+        ctx.addIssue({ code: 'custom', path: ['phone'], message: 'Enter your 10-digit mobile number' });
+    }
     if (data.organizationType === 'ORGANIZATION' && (data.organizationName?.length ?? 0) < 2) {
         ctx.addIssue({
             code: 'custom',
@@ -70,3 +81,13 @@ exports.verifyResetOtpSchema = zod_1.z.object({
 });
 // "Sign in with Google": the signed ID token Google gives the browser (organizers only)
 exports.googleAuthSchema = zod_1.z.object({ credential: zod_1.z.string().min(20).max(8192) }).strict();
+// The sign-up's mobile step
+exports.signupPhoneSchema = zod_1.z.object({ email: emailSchema });
+exports.verifySignupPhoneSchema = zod_1.z.object({ email: emailSchema, code: exports.sixDigitCodeSchema });
+exports.changePendingPhoneSchema = zod_1.z.object({ email: emailSchema, password: zod_1.z.string().min(1, 'Enter the password you chose'), phone: mobileSchema });
+// "Can't access your account?"
+exports.findAccountSchema = zod_1.z.object({ phone: mobileSchema });
+exports.findAccountVerifySchema = zod_1.z.object({ phone: mobileSchema, code: exports.sixDigitCodeSchema });
+exports.lostEmailSchema = zod_1.z
+    .object({ email: emailSchema, recoveryEmail: emailSchema })
+    .refine((d) => d.email !== d.recoveryEmail, { path: ['recoveryEmail'], message: 'Give a different email address you can still open' });

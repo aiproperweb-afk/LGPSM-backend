@@ -38,6 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.userService = void 0;
 exports.staffVisibleToOrganizer = staffVisibleToOrganizer;
+const sms_service_1 = require("./sms.service");
 const auditLog_service_1 = require("./auditLog.service");
 const EmailVerification_1 = require("../models/EmailVerification");
 const mongoose_1 = __importDefault(require("mongoose"));
@@ -178,13 +179,15 @@ async function profileWithAvatarUrl(user) {
         result.profile.avatarUrl = avatarUrl;
     return result;
 }
+/** The profile as its owner sees it, with whether their mobile number can be verified on this server */
+const ownProfile = async (user) => ({ ...(await profileWithAvatarUrl(user)), phoneVerificationAvailable: sms_service_1.smsService.isConfigured() });
 exports.userService = {
     async getProfile(userId) {
         const user = await user_repository_1.userRepository.findById(userId);
         if (!user) {
             throw { statusCode: 404, message: 'User not found' };
         }
-        return profileWithAvatarUrl(user);
+        return ownProfile(user);
     },
     async updateProfile(userId, data) {
         const { organization, ...personal } = data || {};
@@ -216,11 +219,17 @@ exports.userService = {
             for (const [key, value] of Object.entries(otherProfile))
                 payload[`profile.${key}`] = value;
         }
+        // a different number has not been proved yet
+        if (payload.phone !== undefined) {
+            const current = await user_repository_1.userRepository.findById(userId);
+            if (current && (current.phone || '') !== payload.phone)
+                payload.isPhoneVerified = false;
+        }
         const user = await user_repository_1.userRepository.updateById(userId, payload);
         if (!user) {
             throw { statusCode: 404, message: 'User not found' };
         }
-        return profileWithAvatarUrl(user);
+        return ownProfile(user);
     },
     async updateProfilePhoto(userId, buffer, originalName) {
         const stored = await media_service_1.mediaService.storeImage(userId, Media_1.MediaPurpose.AVATAR, buffer, originalName);
@@ -426,6 +435,8 @@ exports.userService = {
         }
         if (data.phone !== undefined) {
             updatePayload.phone = (0, whatsapp_service_1.normalizePhoneNumber)(data.phone);
+            if (updatePayload.phone !== (target.phone || ''))
+                updatePayload.isPhoneVerified = false;
         }
         if (data.isActive !== undefined) {
             if (actor.role === User_1.Role.ADMIN) {

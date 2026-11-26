@@ -785,7 +785,7 @@ export const inviteeService = {
       await auditLogService.record({
         actorId: organizerId, actorRole: options.role, eventId, organizerId: (event as any).organizerId,
         action: 'INVITEE_SET_ASIDE', entityType: 'InviteeSet', entityId: newSetId,
-        description: 'Never-invited guests set aside by a Replace',
+        description: 'Never-invited guests removed from the list by a Replace',
         metadata: { setId: results.setId, mode, archived: results.archived, failedKept: results.failedKept, unknownKept: results.unknownKept, preservedSets: results.preservedSets }
       });
     }

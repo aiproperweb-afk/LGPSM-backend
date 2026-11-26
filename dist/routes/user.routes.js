@@ -8,6 +8,7 @@ const express_1 = require("express");
 const user_controller_1 = require("../controllers/user.controller");
 const authenticate_1 = require("../middlewares/authenticate");
 const user_validator_1 = require("../validators/user.validator");
+const userRateLimit_1 = require("../middlewares/userRateLimit");
 const authorizeRoles_1 = require("../middlewares/authorizeRoles");
 const User_2 = require("../models/User");
 const imageUpload_1 = require("../middlewares/imageUpload");
@@ -27,6 +28,12 @@ router.get('/profile', user_controller_1.userController.getProfile);
 router.patch('/profile', validate(user_validator_1.updateProfileSchema), user_controller_1.userController.updateProfile);
 router.patch('/profile/photo', rateLimiter_1.mediaUploadLimiter, imageUpload_1.uploadImage, user_controller_1.userController.updateProfilePhoto);
 router.patch('/me/password', validate(user_validator_1.changePasswordSchema), (0, auditAction_1.auditAction)({ action: 'USER_PASSWORD_CHANGE', entityType: 'User' }), user_controller_1.userController.changePassword);
+// Proving the mobile number, and changing the sign-in email (a code goes to the new address before anything changes)
+const tenMinutes = 10 * 60 * 1000;
+router.post('/me/phone/send', (0, userRateLimit_1.perUserLimit)('phone-code', { windowMs: tenMinutes, max: 5 }), user_controller_1.userController.sendPhoneCode);
+router.post('/me/phone/verify', (0, userRateLimit_1.perUserLimit)('phone-verify', { windowMs: tenMinutes, max: 15 }), validate(user_validator_1.verificationCodeSchema), user_controller_1.userController.verifyPhone);
+router.post('/me/email', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ORGANIZER), (0, userRateLimit_1.perUserLimit)('email-change', { windowMs: tenMinutes, max: 8 }), validate(user_validator_1.changeEmailSchema), (0, auditAction_1.auditAction)({ action: 'USER_EMAIL_CHANGE_REQUEST', entityType: 'User' }), user_controller_1.userController.requestEmailChange);
+router.post('/me/email/confirm', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ORGANIZER), (0, userRateLimit_1.perUserLimit)('email-change-confirm', { windowMs: tenMinutes, max: 15 }), validate(user_validator_1.verificationCodeSchema), (0, auditAction_1.auditAction)({ action: 'USER_EMAIL_CHANGE', entityType: 'User' }), user_controller_1.userController.confirmEmailChange);
 // Endpoint for Admins and Organizers to list users (supports ?role=SYSTEM_USER)
 router.get('/', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ADMIN, User_2.Role.ORGANIZER), user_controller_1.userController.getUsers);
 // Endpoint for Admins and Organizers to create sub-users

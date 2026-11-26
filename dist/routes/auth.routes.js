@@ -32,4 +32,12 @@ router.post('/verify-email', rateLimiter_1.authRateLimiter, rateLimiter_1.verify
 // "Change email address" on the sign-up code page
 router.post('/change-pending-email', rateLimiter_1.authRateLimiter, rateLimiter_1.changePendingEmailRateLimiter, validate(auth_validator_1.changePendingEmailSchema), auth_controller_1.authController.changePendingEmail);
 router.post('/resend-verification', rateLimiter_1.authRateLimiter, rateLimiter_1.resendVerificationRateLimiter, validate(auth_validator_1.resendVerificationSchema), auth_controller_1.authController.resendVerificationCode);
+// The sign-up's mobile step (before the account can sign in)
+router.post('/phone/resend', rateLimiter_1.phoneSendLimiter, validate(auth_validator_1.signupPhoneSchema), auth_controller_1.authController.resendSignupPhoneCode);
+router.post('/phone/verify', rateLimiter_1.phoneVerifyLimiter, validate(auth_validator_1.verifySignupPhoneSchema), auth_controller_1.authController.verifySignupPhone);
+router.post('/change-pending-phone', rateLimiter_1.phoneSendLimiter, rateLimiter_1.changePendingEmailRateLimiter, validate(auth_validator_1.changePendingPhoneSchema), auth_controller_1.authController.changePendingPhone);
+// "Can't access your account?"
+router.post('/recovery/find-account', rateLimiter_1.phoneSendLimiter, rateLimiter_1.recoveryLimiter, validate(auth_validator_1.findAccountSchema), auth_controller_1.authController.sendFindAccountCode);
+router.post('/recovery/find-account/verify', rateLimiter_1.phoneVerifyLimiter, validate(auth_validator_1.findAccountVerifySchema), auth_controller_1.authController.findAccounts);
+router.post('/recovery/lost-email', rateLimiter_1.recoveryLimiter, validate(auth_validator_1.lostEmailSchema), auth_controller_1.authController.lostEmailAccess);
 exports.default = router;

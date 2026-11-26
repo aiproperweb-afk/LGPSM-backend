@@ -1,3 +1,4 @@
+import { smsService } from './sms.service';
 import { auditLogService } from './auditLog.service';
 import { EmailVerification } from '../models/EmailVerification';
 import mongoose from 'mongoose';
@@ -145,13 +146,16 @@ async function profileWithAvatarUrl(user: IUser): Promise<Record<string, any>> {
   return result;
 }
 
+/** The profile as its owner sees it, with whether their mobile number can be verified on this server */
+const ownProfile = async (user: IUser) => ({ ...(await profileWithAvatarUrl(user)), phoneVerificationAvailable: smsService.isConfigured() });
+
 export const userService = {
   async getProfile(userId: string) {
     const user = await userRepository.findById(userId);
     if (!user) {
       throw { statusCode: 404, message: 'User not found' };
     }
-    return profileWithAvatarUrl(user);
+    return ownProfile(user);
   },
 
   async updateProfile(userId: string, data: any) {
@@ -181,11 +185,16 @@ export const userService = {
       delete payload.profile;
       for (const [key, value] of Object.entries(otherProfile)) payload[`profile.${key}`] = value;
     }
+    // a different number has not been proved yet
+    if (payload.phone !== undefined) {
+      const current = await userRepository.findById(userId);
+      if (current && (current.phone || '') !== payload.phone) payload.isPhoneVerified = false;
+    }
     const user = await userRepository.updateById(userId, payload);
     if (!user) {
       throw { statusCode: 404, message: 'User not found' };
     }
-    return profileWithAvatarUrl(user);
+    return ownProfile(user);
   },
 
   async updateProfilePhoto(userId: string, buffer: Buffer, originalName?: string) {
@@ -408,6 +417,7 @@ export const userService = {
     }
     if (data.phone !== undefined) {
       updatePayload.phone = normalizePhoneNumber(data.phone);
+      if (updatePayload.phone !== ((target as any).phone || '')) updatePayload.isPhoneVerified = false;
     }
     if (data.isActive !== undefined) {
       if (actor.role === Role.ADMIN) {

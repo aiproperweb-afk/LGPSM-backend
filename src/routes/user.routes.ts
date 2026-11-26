@@ -5,7 +5,8 @@ import { platformSettingsService } from '../services/platformSettings.service';
 import { Router } from 'express';
 import { userController } from '../controllers/user.controller';
 import { authenticate } from '../middlewares/authenticate';
-import { updateProfileSchema, createUserSchema, updateUserSchema, changePasswordSchema } from '../validators/user.validator';
+import { updateProfileSchema, createUserSchema, updateUserSchema, changePasswordSchema, changeEmailSchema, verificationCodeSchema } from '../validators/user.validator';
+import { perUserLimit } from '../middlewares/userRateLimit';
 import { Request, Response, NextFunction } from 'express';
 import { authorizeRoles } from '../middlewares/authorizeRoles';
 import { Role } from '../models/User';
@@ -30,6 +31,13 @@ router.get('/profile', userController.getProfile);
 router.patch('/profile', validate(updateProfileSchema), userController.updateProfile);
 router.patch('/profile/photo', mediaUploadLimiter, uploadImage, userController.updateProfilePhoto);
 router.patch('/me/password', validate(changePasswordSchema), auditAction({ action: 'USER_PASSWORD_CHANGE', entityType: 'User' }), userController.changePassword);
+
+// Proving the mobile number, and changing the sign-in email (a code goes to the new address before anything changes)
+const tenMinutes = 10 * 60 * 1000;
+router.post('/me/phone/send', perUserLimit('phone-code', { windowMs: tenMinutes, max: 5 }), userController.sendPhoneCode);
+router.post('/me/phone/verify', perUserLimit('phone-verify', { windowMs: tenMinutes, max: 15 }), validate(verificationCodeSchema), userController.verifyPhone);
+router.post('/me/email', authorizeRoles(Role.ORGANIZER), perUserLimit('email-change', { windowMs: tenMinutes, max: 8 }), validate(changeEmailSchema), auditAction({ action: 'USER_EMAIL_CHANGE_REQUEST', entityType: 'User' }), userController.requestEmailChange);
+router.post('/me/email/confirm', authorizeRoles(Role.ORGANIZER), perUserLimit('email-change-confirm', { windowMs: tenMinutes, max: 15 }), validate(verificationCodeSchema), auditAction({ action: 'USER_EMAIL_CHANGE', entityType: 'User' }), userController.confirmEmailChange);
 
 // Endpoint for Admins and Organizers to list users (supports ?role=SYSTEM_USER)
 router.get(

@@ -8,6 +8,9 @@ import {
   verifyEmailRateLimiter,
   resendVerificationRateLimiter,
   changePendingEmailRateLimiter,
+  phoneSendLimiter,
+  phoneVerifyLimiter,
+  recoveryLimiter,
 } from '../middlewares/rateLimiter';
 import {
   registerSchema,
@@ -20,6 +23,12 @@ import {
   resendVerificationSchema,
   changePendingEmailSchema,
   verifyResetOtpSchema,
+  signupPhoneSchema,
+  verifySignupPhoneSchema,
+  changePendingPhoneSchema,
+  findAccountSchema,
+  findAccountVerifySchema,
+  lostEmailSchema,
 } from '../validators/auth.validator';
 import { Request, Response, NextFunction } from 'express';
 
@@ -86,5 +95,15 @@ router.post(
   validate(resendVerificationSchema),
   authController.resendVerificationCode
 );
+
+// The sign-up's mobile step (before the account can sign in)
+router.post('/phone/resend', phoneSendLimiter, validate(signupPhoneSchema), authController.resendSignupPhoneCode);
+router.post('/phone/verify', phoneVerifyLimiter, validate(verifySignupPhoneSchema), authController.verifySignupPhone);
+router.post('/change-pending-phone', phoneSendLimiter, changePendingEmailRateLimiter, validate(changePendingPhoneSchema), authController.changePendingPhone);
+
+// "Can't access your account?"
+router.post('/recovery/find-account', phoneSendLimiter, recoveryLimiter, validate(findAccountSchema), authController.sendFindAccountCode);
+router.post('/recovery/find-account/verify', phoneVerifyLimiter, validate(findAccountVerifySchema), authController.findAccounts);
+router.post('/recovery/lost-email', recoveryLimiter, validate(lostEmailSchema), authController.lostEmailAccess);
 
 export default router;

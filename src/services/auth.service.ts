@@ -16,6 +16,8 @@ import {
 import { sendEmail } from '../utils/email.provider';
 import { AuthProvider, Role } from '../models/User';
 import { MAX_OTP_ATTEMPTS, OTP_EXPIRY_MINUTES } from '../models/EmailVerification';
+import { accountSecurityService } from './accountSecurity.service';
+import { smsService } from './sms.service';
 import { OAuth2Client } from 'google-auth-library';
 import {
   PasswordResetOtp,
@@ -134,6 +136,9 @@ export const authService = {
     invitationChannel?: 'EMAIL' | 'WHATSAPP' | 'BOTH';
     organizationType?: 'INDIVIDUAL' | 'ORGANIZATION';
     organizationName?: string;
+    /** "web": the web sign-up form, where the mobile number is required and verified */
+    channel?: 'web' | 'app';
+    marketingConsent?: boolean;
   }) {
     // Self-registration only creates organizers.
     if (data.role && data.role !== Role.ORGANIZER) {
@@ -168,6 +173,9 @@ export const authService = {
 
     const hashedPassword = await hashPassword(data.password);
 
+    // the mobile number has to be verified too, once the server can send text messages
+    const verifyPhone = !!data.channel && !!data.phone && smsService.isConfigured();
+
     // Create account as active but unverified (isActive is preserved for administrative activation semantics)
     const user = await userRepository.create({
       fullName: data.fullName,
@@ -180,6 +188,9 @@ export const authService = {
       role: Role.ORGANIZER,
       isActive: true,
       isEmailVerified: false,
+      isPhoneVerified: false,
+      phoneVerificationRequired: verifyPhone,
+      ...(data.marketingConsent !== undefined ? { marketingConsent: data.marketingConsent } : {}),
       profile: {
         invitationChannel: data.invitationChannel || 'BOTH',
         ...(data.organizationType ? { organizationType: data.organizationType } : {}),
@@ -215,6 +226,11 @@ export const authService = {
       };
     }
 
+    // a text message that cannot be sent does not undo the sign-up: it can be asked for again on the next screen
+    if (verifyPhone && user.phone) {
+      await accountSecurityService.resendSignupPhoneCode(normalisedEmail).catch((err) => console.error('[auth.service] Sign-up text message was not sent:', err?.message));
+    }
+
     await alertService.notifyAdmins('newOrganizerRegistration', {
       type: 'SYSTEM',
       title: 'New organizer registered (pending verification)',
@@ -223,7 +239,7 @@ export const authService = {
       entityId: user._id,
     });
 
-    return { pendingVerification: true as const, email: normalisedEmail };
+    return { pendingVerification: true as const, email: normalisedEmail, phoneVerificationRequired: verifyPhone };
   },
 
   /**
@@ -302,7 +318,8 @@ export const authService = {
     // Remove OTP record
     await emailVerificationRepository.deleteByEmail(normalised);
 
-    return { verified: true as const };
+    const verified = await userRepository.findByRoleAndEmail(normalised, Role.ORGANIZER);
+    return { verified: true as const, phoneVerificationRequired: !!verified?.phoneVerificationRequired && !verified.isPhoneVerified && smsService.isConfigured() };
   },
 
   /**
@@ -453,6 +470,10 @@ export const authService = {
     // Email-verification gate — Organizer only (strictly when isEmailVerified === false for backward compatibility)
     if (user.role === Role.ORGANIZER && user.isEmailVerified === false) {
       throw { statusCode: 403, message: 'EMAIL_NOT_VERIFIED' };
+    }
+    // Mobile gate: only a sign-up that was asked to verify its number, and only while codes can still be sent
+    if (user.role === Role.ORGANIZER && user.phoneVerificationRequired && !user.isPhoneVerified && smsService.isConfigured()) {
+      throw { statusCode: 403, message: 'PHONE_NOT_VERIFIED' };
     }
 
     // Account-activation check (administrative disable, separate from email verification)

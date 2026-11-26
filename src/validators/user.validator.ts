@@ -69,3 +69,7 @@ export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
   newPassword: z.string().min(8, 'New password must be at least 8 characters')
 }).strict();
+
+// Changing the sign-in email (step 1 and 2) and verifying the mobile number on the profile
+export const changeEmailSchema = z.object({ newEmail: z.string().trim().toLowerCase().email('Enter a valid email address').max(150), password: z.string().min(1, 'Enter your current password') }).strict();
+export const verificationCodeSchema = z.object({ code: z.string().regex(/^\d{6}$/, 'Enter the 6-digit code') }).strict();

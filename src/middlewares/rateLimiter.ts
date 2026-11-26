@@ -96,6 +96,22 @@ export const resendVerificationRateLimiter = rateLimit({
 });
 
 /** Changing the address of a pending sign-up: it sends mail and takes a password, so it is limited like a resend */
+const perAddress = (name: string, max: number, windowMs: number, message: string) => rateLimit({
+  handler: logged(name),
+  store: new KvRateLimitStore(name),
+  windowMs,
+  max,
+  message: { success: false, message },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: skipInTest,
+});
+
+// Text messages cost money and can be abused: asking for one is limited more tightly than typing it in
+export const phoneSendLimiter = perAddress('phoneSendLimiter', 8, 10 * 60 * 1000, 'Too many code requests. Please try again in 10 minutes.');
+export const phoneVerifyLimiter = perAddress('phoneVerifyLimiter', 15, 10 * 60 * 1000, 'Too many verification attempts. Please try again in 10 minutes.');
+export const recoveryLimiter = perAddress('recoveryLimiter', 6, 15 * 60 * 1000, 'Too many recovery requests. Please try again in 15 minutes.');
+
 export const changePendingEmailRateLimiter = rateLimit({
   handler: logged('changePendingEmailRateLimiter'),
   store: new KvRateLimitStore('changePendingEmailRateLimiter'),

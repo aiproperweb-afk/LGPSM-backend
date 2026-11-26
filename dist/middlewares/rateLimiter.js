@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.mediaUploadLimiter = exports.importLimiter = exports.credentialActionLimiter = exports.invitationSendLimiter = exports.checkInLimiter = exports.templateRenderLimiter = exports.templateGenerationReadLimiter = exports.templateGenerationLimiter = exports.cardPreviewLimiter = exports.publicInvitationLimiter = exports.contactRateLimiter = exports.contactAttemptLimiter = exports.changePendingEmailRateLimiter = exports.resendVerificationRateLimiter = exports.verifyEmailRateLimiter = exports.refreshRateLimiter = exports.loginAccountLimiter = exports.loginIpLimiter = exports.authRateLimiter = void 0;
+exports.mediaUploadLimiter = exports.importLimiter = exports.credentialActionLimiter = exports.invitationSendLimiter = exports.checkInLimiter = exports.templateRenderLimiter = exports.templateGenerationReadLimiter = exports.templateGenerationLimiter = exports.cardPreviewLimiter = exports.publicInvitationLimiter = exports.contactRateLimiter = exports.contactAttemptLimiter = exports.changePendingEmailRateLimiter = exports.recoveryLimiter = exports.phoneVerifyLimiter = exports.phoneSendLimiter = exports.resendVerificationRateLimiter = exports.verifyEmailRateLimiter = exports.refreshRateLimiter = exports.loginAccountLimiter = exports.loginIpLimiter = exports.authRateLimiter = void 0;
 const express_rate_limit_1 = __importStar(require("express-rate-limit"));
 const securityLog_1 = require("../utils/securityLog");
 const rateLimitStore_1 = require("../infra/kv/rateLimitStore");
@@ -122,6 +122,20 @@ exports.resendVerificationRateLimiter = (0, express_rate_limit_1.default)({
     skip: skipInTest,
 });
 /** Changing the address of a pending sign-up: it sends mail and takes a password, so it is limited like a resend */
+const perAddress = (name, max, windowMs, message) => (0, express_rate_limit_1.default)({
+    handler: logged(name),
+    store: new rateLimitStore_1.KvRateLimitStore(name),
+    windowMs,
+    max,
+    message: { success: false, message },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: skipInTest,
+});
+// Text messages cost money and can be abused: asking for one is limited more tightly than typing it in
+exports.phoneSendLimiter = perAddress('phoneSendLimiter', 8, 10 * 60 * 1000, 'Too many code requests. Please try again in 10 minutes.');
+exports.phoneVerifyLimiter = perAddress('phoneVerifyLimiter', 15, 10 * 60 * 1000, 'Too many verification attempts. Please try again in 10 minutes.');
+exports.recoveryLimiter = perAddress('recoveryLimiter', 6, 15 * 60 * 1000, 'Too many recovery requests. Please try again in 15 minutes.');
 exports.changePendingEmailRateLimiter = (0, express_rate_limit_1.default)({
     handler: logged('changePendingEmailRateLimiter'),
     store: new rateLimitStore_1.KvRateLimitStore('changePendingEmailRateLimiter'),

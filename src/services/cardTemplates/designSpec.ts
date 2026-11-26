@@ -142,7 +142,11 @@ export const qrElementSchema = z
  * Uploaded designs only: a place in the organizer's picture whose old wording is painted out from the background around it, so the event's
  * own text (a `text` element on the same spot) can be written there. Nothing else of the picture changes.
  */
-export const patchElementSchema = z.object({ ...base, type: z.literal('patch'), x: coord, y: coord, w: px(4, MAX_CANVAS), h: px(4, MAX_CANVAS) }).strict();
+export const patchElementSchema = z.object({
+  ...base, type: z.literal('patch'), x: coord, y: coord, w: px(4, MAX_CANVAS), h: px(4, MAX_CANVAS),
+  /** painted out only when the event has a logo to put there; without one the picture keeps what the designer drew */
+  slot: z.literal('logo').optional()
+}).strict();
 
 export const elementSchema = z.discriminatedUnion('type', [rectElementSchema, patchElementSchema, ellipseElementSchema, lineElementSchema, textElementSchema, imageElementSchema, qrElementSchema]);
 export type SpecElement = z.infer<typeof elementSchema>;

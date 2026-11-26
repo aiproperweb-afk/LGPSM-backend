@@ -382,7 +382,8 @@ export async function renderDesignSpec(input: SpecRenderInput): Promise<SpecRend
   const warnings: string[] = [];
   const backgroundImage = await loadBackgroundImage(input.spec, width, height, warnings);
   // the old wording of an uploaded design is painted out of the picture before anything is drawn on it
-  const patches = input.spec.elements.filter((e) => e.type === 'patch').map((e) => ({ x: (e as { x: number }).x * s, y: (e as { y: number }).y * s, w: (e as { w: number }).w * s, h: (e as { h: number }).h * s }));
+  const showsLogo = !!input.logo && input.spec.elements.some((e) => e.type === 'image' && e.slot === 'logo');
+  const patches = input.spec.elements.filter((e) => e.type === 'patch' && (e.slot !== 'logo' || showsLogo)).map((e) => ({ x: (e as { x: number }).x * s, y: (e as { y: number }).y * s, w: (e as { w: number }).w * s, h: (e as { h: number }).h * s }));
   const cleanedImage = backgroundImage && patches.length ? await paintOutAreas(backgroundImage, patches) : backgroundImage;
   const spec = await withoutUploadPanel(input.spec, cleanedImage, s, input.bottomInset ?? 0);
 

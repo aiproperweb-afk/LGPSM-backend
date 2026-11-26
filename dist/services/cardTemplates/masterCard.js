@@ -26,6 +26,7 @@ const CONTENT_WIDTH = 345;
 const LINE_HEIGHT = 1.2102; // Inter's "normal" line height
 const ASCENT = 0.96875; // Inter's ascent, in em: where the baseline sits in a line box
 const LOGO = 90;
+const LOGO_MAX_WIDTH = 220;
 const QR_BOX = 160;
 const BORDER = 1.746;
 const SCALE_DEFAULT = 2;
@@ -102,8 +103,10 @@ async function renderMasterCard(input) {
     const gaps = []; // the gap before each block (the first has none)
     const add = (block, gap) => { gaps.push(blocks.length ? gap : 0); blocks.push(block); };
     if (logo) {
-        const png = await (0, sharp_1.default)(logo, { failOn: 'none' }).rotate().resize(Math.round(LOGO * s), Math.round(LOGO * s), { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
-        add({ height: LOGO, draw: (top, _svg, layers) => { layers.push({ input: png, left: Math.round(((exports.MASTER_WIDTH - LOGO) / 2) * s), top: Math.round(top * s) }); } }, 0);
+        // the whole logo, never cut: up to LOGO tall, and wider than tall when the logo is (a name-style logo stays readable)
+        const { data: png, info } = await (0, sharp_1.default)(logo, { failOn: 'none' }).rotate().resize(Math.round(LOGO_MAX_WIDTH * s), Math.round(LOGO * s), { fit: 'inside' }).png().toBuffer({ resolveWithObject: true });
+        const drop = Math.round((LOGO * s - info.height) / 2);
+        add({ height: LOGO, draw: (top, _svg, layers) => { layers.push({ input: png, left: Math.round((exports.MASTER_WIDTH * s - info.width) / 2), top: Math.round(top * s) + drop }); } }, 0);
     }
     if (title) {
         const t = await fit(title, 'Inter', 700, 26, 16, 4);

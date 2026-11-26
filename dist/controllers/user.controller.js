@@ -2,9 +2,25 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.userController = void 0;
 const user_service_1 = require("../services/user.service");
+const accountSecurity_service_1 = require("../services/accountSecurity.service");
 const systemUserAssignment_service_1 = require("../services/systemUserAssignment.service");
 const query_1 = require("../utils/query");
+/** An action on the signed-in person's own account */
+const own = (action) => async (req, res, next) => {
+    try {
+        if (!req.user)
+            throw { statusCode: 401, message: 'Unauthorized' };
+        res.status(200).json({ success: true, data: await action(req.user.userId, req.body) });
+    }
+    catch (error) {
+        next(error);
+    }
+};
 exports.userController = {
+    sendPhoneCode: own((userId) => accountSecurity_service_1.accountSecurityService.sendProfilePhoneCode(userId)),
+    verifyPhone: own((userId, body) => accountSecurity_service_1.accountSecurityService.verifyProfilePhone(userId, body.code)),
+    requestEmailChange: own((userId, body) => accountSecurity_service_1.accountSecurityService.requestEmailChange(userId, body)),
+    confirmEmailChange: own((userId, body) => accountSecurity_service_1.accountSecurityService.confirmEmailChange(userId, body.code)),
     async getProfile(req, res, next) {
         try {
             if (!req.user)

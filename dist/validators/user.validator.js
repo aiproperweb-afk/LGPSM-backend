@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.changePasswordSchema = exports.updateUserSchema = exports.createUserSchema = exports.updateProfileSchema = void 0;
+exports.verificationCodeSchema = exports.changeEmailSchema = exports.changePasswordSchema = exports.updateUserSchema = exports.createUserSchema = exports.updateProfileSchema = void 0;
 const zod_1 = require("zod");
 const User_1 = require("../models/User");
 const phone_validator_1 = require("./phone.validator");
@@ -67,3 +67,6 @@ exports.changePasswordSchema = zod_1.z.object({
     currentPassword: zod_1.z.string().min(1, 'Current password is required'),
     newPassword: zod_1.z.string().min(8, 'New password must be at least 8 characters')
 }).strict();
+// Changing the sign-in email (step 1 and 2) and verifying the mobile number on the profile
+exports.changeEmailSchema = zod_1.z.object({ newEmail: zod_1.z.string().trim().toLowerCase().email('Enter a valid email address').max(150), password: zod_1.z.string().min(1, 'Enter your current password') }).strict();
+exports.verificationCodeSchema = zod_1.z.object({ code: zod_1.z.string().regex(/^\d{6}$/, 'Enter the 6-digit code') }).strict();

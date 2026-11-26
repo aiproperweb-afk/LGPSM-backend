@@ -46,16 +46,24 @@ const WORDING = ['title', 'dateTime', 'venue'];
  *  - the guest's QR code goes in the design's own QR box (or the quietest spot of the picture);
  *  - the guest's name and extra details only where the design left a place for them: with no place, they are not added;
  *  - when `replaceWording` (admin uploads), the event's name, date and time and venue are written over the design's own wording, which is
- *    painted out of the picture first. The picture is otherwise untouched, and nothing is drawn behind anything.
+ *    painted out of the picture first. The picture is otherwise untouched, and nothing is drawn behind anything;
+ *  - also for admin uploads, the event's logo goes where a logo area was marked (an event with no logo keeps the picture's own).
  */
 function buildSpecFromZones(imageKey, width, height, zones, replaceWording, lightPicture) {
     const presetId = presetFor(width, height);
     const { width: W, height: H } = designSpec_1.CANVAS_PRESETS[presetId];
     const elements = [];
-    const kept = zones.filter((z) => replaceWording || !WORDING.includes(z.role));
+    const kept = zones.filter((z) => replaceWording || (!WORDING.includes(z.role) && z.role !== 'logo'));
     kept.forEach((z, i) => {
         if (z.role === 'qr')
             return;
+        if (z.role === 'logo') {
+            const box = { x: Math.round(z.x), y: Math.round(z.y), w: Math.max(20, Math.round(z.w)), h: Math.max(20, Math.round(z.h)) };
+            if (z.erase ?? true)
+                elements.push({ type: 'patch', id: `patch${i}`, slot: 'logo', ...box });
+            elements.push({ type: 'image', id: `zone${i}`, slot: 'logo', fit: 'contain', ...box });
+            return;
+        }
         const erase = z.erase ?? WORDING.includes(z.role);
         if (erase)
             elements.push({ type: 'patch', id: `patch${i}`, x: Math.round(z.x), y: Math.round(z.y), w: Math.max(4, Math.round(z.w)), h: Math.max(4, Math.round(z.h)) });
@@ -215,13 +223,17 @@ async function ownUpload(actor, id) {
         throw new UploadError(404, 'Template not found');
     return t;
 }
-/** The areas now in the design, as the editor shows them (the QR code, the guest's name and details, and an admin upload's wording) */
+/** The areas now in the design, as the editor shows them (the QR code, the guest's name and details, and an admin upload's wording and logo) */
 const zoneElements = (spec) => {
     const els = spec?.elements || [];
     const out = [];
     for (const e of els) {
         if (e.type === 'qr')
             out.push({ role: 'qr', x: e.x, y: e.y, w: e.size, h: e.size, lines: 1, color: '#000000', fontFamily: 'Inter', fontWeight: 400, align: 'center', frame: !!e.frameColor });
+        if (e.type === 'image' && e.slot === 'logo' && /^zone\d+$/.test(e.id || '')) {
+            const n = String(e.id).slice(4);
+            out.push({ role: 'logo', x: e.x, y: e.y, w: e.w, h: e.h, lines: 1, color: '#000000', fontFamily: 'Inter', fontWeight: 400, align: 'center', erase: els.some((p) => p.type === 'patch' && p.id === `patch${n}`) });
+        }
         if (e.type === 'text' && /^zone\d+$/.test(e.id || '')) {
             const n = String(e.id).slice(4);
             out.push({ role: e.role, x: e.x, y: e.y, w: e.w, h: e.h, lines: e.maxLines, color: e.color, fontFamily: e.fontFamily, fontWeight: e.fontWeight, align: e.align, erase: els.some((p) => p.type === 'patch' && p.id === `patch${n}`) });

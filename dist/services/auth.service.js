@@ -15,6 +15,8 @@ const token_1 = require("../utils/token");
 const email_provider_1 = require("../utils/email.provider");
 const User_1 = require("../models/User");
 const EmailVerification_1 = require("../models/EmailVerification");
+const accountSecurity_service_1 = require("./accountSecurity.service");
+const sms_service_1 = require("./sms.service");
 const google_auth_library_1 = require("google-auth-library");
 const PasswordResetOtp_1 = require("../models/PasswordResetOtp");
 const alert_service_1 = require("./alert.service");
@@ -130,6 +132,8 @@ exports.authService = {
             await emailVerification_repository_1.emailVerificationRepository.deleteByEmail(normalisedEmail);
         }
         const hashedPassword = await (0, password_1.hashPassword)(data.password);
+        // the mobile number has to be verified too, once the server can send text messages
+        const verifyPhone = !!data.channel && !!data.phone && sms_service_1.smsService.isConfigured();
         // Create account as active but unverified (isActive is preserved for administrative activation semantics)
         const user = await user_repository_1.userRepository.create({
             fullName: data.fullName,
@@ -142,6 +146,9 @@ exports.authService = {
             role: User_1.Role.ORGANIZER,
             isActive: true,
             isEmailVerified: false,
+            isPhoneVerified: false,
+            phoneVerificationRequired: verifyPhone,
+            ...(data.marketingConsent !== undefined ? { marketingConsent: data.marketingConsent } : {}),
             profile: {
                 invitationChannel: data.invitationChannel || 'BOTH',
                 ...(data.organizationType ? { organizationType: data.organizationType } : {}),
@@ -169,6 +176,10 @@ exports.authService = {
                 message: 'Unable to send verification email. Please try again later.',
             };
         }
+        // a text message that cannot be sent does not undo the sign-up: it can be asked for again on the next screen
+        if (verifyPhone && user.phone) {
+            await accountSecurity_service_1.accountSecurityService.resendSignupPhoneCode(normalisedEmail).catch((err) => console.error('[auth.service] Sign-up text message was not sent:', err?.message));
+        }
         await alert_service_1.alertService.notifyAdmins('newOrganizerRegistration', {
             type: 'SYSTEM',
             title: 'New organizer registered (pending verification)',
@@ -176,7 +187,7 @@ exports.authService = {
             entityType: 'User',
             entityId: user._id,
         });
-        return { pendingVerification: true, email: normalisedEmail };
+        return { pendingVerification: true, email: normalisedEmail, phoneVerificationRequired: verifyPhone };
     },
     /**
      * Verify an organizer's email address with the 6-digit OTP.
@@ -243,7 +254,8 @@ exports.authService = {
         await user_repository_1.userRepository.verifyOrganizerEmail(normalised, record.userId);
         // Remove OTP record
         await emailVerification_repository_1.emailVerificationRepository.deleteByEmail(normalised);
-        return { verified: true };
+        const verified = await user_repository_1.userRepository.findByRoleAndEmail(normalised, User_1.Role.ORGANIZER);
+        return { verified: true, phoneVerificationRequired: !!verified?.phoneVerificationRequired && !verified.isPhoneVerified && sms_service_1.smsService.isConfigured() };
     },
     /**
      * "Change email address" on the sign-up code page: the person typed their address wrongly in step 1, so the code went nowhere.
@@ -376,6 +388,10 @@ exports.authService = {
         // Email-verification gate — Organizer only (strictly when isEmailVerified === false for backward compatibility)
         if (user.role === User_1.Role.ORGANIZER && user.isEmailVerified === false) {
             throw { statusCode: 403, message: 'EMAIL_NOT_VERIFIED' };
+        }
+        // Mobile gate: only a sign-up that was asked to verify its number, and only while codes can still be sent
+        if (user.role === User_1.Role.ORGANIZER && user.phoneVerificationRequired && !user.isPhoneVerified && sms_service_1.smsService.isConfigured()) {
+            throw { statusCode: 403, message: 'PHONE_NOT_VERIFIED' };
         }
         // Account-activation check (administrative disable, separate from email verification)
         if (!user.isActive) {

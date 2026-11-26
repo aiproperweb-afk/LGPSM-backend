@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { optionalPhoneSchema } from './phone.validator';
 
+// an Indian mobile number, with or without the country code or a leading 0
+const MOBILE = /^(?:91|0)?\d{10}$/;
+const mobileSchema = z.string().trim().regex(MOBILE, 'Enter your 10-digit mobile number');
+const emailSchema = z.string().trim().toLowerCase().email('Invalid email format');
+export const sixDigitCodeSchema = z.string().regex(/^\d{6}$/, 'Enter the 6-digit code');
+
 export const registerSchema = z.object({
   fullName: z.string().trim().min(2, 'Full name must be at least 2 characters').max(120, 'Full name is too long'),
   email: z.string().trim().toLowerCase().email('Invalid email format'),
@@ -11,7 +17,13 @@ export const registerSchema = z.object({
   organizationName: z.string().trim().max(150, 'Organization name is too long').optional(),
   // How the organizer will send invitations (asked at signup); the send screen starts with this choice
   invitationChannel: z.enum(['EMAIL', 'WHATSAPP', 'BOTH']).optional(),
+  // "web" or "app": a sign-up form where the mobile number is required (older app versions send neither)
+  channel: z.enum(['web', 'app']).optional(),
+  marketingConsent: z.boolean().optional(),
 }).superRefine((data, ctx) => {
+  if (data.channel && !MOBILE.test(data.phone || '')) {
+    ctx.addIssue({ code: 'custom', path: ['phone'], message: 'Enter your 10-digit mobile number' });
+  }
   if (data.organizationType === 'ORGANIZATION' && (data.organizationName?.length ?? 0) < 2) {
     ctx.addIssue({
       code: 'custom',
@@ -77,3 +89,15 @@ export const verifyResetOtpSchema = z.object({
 
 // "Sign in with Google": the signed ID token Google gives the browser (organizers only)
 export const googleAuthSchema = z.object({ credential: z.string().min(20).max(8192) }).strict();
+
+// The sign-up's mobile step
+export const signupPhoneSchema = z.object({ email: emailSchema });
+export const verifySignupPhoneSchema = z.object({ email: emailSchema, code: sixDigitCodeSchema });
+export const changePendingPhoneSchema = z.object({ email: emailSchema, password: z.string().min(1, 'Enter the password you chose'), phone: mobileSchema });
+
+// "Can't access your account?"
+export const findAccountSchema = z.object({ phone: mobileSchema });
+export const findAccountVerifySchema = z.object({ phone: mobileSchema, code: sixDigitCodeSchema });
+export const lostEmailSchema = z
+  .object({ email: emailSchema, recoveryEmail: emailSchema })
+  .refine((d) => d.email !== d.recoveryEmail, { path: ['recoveryEmail'], message: 'Give a different email address you can still open' });

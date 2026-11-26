@@ -401,7 +401,8 @@ async function renderFromSpec(fullSpec, data, bottomInset = 0) {
         texts,
         qr,
         photo: eventImage,
-        logo: eventImage || dataUrlToBuffer(getLogoBase64()),
+        // an uploaded design has its own artwork where a logo goes: with no event logo it is left as drawn, never replaced by ours
+        logo: eventImage || (spec.meta?.generator === 'UPLOAD' ? undefined : dataUrlToBuffer(getLogoBase64())),
         showPlaceholders: data.isPreview === true,
         bottomInset
     });

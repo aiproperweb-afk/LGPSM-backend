@@ -2,8 +2,24 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authController = void 0;
 const auth_service_1 = require("../services/auth.service");
+const accountSecurity_service_1 = require("../services/accountSecurity.service");
 const securityLog_1 = require("../utils/securityLog");
+/** Runs one account-security action and answers with its result */
+const answer = (action) => async (req, res, next) => {
+    try {
+        res.status(200).json({ success: true, data: await action(req) });
+    }
+    catch (error) {
+        next(error);
+    }
+};
 exports.authController = {
+    resendSignupPhoneCode: answer((req) => accountSecurity_service_1.accountSecurityService.resendSignupPhoneCode(req.body.email)),
+    verifySignupPhone: answer((req) => accountSecurity_service_1.accountSecurityService.verifySignupPhone(req.body.email, req.body.code)),
+    changePendingPhone: answer((req) => accountSecurity_service_1.accountSecurityService.changePendingPhone(req.body)),
+    sendFindAccountCode: answer((req) => accountSecurity_service_1.accountSecurityService.sendFindAccountCode(req.body.phone)),
+    findAccounts: answer((req) => accountSecurity_service_1.accountSecurityService.findAccounts(req.body.phone, req.body.code)),
+    lostEmailAccess: answer((req) => accountSecurity_service_1.accountSecurityService.requestEmailRecovery(req.body, { ip: req.ip, userAgent: req.get('user-agent') })),
     async register(req, res, next) {
         try {
             const result = await auth_service_1.authService.register(req.body);

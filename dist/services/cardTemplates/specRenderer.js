@@ -369,7 +369,8 @@ async function renderDesignSpec(input) {
     const warnings = [];
     const backgroundImage = await loadBackgroundImage(input.spec, width, height, warnings);
     // the old wording of an uploaded design is painted out of the picture before anything is drawn on it
-    const patches = input.spec.elements.filter((e) => e.type === 'patch').map((e) => ({ x: e.x * s, y: e.y * s, w: e.w * s, h: e.h * s }));
+    const showsLogo = !!input.logo && input.spec.elements.some((e) => e.type === 'image' && e.slot === 'logo');
+    const patches = input.spec.elements.filter((e) => e.type === 'patch' && (e.slot !== 'logo' || showsLogo)).map((e) => ({ x: e.x * s, y: e.y * s, w: e.w * s, h: e.h * s }));
     const cleanedImage = backgroundImage && patches.length ? await paintOutAreas(backgroundImage, patches) : backgroundImage;
     const spec = await withoutUploadPanel(input.spec, cleanedImage, s, input.bottomInset ?? 0);
     const layers = [];

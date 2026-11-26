@@ -1,8 +1,25 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service';
+import { accountSecurityService } from '../services/accountSecurity.service';
 import { securityEvent } from '../utils/securityLog';
 
+/** Runs one account-security action and answers with its result */
+const answer = (action: (req: Request) => Promise<unknown>) => async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.status(200).json({ success: true, data: await action(req) });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const authController = {
+  resendSignupPhoneCode: answer((req) => accountSecurityService.resendSignupPhoneCode(req.body.email)),
+  verifySignupPhone: answer((req) => accountSecurityService.verifySignupPhone(req.body.email, req.body.code)),
+  changePendingPhone: answer((req) => accountSecurityService.changePendingPhone(req.body)),
+  sendFindAccountCode: answer((req) => accountSecurityService.sendFindAccountCode(req.body.phone)),
+  findAccounts: answer((req) => accountSecurityService.findAccounts(req.body.phone, req.body.code)),
+  lostEmailAccess: answer((req) => accountSecurityService.requestEmailRecovery(req.body, { ip: req.ip, userAgent: req.get('user-agent') })),
+
   async register(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await authService.register(req.body);

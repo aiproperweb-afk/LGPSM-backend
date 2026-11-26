@@ -1,9 +1,25 @@
 import { Request, Response, NextFunction } from 'express';
 import { userService } from '../services/user.service';
+import { accountSecurityService } from '../services/accountSecurity.service';
 import { systemUserAssignmentService } from '../services/systemUserAssignment.service';
 import { queryObjectId, queryString } from '../utils/query';
 
+/** An action on the signed-in person's own account */
+const own = (action: (userId: string, body: any) => Promise<unknown>) => async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) throw { statusCode: 401, message: 'Unauthorized' };
+    res.status(200).json({ success: true, data: await action(req.user.userId, req.body) });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const userController = {
+  sendPhoneCode: own((userId) => accountSecurityService.sendProfilePhoneCode(userId)),
+  verifyPhone: own((userId, body) => accountSecurityService.verifyProfilePhone(userId, body.code)),
+  requestEmailChange: own((userId, body) => accountSecurityService.requestEmailChange(userId, body)),
+  confirmEmailChange: own((userId, body) => accountSecurityService.confirmEmailChange(userId, body.code)),
+
   async getProfile(req: Request, res: Response, next: NextFunction) {
     try {
       if (!req.user) throw { statusCode: 401, message: 'Unauthorized' };

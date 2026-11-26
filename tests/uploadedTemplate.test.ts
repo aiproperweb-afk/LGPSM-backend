@@ -100,6 +100,39 @@ describe('upload your own template', () => {
     expect(await decodeQr(full.body)).toMatch(/^https?:\/\//);
   });
 
+  it('a logo area on a shared design shows the event\'s logo in place of the picture\'s own, and keeps the picture as it is when there is none', async () => {
+    // a red design with the designer's white logo drawn at (200..600, 100..300) of a 1080 x 1920 canvas
+    const white = await sharp({ create: { width: 400, height: 200, channels: 3, background: '#ffffff' } }).png().toBuffer();
+    const data = await sharp({ create: { width: 1080, height: 1920, channels: 3, background: '#cc1122' } }).composite([{ input: white, left: 200, top: 100 }]).png().toBuffer();
+    const picture = await Media.create({ ownerId: admin._id, purpose: MediaPurpose.TEMPLATE, contentType: 'image/png', size: data.length, width: 1080, height: 1920, data });
+    const id = (await make(admin, { publish: true, name: 'With logo', imageKey: `media:${picture._id}` })).body.data._id;
+
+    // a square JPEG logo (no transparency), so the wide area has room left on both sides of it
+    const green = await sharp({ create: { width: 200, height: 200, channels: 3, background: '#00aa00' } }).jpeg({ quality: 100 }).toBuffer();
+    const logo = await Media.create({ ownerId: admin._id, purpose: MediaPurpose.EVENT_LOGO, contentType: 'image/jpeg', size: green.length, width: 200, height: 200, data: green });
+
+    const zone = { role: 'logo', x: 190, y: 90, w: 420, h: 220, lines: 1, color: '#000000', fontFamily: 'Inter', fontWeight: 400, align: 'center' };
+    expect((await request(app).put(`/api/v1/templates/${id}/text-zones`).set(auth(admin)).send({ zones: [zone] })).status).toBe(200);
+    const saved = await request(app).get(`/api/v1/templates/${id}/text-zones`).set(auth(admin));
+    expect(saved.body.data.zones.find((z: any) => z.role === 'logo')).toMatchObject({ x: 190, y: 90, w: 420, h: 220, erase: true });
+
+    const render = async (extra: object) => (await request(app).post(`/api/v1/templates/${id}/preview`).set(auth(admin)).send({ title: 'Gala', ...extra }).buffer(true).parse((r, cb) => { const c: Buffer[] = []; r.on('data', (d: Buffer) => c.push(d)); r.on('end', () => cb(null, Buffer.concat(c))); })).body as Buffer;
+    const at = async (card: Buffer, left: number, top: number) => [...(await sharp(card).extract({ left, top, width: 1, height: 1 }).removeAlpha().raw().toBuffer())];
+    const near = (actual: number[], expected: number[]) => actual.forEach((v, i) => expect(Math.abs(v - expected[i])).toBeLessThanOrEqual(6));
+
+    const withLogo = await render({ logoKey: `media:${logo._id}` });
+    near(await at(withLogo, 400, 200), [0x00, 0xaa, 0x00]); // the event's logo in the middle of the area
+    near(await at(withLogo, 215, 200), [0xcc, 0x11, 0x22]); // beside it: the designer's logo is gone and the background shows
+
+    near(await at(await render({}), 215, 200), [255, 255, 255]); // no event logo: the picture is as drawn
+    near(await at(await render({ logoKey: `media:${logo._id}`, cardDisplay: { logo: false } }), 215, 200), [255, 255, 255]); // logo switched off: the same
+
+    // an organizer's own design takes no logo area: it is sent as it is
+    const own = (await make(a, { name: 'Org', imageKey: await upload(a) })).body.data._id;
+    await request(app).put(`/api/v1/templates/${own}/text-zones`).set(auth(a)).send({ zones: [zone] });
+    expect(((await Template.findById(own).lean()) as any).designSpec.elements).toEqual([]);
+  });
+
   it('an organizer\'s upload saved by an older version (with a QR code and a name zone in it) is now drawn as the plain picture', async () => {
     // the design has a white QR box in the middle; the old saved layout put the code and the name at the bottom-left
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920"><rect width="1080" height="1920" fill="#f6c9d8"/><rect x="390" y="1000" width="300" height="300" fill="#ffffff" stroke="#5a2030" stroke-width="6"/></svg>';

@@ -29,6 +29,12 @@ export interface IUser extends Document {
    *   so that existing login/session flows are not affected.
    */
   isEmailVerified: boolean;
+  /** The mobile number was proved with a text-message code; cleared when the number changes */
+  isPhoneVerified?: boolean;
+  /** A new sign-up that may not sign in until its mobile number is verified (set only while text messages can be sent) */
+  phoneVerificationRequired?: boolean;
+  /** Agreed at sign-up to product updates and offers by WhatsApp and SMS */
+  marketingConsent?: boolean;
   googleId?: string;
   /** ORGANIZER: a per-invitee rate set by an administrator for this organizer; null/absent = the platform rate applies */
   customRatePerInvitee?: number | null;
@@ -55,6 +61,9 @@ const UserSchema: Schema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     isActive: { type: Boolean, default: true },
     isEmailVerified: { type: Boolean, default: true },
+    isPhoneVerified: { type: Boolean, default: false },
+    phoneVerificationRequired: { type: Boolean, default: false },
+    marketingConsent: { type: Boolean },
     // the Google account an organizer signed in with (the "sub" of the verified ID token); never used to look people up by email alone
     googleId: { type: String, index: true, sparse: true },
     customRatePerInvitee: { type: Number, default: null, min: 0 },
