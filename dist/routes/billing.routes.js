@@ -6,6 +6,7 @@ const authorizeRoles_1 = require("../middlewares/authorizeRoles");
 const User_1 = require("../models/User");
 const billing_service_1 = require("../services/billing.service");
 const billingPdf_service_1 = require("../services/billingPdf.service");
+const platformSettings_service_1 = require("../services/platformSettings.service");
 const zod_1 = require("zod");
 const userRateLimit_1 = require("../middlewares/userRateLimit");
 const router = (0, express_1.Router)();
@@ -29,6 +30,17 @@ const fail = (res, error) => {
 router.get('/billing/events', organizerOnly, async (req, res) => {
     try {
         return res.json({ success: true, data: await billing_service_1.billingService.listEventBills(req.user.userId) });
+    }
+    catch (e) {
+        return fail(res, e);
+    }
+});
+// The signed-in organizer's own price per invitee and the GST, as the administrator set them. Read only, and nothing else about
+// payments: the event assistant shows an estimate from this.
+router.get('/billing/rate', organizerOnly, (0, userRateLimit_1.perUserLimit)('billing-rate', { windowMs: 60_000, max: 60 }), async (req, res) => {
+    try {
+        const [rate, gstPercent] = await Promise.all([platformSettings_service_1.platformSettingsService.rateForOrganizer(req.user.userId), platformSettings_service_1.platformSettingsService.gstPercent()]);
+        return res.json({ success: true, data: { ratePerInvitee: rate.effectiveRate, gstPercent, custom: rate.customRate !== null, currency: rate.currency } });
     }
     catch (e) {
         return fail(res, e);
