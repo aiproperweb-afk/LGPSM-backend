@@ -25,16 +25,13 @@ function requireExpectedVersion(expectedVersion) {
 async function requirePage(id) {
     requirePageId(id);
     const page = await cmsPage_repository_1.cmsPageRepository.findById(id);
-    if (!page)
+    if (!page || !(0, cmsPage_validator_1.supportsPageContract)(page.slug, page.route, page.schemaVersion))
         throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
     return page;
 }
 async function requireEditablePage(id, expectedVersion) {
     requireExpectedVersion(expectedVersion);
     const page = await requirePage(id);
-    if (!(0, cmsPage_validator_1.supportsPageContract)(page.slug, page.route, page.schemaVersion)) {
-        throw cmsError(409, 'CMS_SCHEMA_UNSUPPORTED', 'This page does not use a supported CMS contract.');
-    }
     if (page.editVersion !== expectedVersion)
         throw editConflict(page.editVersion);
     return page;
@@ -60,7 +57,7 @@ async function verifyMediaReferences(mediaIds) {
 function validateStructure(page, structure) {
     if (!page.componentStructureLocked)
         return;
-    const current = (0, cmsPage_validator_1.validatePuckData)(page.draftData, page.slug).structure;
+    const current = (0, cmsPage_validator_1.validatePuckData)((0, cmsPage_validator_1.withoutRetiredCmsSections)(page.draftData, page.slug), page.slug).structure;
     if (current !== structure) {
         throw cmsError(409, 'CMS_STRUCTURE_LOCKED', 'This page has a fixed component structure; component insertion, deletion and reordering are not allowed.');
     }
@@ -109,6 +106,8 @@ exports.cmsPageService = {
         return this.throwEditConflict(id);
     },
     async getPublishedPage(slug) {
+        if (!cmsPage_validator_1.supportedCmsSlugs.includes(slug))
+            throw cmsError(404, 'PAGE_NOT_FOUND', 'Published page not found');
         const page = await cmsPage_repository_1.cmsPageRepository.findPublishedBySlug(slug);
         if (!page)
             throw cmsError(404, 'PAGE_NOT_FOUND', 'Published page not found');

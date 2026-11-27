@@ -82,11 +82,11 @@ Example public response
 }
 ```
 
-The checked-in v1 seed at `src/validators/cms-pages.v1.json` is generated from the frontend with `node scripts/export-cms-seed.mjs`. It is both the initial page data and the basis for validating the exact component order, IDs, props, and nested field shapes for Home, Contact, Features, How it works, and the seven client-category routes. Existing Home snapshots remain valid and can be expanded with Testimonials when published from the current editor. The validator enforces the 90 KiB limit, fixed arrays, approved internal CTA destinations, plain text, safe raster asset paths, and registered CMS media IDs. Changes to fields and initial content require regenerating the seed and testing the frontend and backend together. Incompatible field changes need a new schema version and an explicit database migration.
+The checked-in v1 seed at `src/validators/cms-pages.v1.json` is generated from the frontend with `node scripts/export-cms-seed.mjs`. It is both the initial page data and the basis for validating the exact component order, IDs, props, and nested field shapes for `home` and `contact`. The validator enforces the 90 KiB limit, fixed arrays, approved internal CTA destinations, plain text, safe raster asset paths, and registered CMS media IDs. Changes to fields and initial content require regenerating the seed and testing the frontend and backend together. Incompatible field changes need a new schema version and an explicit database migration.
 
 Administrators upload images through `POST /api/v1/media/upload`, with multipart fields `file` and `purpose=CMS_PAGE`. Persist the returned `media:<id>` key. Public images resolve through the standard media API redirect to the Hostinger media origin. CMS files use disk storage in the existing media directory. Draft and publish validate ownership of the media record by purpose and verify the bytes are available.
 
-The backend seeds missing CMS pages after connecting to MongoDB at startup. For manual initialization, run `npm run seed:cms -- src/validators/cms-pages.v1.json` with the approved database connection. The command creates indexes and initializes draft and published snapshots with an insert-only upsert. Repeating it preserves existing content, versions, and timestamps.
+The backend seeds Home and Contact after connecting to MongoDB at startup. For manual initialization, run `npm run seed:cms -- src/validators/cms-pages.v1.json` with the approved database connection. The command creates indexes and initializes draft and published snapshots with an insert-only upsert. Repeating it preserves existing content, versions, and timestamps.
 
 ## Hostinger media
 
