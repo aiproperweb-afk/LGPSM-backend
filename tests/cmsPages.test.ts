@@ -333,9 +333,9 @@ describe('CMS pages', () => {
 
   it('seeds every workspace tab and restricts draft and published access by role', async () => {
     const pages = await cmsPageService.seedPages(homepageSeed);
-    expect(pages).toHaveLength(27);
+    expect(pages).toHaveLength(29);
     const list = await request(app).get('/api/v1/admin/pages').set(adminHeaders);
-    expect(list.body.data).toHaveLength(27);
+    expect(list.body.data).toHaveLength(29);
     const page = list.body.data.find((item: { slug: string }) => item.slug === 'workspace-dashboard');
     const path = '/api/v1/workspace/pages/' + page.slug;
     expect((await request(app).get('/api/v1/public/pages/' + page.slug)).status).toBe(404);
@@ -357,6 +357,30 @@ describe('CMS pages', () => {
     expect(saved.status).toBe(200);
     const after = await request(app).get(path).set(organizerHeaders);
     expect(after.body.data.content.content[0].props.labels.dashboard).toBe('Updated workspace heading');
+  });
+
+  it('serves shared navbar and footer copy and keeps edits private until published', async () => {
+    const shared = homepageSeed.filter(page => page.slug === 'navbar' || page.slug === 'footer');
+    expect(await cmsPageService.seedPages(shared)).toHaveLength(2);
+    for (const { slug, route } of shared) {
+      const publicPath = '/api/v1/public/pages/' + slug;
+      const live = await request(app).get(publicPath);
+      expect(live.status).toBe(200);
+      expect(live.body.data.route).toBe(route);
+      expect(live.body.data.content.content[0].type).toBe('SiteChromeCopy');
+      const page = await Page.findOne({ slug });
+      const endpoint = '/api/v1/admin/pages/' + page!.id;
+      const data = structuredClone(live.body.data.content);
+      data.content[0].props.labels.logoLinkLabel = 'Updated home link';
+      const draft = await request(app).patch(endpoint + '/draft')
+        .set({ ...adminHeaders, 'If-Match': String(page!.editVersion) }).send({ data });
+      expect(draft.status).toBe(200);
+      expect((await request(app).get(publicPath)).body.data.content).toEqual(live.body.data.content);
+      const published = await request(app).post(endpoint + '/publish')
+        .set({ ...adminHeaders, 'If-Match': String(draft.body.data.editVersion) }).send({ data });
+      expect(published.status).toBe(200);
+      expect((await request(app).get(publicPath)).body.data.content).toEqual(data);
+    }
   });
 
   it('seeds published pages idempotently without overwriting admin changes', async () => {

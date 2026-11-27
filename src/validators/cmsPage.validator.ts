@@ -26,7 +26,7 @@ export function isWorkspaceCmsPage(slug: string) {
   return supportedCmsSlugs.includes(slug) && slug.startsWith('workspace-');
 }
 
-const routeSchema = z.string().trim().min(1).max(200).regex(/^\/(?:[A-Za-z0-9_-]+|\[id\])?(?:\/(?:[A-Za-z0-9_-]+|\[id\]))*$/, 'Route must be a local path without query strings');
+const routeSchema = z.string().trim().min(1).max(200).regex(/^\/(?:(?:[A-Za-z0-9_-]+|\[id\])(?:\/(?:[A-Za-z0-9_-]+|\[id\]))*|#(?:navbar|footer))?$/, 'Route must be a local path without query strings');
 
 export const cmsPageSeedSchema = z.object({
   name: z.string().trim().min(1).max(120),

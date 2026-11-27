@@ -30,7 +30,7 @@ const slugSchema = zod_1.z.string().trim().min(1).max(100).regex(/^[a-z0-9]+(?:-
 function isWorkspaceCmsPage(slug) {
     return exports.supportedCmsSlugs.includes(slug) && slug.startsWith('workspace-');
 }
-const routeSchema = zod_1.z.string().trim().min(1).max(200).regex(/^\/(?:[A-Za-z0-9_-]+|\[id\])?(?:\/(?:[A-Za-z0-9_-]+|\[id\]))*$/, 'Route must be a local path without query strings');
+const routeSchema = zod_1.z.string().trim().min(1).max(200).regex(/^\/(?:(?:[A-Za-z0-9_-]+|\[id\])(?:\/(?:[A-Za-z0-9_-]+|\[id\]))*|#(?:navbar|footer))?$/, 'Route must be a local path without query strings');
 exports.cmsPageSeedSchema = zod_1.z.object({
     name: zod_1.z.string().trim().min(1).max(120),
     slug: slugSchema,

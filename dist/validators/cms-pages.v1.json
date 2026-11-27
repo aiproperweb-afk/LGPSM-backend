@@ -330,6 +330,129 @@
         }
     },
     {
+        "name": "Navbar",
+        "slug": "navbar",
+        "route": "/#navbar",
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "SiteChromeCopy",
+                    "props": {
+                        "id": "navbar",
+                        "labels": {
+                            "link_features": "Features",
+                            "link_how-it-works": "How it works",
+                            "link_clients": "Clients",
+                            "link_contact": "Contact",
+                            "client_business-corporate_name": "Business & Corporate",
+                            "client_business-corporate_description": "Business Conference, Product Launch, Networking Event & Corporate Meet.",
+                            "client_wedding-pre-wedding_name": "Wedding & Pre-Wedding",
+                            "client_wedding-pre-wedding_description": "Engagement, Haldi, Mehendi, Sangeet & Wedding Reception.",
+                            "client_education-campus_name": "Education & Campus",
+                            "client_education-campus_description": "Convocation, Freshers, Welcome, Farewell & College Fest.",
+                            "client_personal-family_name": "Personal & Family",
+                            "client_personal-family_description": "Birthday, Baby Shower, Annaprasan, Griha Pravesh & Anniversary.",
+                            "client_festivals-culture_name": "Festivals & Culture",
+                            "client_festivals-culture_description": "Festival Celebration, Puja Gathering, Cultural Program & Community Fair.",
+                            "client_sports-fitness_name": "Sports & Fitness",
+                            "client_sports-fitness_description": "Cricket Tournament, Football Tournament, Marathon, Farewell & College Fest.",
+                            "client_entertainment-social_name": "Entertainment & Social",
+                            "client_entertainment-social_description": "Live Concert, Comedy Show, DJ Night, Food Festival & Exhibition.",
+                            "desktopSignIn": "Log in",
+                            "organizerSignIn": "Organizer log in",
+                            "adminSignIn": "Super Admin log in",
+                            "createEvent": "Start your first event",
+                            "clientMenuPrompt": "Not sure which fits your event?",
+                            "scheduleMeeting": "Schedule a meeting",
+                            "logoLinkLabel": "EventQRapp home",
+                            "navigationLabel": "Main",
+                            "toggleMenuLabel": "Toggle navigation menu"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "Footer",
+        "slug": "footer",
+        "route": "/#footer",
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "SiteChromeCopy",
+                    "props": {
+                        "id": "footer",
+                        "labels": {
+                            "description": "EventQRApp helps you create elegant digital invitations with QR codes, RSVP tracking, guest management, and instant sharing. Perfect for weddings, birthdays, corporate events, and special occasions.",
+                            "logoLinkLabel": "EventQRapp home",
+                            "copyright": "EventQRapp. All rights reserved.",
+                            "legalHeading": "Legal",
+                            "homeTerms": "Terms & condition",
+                            "homePrivacy": "Privacy policy",
+                            "bookDemo": "Book a demo",
+                            "product_heading": "Product",
+                            "product_link_1": "Features",
+                            "product_link_2": "How it works",
+                            "product_link_3": "Pricing",
+                            "product_link_4": "Templates",
+                            "product_link_5": "Custom card design",
+                            "use_cases_heading": "Use cases",
+                            "use_cases_link_1": "Weddings",
+                            "use_cases_link_2": "Birthdays",
+                            "use_cases_link_3": "Corporate events",
+                            "use_cases_link_4": "Conferences",
+                            "use_cases_link_5": "Expos and fests",
+                            "use_cases_link_6": "Agencies",
+                            "resources_heading": "Resources",
+                            "resources_link_1": "Help centre",
+                            "resources_link_2": "Sample Excel guest list",
+                            "resources_link_3": "FAQ",
+                            "resources_link_4": "Blog",
+                            "company_heading": "Company",
+                            "company_link_1": "About",
+                            "company_link_2": "Contact",
+                            "company_link_3": "Careers",
+                            "legal_link_1": "Terms and conditions",
+                            "legal_link_2": "Privacy policy",
+                            "legal_link_3": "Refund policy",
+                            "home_cta_title": "Your next event deserves a better guest list",
+                            "home_cta_body": "Design your invitation, upload your guests and send in minutes. You only pay when you hit send.",
+                            "home_cta_primary": "Create your first event",
+                            "home_cta_note": "No credit card needed to set up. Pay per invitee, with no subscription.",
+                            "clients_cta_title": "Join the organisers who never stress about the guest list",
+                            "clients_cta_body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "clients_cta_primary": "Create your first event",
+                            "clients_cta_note": "No credit card needed to start · No subscription",
+                            "features_cta_title": "Ready to run your smoothest guest list yet?",
+                            "features_cta_body": "Set up your event, design your QR invitation and send it to every guest in minutes. You only pay for the people you invite.",
+                            "features_cta_primary": "Create your first event",
+                            "features_cta_note": "No credit card needed to start · No subscription",
+                            "tutorial_cta_title": "Ready to create your first event?",
+                            "tutorial_cta_body": "Set up your event, upload your guests and send QR invitations in minutes. You only pay for the guests you invite.",
+                            "tutorial_cta_primary": "Create Your First Event",
+                            "tutorial_cta_note": "No credit card needed to start · No subscription",
+                            "contact_cta_title": "Prefer to try it yourself first?",
+                            "contact_cta_body": "Set up your event, upload your guests and send QR invitations in minutes. You only pay for the guests you invite.",
+                            "contact_cta_primary": "Create your first event",
+                            "contact_cta_note": "No credit card needed to start · No subscription"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
         "name": "Dashboard",
         "slug": "workspace-dashboard",
         "route": "/dashboard",
