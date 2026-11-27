@@ -314,6 +314,34 @@ describe('CMS pages', () => {
       .toEqual(homepageSeed[0].data);
   });
 
+  it('seeds and serves every public marketing page on its own route', async () => {
+    const seeded = await cmsPageService.seedPages(homepageSeed);
+    expect(seeded).toHaveLength(11);
+    expect(seeded.filter(page => page.inserted)).toHaveLength(11);
+    for (const page of homepageSeed) {
+      const response = await request(app).get('/api/v1/public/pages/' + page.slug);
+      expect(response.status).toBe(200);
+      expect(response.body.data).toMatchObject({ route: page.route, status: 'PUBLISHED', content: page.data });
+    }
+    expect((await cmsPageService.seedPages(homepageSeed)).every(page => !page.inserted)).toBe(true);
+  });
+
+  it('publishes testimonials without overwriting content on a legacy homepage', async () => {
+    const existing = puckData('Previously published headline');
+    const legacy = { ...existing, content: existing.content.filter(section => section.type !== 'Testimonials') };
+    const page = await createPage({ draftData: legacy, publishedData: legacy });
+    await cmsPageService.seedPages(homepageSeed);
+    const original = await request(app).get('/api/v1/public/pages/home');
+    expect(original.body.data.content.content).toHaveLength(legacy.content.length);
+    const expanded = puckData('Previously published headline');
+    const response = await request(app).post('/api/v1/admin/pages/' + page.id + '/publish')
+      .set({ ...adminHeaders, 'If-Match': '0' }).send({ data: expanded });
+    expect(response.status).toBe(200);
+    const publicPage = await request(app).get('/api/v1/public/pages/home');
+    expect(publicPage.body.data.content.content[0].props.heading).toBe('Previously published headline');
+    expect(publicPage.body.data.content.content.some((section: { type: string }) => section.type === 'Testimonials')).toBe(true);
+  });
+
   it('seeds published pages idempotently without overwriting admin changes', async () => {
     const seed = [homepageSeed[0]];
     expect(await cmsPageService.seedPages(seed)).toEqual([{ slug: 'home', inserted: true }]);

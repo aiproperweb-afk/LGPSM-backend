@@ -56,8 +56,8 @@ function fields(value, sample, path, ids, key = '', optionalImage = false) {
         safeText(value, path);
         if (key.endsWith('Href') && !approvedLinks.has(value))
             fail(path, 'destination is not approved');
-        if (key === 'image') {
-            if (optionalImage && value === '')
+        if (key === 'image' || key.endsWith('Image')) {
+            if ((optionalImage || sample === '') && value === '')
                 return;
             if (/^media:[0-9a-fA-F]{24}$/.test(value))
                 ids.add(value.slice(6).toLowerCase());
@@ -97,7 +97,12 @@ function validatePuckData(input, slug) {
     exact(exact(data.root, ['props'], 'data.root').props, [], 'data.root.props');
     if (data.zones !== undefined)
         exact(data.zones, [], 'data.zones');
-    const content = data.content;
+    let content = data.content;
+    if (slug === 'home' && Array.isArray(content) && content.length === contract.data.content.length - 1) {
+        const index = contract.data.content.findIndex(section => section.type === 'Testimonials');
+        // Legacy snapshots lack testimonials. Validate their original fields and compare the canonical section order.
+        content = [...content.slice(0, index), contract.data.content[index], ...content.slice(index)];
+    }
     if (!Array.isArray(content) || content.length !== contract.data.content.length)
         fail('data.content', 'page section count is fixed');
     const mediaIds = new Set();
