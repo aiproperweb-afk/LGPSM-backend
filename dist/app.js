@@ -170,7 +170,6 @@ app.use('/api/v1/audit-logs', auditLog_routes_1.default);
 app.use('/api/v1/settings', platformSettings_routes_1.default);
 app.use('/api/v1/admin/pages', cmsPage_routes_1.cmsAdminPageRoutes);
 app.use('/api/v1/public/pages', cmsPage_routes_1.cmsPublicPageRoutes);
-app.use('/api/v1/workspace/pages', cmsPage_routes_1.cmsWorkspacePageRoutes);
 app.use('/api/v1/reports', report_routes_1.default);
 app.use('/api/v1/events/:eventId/tickets', ticketTier_routes_1.eventTicketTierRoutes);
 app.use('/api/v1/tickets', ticketTier_routes_1.ticketTierRoutes);

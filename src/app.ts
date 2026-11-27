@@ -31,7 +31,7 @@ import { eventTicketTierRoutes, ticketTierRoutes } from './routes/ticketTier.rou
 import paymentRoutes from './routes/payment.routes';
 import billingRoutes from './routes/billing.routes';
 import platformSettingsRoutes from './routes/platformSettings.routes';
-import { cmsAdminPageRoutes, cmsPublicPageRoutes, cmsWorkspacePageRoutes } from './routes/cmsPage.routes';
+import { cmsAdminPageRoutes, cmsPublicPageRoutes } from './routes/cmsPage.routes';
 
 const app = express();
 
@@ -142,7 +142,6 @@ app.use('/api/v1/audit-logs', auditLogRoutes);
 app.use('/api/v1/settings', platformSettingsRoutes);
 app.use('/api/v1/admin/pages', cmsAdminPageRoutes);
 app.use('/api/v1/public/pages', cmsPublicPageRoutes);
-app.use('/api/v1/workspace/pages', cmsWorkspacePageRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/events/:eventId/tickets', eventTicketTierRoutes);
 app.use('/api/v1/tickets', ticketTierRoutes);

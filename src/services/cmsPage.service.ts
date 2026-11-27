@@ -1,9 +1,8 @@
 import mongoose from 'mongoose';
-import { Role } from '../models/User';
 import { Media, MediaPurpose } from '../models/Media';
 import { Page, PageStatus } from '../models/Page';
 import { cmsPageRepository } from '../repositories/cmsPage.repository';
-import { isWorkspaceCmsPage, supportsPageContract, supportedCmsSlugs, validateCmsSeedInput, validatePuckData, withoutRetiredCmsSections } from '../validators/cmsPage.validator';
+import { supportsPageContract, supportedCmsSlugs, validateCmsSeedInput, validatePuckData } from '../validators/cmsPage.validator';
 import { mediaService } from './media.service';
 
 function cmsError(statusCode: number, code: string, message: string, extra?: Record<string, unknown>) {
@@ -54,7 +53,7 @@ async function verifyMediaReferences(mediaIds: string[]) {
 
 function validateStructure(page: { componentStructureLocked: boolean; draftData: unknown; slug: string }, structure: string) {
   if (!page.componentStructureLocked) return;
-  const current = validatePuckData(withoutRetiredCmsSections(page.draftData, page.slug), page.slug).structure;
+  const current = validatePuckData(page.draftData, page.slug).structure;
   if (current !== structure) {
     throw cmsError(409, 'CMS_STRUCTURE_LOCKED', 'This page has a fixed component structure; component insertion, deletion and reordering are not allowed.');
   }
@@ -105,12 +104,8 @@ export const cmsPageService = {
     return this.throwEditConflict(id);
   },
 
-  async getPublishedPage(slug: string, workspaceRole?: Role) {
-    const workspace = isWorkspaceCmsPage(slug);
-    if (workspace && workspaceRole === Role.ORGANIZER && /^(workspace-admin-|workspace-event-organizer|workspace-earnings|workspace-templates|workspace-settings-(event|notification|price-rate|template))/.test(slug)) {
-      throw cmsError(403, 'CMS_PAGE_FORBIDDEN', 'Page text is unavailable for this role.');
-    }
-    if (!supportedCmsSlugs.includes(slug) || workspace !== Boolean(workspaceRole)) throw cmsError(404, 'PAGE_NOT_FOUND', 'Published page not found');
+  async getPublishedPage(slug: string) {
+    if (!supportedCmsSlugs.includes(slug)) throw cmsError(404, 'PAGE_NOT_FOUND', 'Published page not found');
     const page = await cmsPageRepository.findPublishedBySlug(slug);
     if (!page) throw cmsError(404, 'PAGE_NOT_FOUND', 'Published page not found');
     return page;
