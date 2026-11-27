@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.cmsPublishBodySchema = exports.cmsDraftBodySchema = exports.cmsPageSeedSchema = exports.supportedCmsSlugs = exports.MAX_CMS_PAYLOAD_BYTES = void 0;
 exports.withoutRetiredCmsSections = withoutRetiredCmsSections;
 exports.supportsPageContract = supportsPageContract;
+exports.isWorkspaceCmsPage = isWorkspaceCmsPage;
 exports.validatePuckData = validatePuckData;
 exports.validateCmsSeedInput = validateCmsSeedInput;
 const zod_1 = require("zod");
@@ -26,7 +27,10 @@ function supportsPageContract(slug, route, schemaVersion) {
 }
 const approvedLinks = new Set(['/signup', '/contact', '/#how-it-works', '/#features', '/#pricing', '/#faq']);
 const slugSchema = zod_1.z.string().trim().min(1).max(100).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must use lowercase letters, numbers and hyphens');
-const routeSchema = zod_1.z.string().trim().min(1).max(200).regex(/^\/(?!\/)[A-Za-z0-9/_-]*$/, 'Route must be a local path without query strings');
+function isWorkspaceCmsPage(slug) {
+    return exports.supportedCmsSlugs.includes(slug) && slug.startsWith('workspace-');
+}
+const routeSchema = zod_1.z.string().trim().min(1).max(200).regex(/^\/(?:[A-Za-z0-9_-]+|\[id\])?(?:\/(?:[A-Za-z0-9_-]+|\[id\]))*$/, 'Route must be a local path without query strings');
 exports.cmsPageSeedSchema = zod_1.z.object({
     name: zod_1.z.string().trim().min(1).max(120),
     slug: slugSchema,
@@ -91,8 +95,12 @@ function fields(value, sample, path, ids, key = '', optionalImage = false) {
     }
     const defaults = object(sample, path);
     const record = exact(value, Object.keys(defaults), path);
-    for (const [name, item] of Object.entries(defaults))
-        fields(record[name], item, path + '.' + name, ids, name, optionalImage);
+    for (const [name, item] of Object.entries(defaults)) {
+        if (key === 'labels')
+            safeText(record[name], path + '.' + name);
+        else
+            fields(record[name], item, path + '.' + name, ids, name, optionalImage);
+    }
 }
 function validatePuckData(input, slug) {
     const contract = contracts.get(slug);

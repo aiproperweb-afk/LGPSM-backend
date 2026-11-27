@@ -331,6 +331,34 @@ describe('CMS pages', () => {
     expect(edit.body.data.publishedData).toEqual(existing);
   });
 
+  it('seeds every workspace tab and restricts draft and published access by role', async () => {
+    const pages = await cmsPageService.seedPages(homepageSeed);
+    expect(pages).toHaveLength(27);
+    const list = await request(app).get('/api/v1/admin/pages').set(adminHeaders);
+    expect(list.body.data).toHaveLength(27);
+    const page = list.body.data.find((item: { slug: string }) => item.slug === 'workspace-dashboard');
+    const path = '/api/v1/workspace/pages/' + page.slug;
+    expect((await request(app).get('/api/v1/public/pages/' + page.slug)).status).toBe(404);
+    expect((await request(app).get(path)).status).toBe(401);
+    expect((await request(app).get('/api/v1/workspace/pages/workspace-settings-event').set(organizerHeaders)).status).toBe(403);
+    const live = await request(app).get(path).set(organizerHeaders);
+    expect(live.status).toBe(200);
+    const data = live.body.data.content;
+    data.content[0].props.labels.dashboard = 'Updated workspace heading';
+    const endpoint = '/api/v1/admin/pages/' + page._id;
+    const denied = await request(app).patch(endpoint + '/draft').set({ ...organizerHeaders, 'If-Match': '0' }).send({ data });
+    expect(denied.status).toBe(403);
+    const draft = await request(app).patch(endpoint + '/draft').set({ ...adminHeaders, 'If-Match': '0' }).send({ data });
+    expect(draft.status).toBe(200);
+    const before = await request(app).get(path).set(organizerHeaders);
+    expect(before.body.data.content.content[0].props.labels.dashboard).toBe('Dashboard');
+    const saved = await request(app).post(endpoint + '/publish')
+      .set({ ...adminHeaders, 'If-Match': String(draft.body.data.editVersion) }).send({ data });
+    expect(saved.status).toBe(200);
+    const after = await request(app).get(path).set(organizerHeaders);
+    expect(after.body.data.content.content[0].props.labels.dashboard).toBe('Updated workspace heading');
+  });
+
   it('seeds published pages idempotently without overwriting admin changes', async () => {
     const seed = [homepageSeed[0]];
     expect(await cmsPageService.seedPages(seed)).toEqual([{ slug: 'home', inserted: true }]);

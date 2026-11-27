@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cmsPublicPageRoutes = exports.cmsAdminPageRoutes = void 0;
+exports.cmsWorkspacePageRoutes = exports.cmsPublicPageRoutes = exports.cmsAdminPageRoutes = void 0;
 const express_1 = require("express");
 const cmsPage_controller_1 = require("../controllers/cmsPage.controller");
 const authenticate_1 = require("../middlewares/authenticate");
@@ -37,3 +37,6 @@ const editConflictResponse = (error, _req, res, next) => {
 exports.cmsAdminPageRoutes.use(editConflictResponse);
 exports.cmsPublicPageRoutes = (0, express_1.Router)();
 exports.cmsPublicPageRoutes.get('/:slug', cmsPage_controller_1.cmsPageController.getPublishedPage);
+exports.cmsWorkspacePageRoutes = (0, express_1.Router)();
+exports.cmsWorkspacePageRoutes.use(authenticate_1.authenticate, (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ADMIN, User_1.Role.ORGANIZER));
+exports.cmsWorkspacePageRoutes.get('/:slug', cmsPage_controller_1.cmsPageController.getWorkspacePage);

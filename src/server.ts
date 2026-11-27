@@ -56,6 +56,7 @@ async function startServer() {
     try {
       await Page.createIndexes();
       const pages = await cmsPageService.seedPages(cmsPageSeed);
+      app.set('cmsReady', true);
       for (const page of pages) {
         if (page.inserted) console.log(`Seeded CMS page: ${page.slug}`);
       }

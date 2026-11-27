@@ -13,6 +13,8 @@ The backend stores Puck JSON snapshots in MongoDB. It does not install Puck or s
 | `updatedBy`, `publishedBy`, `publishedAt` | User references and publication timestamp. Seeding sets the timestamp without a user actor. |
 | `createdAt`, `updatedAt`, `componentStructureLocked` | Mongoose timestamps and a boolean policy for fixed layouts. |
 
+Workspace screens use the same seed, draft and publish lifecycle as the public pages. Workspace copy is returned by `GET /api/v1/workspace/pages/:slug` to authorized signed-in roles. Admin editing remains under `/admin/pages`. The backend reports `cms: ready` in `/api/health` after startup seeding succeeds.
+
 ## Routes
 
 All routes are under `/api/v1`:

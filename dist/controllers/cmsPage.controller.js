@@ -67,10 +67,14 @@ exports.cmsPageController = {
             return next(error);
         }
     },
-    async getPublishedPage(req, res, next) {
+    getPublishedPage: publishedPage(false),
+    getWorkspacePage: publishedPage(true)
+};
+function publishedPage(workspace) {
+    return async (req, res, next) => {
         try {
             res.set('Cache-Control', 'no-store');
-            const page = await cmsPage_service_1.cmsPageService.getPublishedPage(req.params.slug);
+            const page = await cmsPage_service_1.cmsPageService.getPublishedPage(req.params.slug, workspace ? req.user.role : undefined);
             return res.status(200).json({
                 success: true,
                 data: {
@@ -88,5 +92,5 @@ exports.cmsPageController = {
         catch (error) {
             return next(error);
         }
-    }
-};
+    };
+}

@@ -38,3 +38,7 @@ cmsAdminPageRoutes.use(editConflictResponse);
 
 export const cmsPublicPageRoutes = Router();
 cmsPublicPageRoutes.get('/:slug', cmsPageController.getPublishedPage);
+
+export const cmsWorkspacePageRoutes = Router();
+cmsWorkspacePageRoutes.use(authenticate, authorizeRoles(Role.ADMIN, Role.ORGANIZER));
+cmsWorkspacePageRoutes.get('/:slug', cmsPageController.getWorkspacePage);

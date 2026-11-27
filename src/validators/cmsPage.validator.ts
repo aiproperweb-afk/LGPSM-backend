@@ -22,7 +22,11 @@ export function supportsPageContract(slug: string, route: string, schemaVersion:
 const approvedLinks = new Set(['/signup', '/contact', '/#how-it-works', '/#features', '/#pricing', '/#faq']);
 
 const slugSchema = z.string().trim().min(1).max(100).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must use lowercase letters, numbers and hyphens');
-const routeSchema = z.string().trim().min(1).max(200).regex(/^\/(?!\/)[A-Za-z0-9/_-]*$/, 'Route must be a local path without query strings');
+export function isWorkspaceCmsPage(slug: string) {
+  return supportedCmsSlugs.includes(slug) && slug.startsWith('workspace-');
+}
+
+const routeSchema = z.string().trim().min(1).max(200).regex(/^\/(?:[A-Za-z0-9_-]+|\[id\])?(?:\/(?:[A-Za-z0-9_-]+|\[id\]))*$/, 'Route must be a local path without query strings');
 
 export const cmsPageSeedSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -90,7 +94,10 @@ function fields(value: unknown, sample: unknown, path: string, ids: Set<string>,
   }
   const defaults = object(sample, path);
   const record = exact(value, Object.keys(defaults), path);
-  for (const [name, item] of Object.entries(defaults)) fields(record[name], item, path + '.' + name, ids, name, optionalImage);
+  for (const [name, item] of Object.entries(defaults)) {
+    if (key === 'labels') safeText(record[name], path + '.' + name);
+    else fields(record[name], item, path + '.' + name, ids, name, optionalImage);
+  }
 }
 
 export function validatePuckData(input: unknown, slug: string): { data: PuckData; mediaIds: string[]; structure: string } {

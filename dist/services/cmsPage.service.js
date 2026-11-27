@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cmsPageService = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
+const User_1 = require("../models/User");
 const Media_1 = require("../models/Media");
 const Page_1 = require("../models/Page");
 const cmsPage_repository_1 = require("../repositories/cmsPage.repository");
@@ -105,8 +106,12 @@ exports.cmsPageService = {
             return updated;
         return this.throwEditConflict(id);
     },
-    async getPublishedPage(slug) {
-        if (!cmsPage_validator_1.supportedCmsSlugs.includes(slug))
+    async getPublishedPage(slug, workspaceRole) {
+        const workspace = (0, cmsPage_validator_1.isWorkspaceCmsPage)(slug);
+        if (workspace && workspaceRole === User_1.Role.ORGANIZER && /^(workspace-admin-|workspace-event-organizer|workspace-earnings|workspace-templates|workspace-settings-(event|notification|price-rate|template))/.test(slug)) {
+            throw cmsError(403, 'CMS_PAGE_FORBIDDEN', 'Page text is unavailable for this role.');
+        }
+        if (!cmsPage_validator_1.supportedCmsSlugs.includes(slug) || workspace !== Boolean(workspaceRole))
             throw cmsError(404, 'PAGE_NOT_FOUND', 'Published page not found');
         const page = await cmsPage_repository_1.cmsPageRepository.findPublishedBySlug(slug);
         if (!page)

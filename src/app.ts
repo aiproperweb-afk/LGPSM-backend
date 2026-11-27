@@ -31,7 +31,7 @@ import { eventTicketTierRoutes, ticketTierRoutes } from './routes/ticketTier.rou
 import paymentRoutes from './routes/payment.routes';
 import billingRoutes from './routes/billing.routes';
 import platformSettingsRoutes from './routes/platformSettings.routes';
-import { cmsAdminPageRoutes, cmsPublicPageRoutes } from './routes/cmsPage.routes';
+import { cmsAdminPageRoutes, cmsPublicPageRoutes, cmsWorkspacePageRoutes } from './routes/cmsPage.routes';
 
 const app = express();
 
@@ -81,7 +81,7 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/api/health', (req, res) => {
   // the web app pings this across origins to wake the server; helmet's default would make the browser report the answer as blocked
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.status(200).json({ status: 'ok', message: 'Backend is running securely', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
+  res.status(200).json({ status: 'ok', message: 'Backend is running securely', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected', cms: req.app.get('cmsReady') ? 'ready' : 'pending' });
 });
 
 // Reject malformed ObjectId path params up-front so they surface as 400s instead of 500 CastErrors
@@ -142,6 +142,7 @@ app.use('/api/v1/audit-logs', auditLogRoutes);
 app.use('/api/v1/settings', platformSettingsRoutes);
 app.use('/api/v1/admin/pages', cmsAdminPageRoutes);
 app.use('/api/v1/public/pages', cmsPublicPageRoutes);
+app.use('/api/v1/workspace/pages', cmsWorkspacePageRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/events/:eventId/tickets', eventTicketTierRoutes);
 app.use('/api/v1/tickets', ticketTierRoutes);
