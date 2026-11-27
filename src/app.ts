@@ -31,6 +31,7 @@ import { eventTicketTierRoutes, ticketTierRoutes } from './routes/ticketTier.rou
 import paymentRoutes from './routes/payment.routes';
 import billingRoutes from './routes/billing.routes';
 import platformSettingsRoutes from './routes/platformSettings.routes';
+import { cmsAdminPageRoutes, cmsPublicPageRoutes } from './routes/cmsPage.routes';
 
 const app = express();
 
@@ -54,6 +55,7 @@ const allowedOrigins = [
   ...(env.NODE_ENV === 'production' ? [] : ['http://localhost:3000']),
   'https://lgpsm-frontend.vercel.app',
   'https://lgpsm-frontend-beta.vercel.app',
+  'https://eventqrapp.com',
   ...(env.CORS_ORIGINS?.split(',') ?? []),
 ]
   .map((origin) => origin.trim().replace(/\/+$/, ''))
@@ -138,6 +140,8 @@ app.use('/api/v1/templates', templateRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/audit-logs', auditLogRoutes);
 app.use('/api/v1/settings', platformSettingsRoutes);
+app.use('/api/v1/admin/pages', cmsAdminPageRoutes);
+app.use('/api/v1/public/pages', cmsPublicPageRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/events/:eventId/tickets', eventTicketTierRoutes);
 app.use('/api/v1/tickets', ticketTierRoutes);

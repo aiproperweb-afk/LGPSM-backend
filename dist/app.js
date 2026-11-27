@@ -68,6 +68,7 @@ const ticketTier_routes_1 = require("./routes/ticketTier.routes");
 const payment_routes_1 = __importDefault(require("./routes/payment.routes"));
 const billing_routes_1 = __importDefault(require("./routes/billing.routes"));
 const platformSettings_routes_1 = __importDefault(require("./routes/platformSettings.routes"));
+const cmsPage_routes_1 = require("./routes/cmsPage.routes");
 const app = (0, express_1.default)();
 // Render forwards requests through one trusted proxy.
 app.set('trust proxy', 1);
@@ -88,6 +89,7 @@ const allowedOrigins = [
     ...(env_1.env.NODE_ENV === 'production' ? [] : ['http://localhost:3000']),
     'https://lgpsm-frontend.vercel.app',
     'https://lgpsm-frontend-beta.vercel.app',
+    'https://eventqrapp.com',
     ...(env_1.env.CORS_ORIGINS?.split(',') ?? []),
 ]
     .map((origin) => origin.trim().replace(/\/+$/, ''))
@@ -166,6 +168,8 @@ app.use('/api/v1/templates', template_routes_1.default);
 app.use('/api/v1/notifications', notification_routes_1.default);
 app.use('/api/v1/audit-logs', auditLog_routes_1.default);
 app.use('/api/v1/settings', platformSettings_routes_1.default);
+app.use('/api/v1/admin/pages', cmsPage_routes_1.cmsAdminPageRoutes);
+app.use('/api/v1/public/pages', cmsPage_routes_1.cmsPublicPageRoutes);
 app.use('/api/v1/reports', report_routes_1.default);
 app.use('/api/v1/events/:eventId/tickets', ticketTier_routes_1.eventTicketTierRoutes);
 app.use('/api/v1/tickets', ticketTier_routes_1.ticketTierRoutes);

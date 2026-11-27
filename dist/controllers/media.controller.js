@@ -10,7 +10,8 @@ const UPLOAD_ROLES = {
     [Media_1.MediaPurpose.TEMPLATE]: [User_1.Role.ADMIN, User_1.Role.ORGANIZER],
     [Media_1.MediaPurpose.EVENT_LOGO]: [User_1.Role.ADMIN, User_1.Role.ORGANIZER],
     [Media_1.MediaPurpose.ORGANIZATION_LOGO]: [User_1.Role.ADMIN, User_1.Role.ORGANIZER],
-    [Media_1.MediaPurpose.AVATAR]: [User_1.Role.ADMIN, User_1.Role.ORGANIZER, User_1.Role.SYSTEM_USER]
+    [Media_1.MediaPurpose.AVATAR]: [User_1.Role.ADMIN, User_1.Role.ORGANIZER, User_1.Role.SYSTEM_USER],
+    [Media_1.MediaPurpose.CMS_PAGE]: [User_1.Role.ADMIN]
 };
 exports.mediaController = {
     async presign(req, res, next) {

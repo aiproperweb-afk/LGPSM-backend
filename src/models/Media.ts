@@ -6,7 +6,8 @@ export enum MediaPurpose {
   TEMPLATE = 'TEMPLATE',
   EVENT_LOGO = 'EVENT_LOGO',
   ORGANIZATION_LOGO = 'ORGANIZATION_LOGO',
-  AVATAR = 'AVATAR'
+  AVATAR = 'AVATAR',
+  CMS_PAGE = 'CMS_PAGE'
 }
 
 export interface IMedia extends Document {
@@ -20,7 +21,7 @@ export interface IMedia extends Document {
   /** the image bytes: here for images kept in the database; absent when `storage` is DISK */
   data?: Buffer;
   /** DB = bytes in this record; DISK = bytes in a file named `fileName` inside MEDIA_DIR */
-  storage: 'DB' | 'DISK';
+  storage: 'DB' | 'DISK' | 'S3';
   fileName?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -35,9 +36,9 @@ const MediaSchema = new Schema<IMedia>(
     width: { type: Number },
     height: { type: Number },
     originalName: { type: String },
-    storage: { type: String, enum: ['DB', 'DISK'], default: 'DB' },
+    storage: { type: String, enum: ['DB', 'DISK', 'S3'], default: 'DB' },
     fileName: { type: String },
-    data: { type: Buffer, required: function (this: { storage?: string }) { return this.storage !== 'DISK'; }, select: false }
+    data: { type: Buffer, required: function (this: { storage?: string }) { return this.storage === 'DB'; }, select: false }
   },
   { timestamps: true }
 );

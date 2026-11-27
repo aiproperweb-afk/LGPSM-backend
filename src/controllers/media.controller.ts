@@ -9,7 +9,8 @@ const UPLOAD_ROLES: Record<MediaPurpose, Role[]> = {
   [MediaPurpose.TEMPLATE]: [Role.ADMIN, Role.ORGANIZER],
   [MediaPurpose.EVENT_LOGO]: [Role.ADMIN, Role.ORGANIZER],
   [MediaPurpose.ORGANIZATION_LOGO]: [Role.ADMIN, Role.ORGANIZER],
-  [MediaPurpose.AVATAR]: [Role.ADMIN, Role.ORGANIZER, Role.SYSTEM_USER]
+  [MediaPurpose.AVATAR]: [Role.ADMIN, Role.ORGANIZER, Role.SYSTEM_USER],
+  [MediaPurpose.CMS_PAGE]: [Role.ADMIN]
 };
 
 export const mediaController = {

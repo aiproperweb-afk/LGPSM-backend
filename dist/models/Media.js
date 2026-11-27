@@ -43,6 +43,7 @@ var MediaPurpose;
     MediaPurpose["EVENT_LOGO"] = "EVENT_LOGO";
     MediaPurpose["ORGANIZATION_LOGO"] = "ORGANIZATION_LOGO";
     MediaPurpose["AVATAR"] = "AVATAR";
+    MediaPurpose["CMS_PAGE"] = "CMS_PAGE";
 })(MediaPurpose || (exports.MediaPurpose = MediaPurpose = {}));
 const MediaSchema = new mongoose_1.Schema({
     ownerId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -52,9 +53,9 @@ const MediaSchema = new mongoose_1.Schema({
     width: { type: Number },
     height: { type: Number },
     originalName: { type: String },
-    storage: { type: String, enum: ['DB', 'DISK'], default: 'DB' },
+    storage: { type: String, enum: ['DB', 'DISK', 'S3'], default: 'DB' },
     fileName: { type: String },
-    data: { type: Buffer, required: function () { return this.storage !== 'DISK'; }, select: false }
+    data: { type: Buffer, required: function () { return this.storage === 'DB'; }, select: false }
 }, { timestamps: true });
 MediaSchema.index({ ownerId: 1, purpose: 1 });
 exports.Media = mongoose_1.default.model('Media', MediaSchema);

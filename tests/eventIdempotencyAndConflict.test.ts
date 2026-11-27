@@ -97,6 +97,14 @@ describe('F-05 A: Idempotency-Key on event creation', () => {
     expect(String(res.headers['access-control-allow-headers']).toLowerCase()).toMatch(/idempotency-key/);
     expect(String(res.headers['access-control-allow-headers']).toLowerCase()).toMatch(/if-match/);
   });
+  it('allows the production eventqrapp.com origin', async () => {
+    const res = await request.options('/api/auth/login')
+      .set('Origin', 'https://eventqrapp.com')
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'authorization,content-type');
+    expect(res.status).toBeLessThan(300);
+    expect(res.headers['access-control-allow-origin']).toBe('https://eventqrapp.com');
+  });
 });
 
 describe('F-05 B: edits against a stale version are refused, not silently applied', () => {

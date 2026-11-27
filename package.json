@@ -8,6 +8,7 @@
     "build": "tsc && node scripts/copy-assets.js",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
+    "seed:cms": "tsx src/scripts/seedCmsPages.ts",
     "check:deployed-layout": "node scripts/check-deployed-layout.js",
     "migrate:invitee-uniqueness": "node scripts/migrate-invitee-uniqueness.js",
     "migrate:user-contact-uniqueness": "node scripts/migrate-user-contact-uniqueness.js",

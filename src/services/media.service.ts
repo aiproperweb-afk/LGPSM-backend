@@ -1,9 +1,11 @@
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import s3Client from '../config/s3.config';
 import { env } from '../config/env';
 import crypto from 'crypto';
+import path from 'path';
+import { tmpdir } from 'os';
 import mongoose from 'mongoose';
 import { Media, MediaPurpose } from '../models/Media';
 import { mediaDir, publicUrlFor, readMediaFile, removeMediaFile, writeMediaFile } from './mediaStorage';
@@ -14,10 +16,34 @@ const MAX_EDGE: Record<MediaPurpose, number> = {
   [MediaPurpose.TEMPLATE]: 1600,
   [MediaPurpose.EVENT_LOGO]: 800,
   [MediaPurpose.ORGANIZATION_LOGO]: 800,
-  [MediaPurpose.AVATAR]: 512
+  [MediaPurpose.AVATAR]: 512,
+  [MediaPurpose.CMS_PAGE]: 1600
 };
 
+function isWithin(directory: string, parent: string): boolean {
+  const relative = path.relative(parent, directory);
+  return relative === '' || (relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative));
+}
+
+function requireCmsDiskStorage(): void {
+  const directory = mediaDir();
+  const configuredPath = (process.env.MEDIA_DIR || '').trim();
+  const publicBase = (process.env.MEDIA_PUBLIC_URL || '').trim().replace(/\/+$/, '');
+  const productionReady = directory && path.isAbsolute(configuredPath)
+    && !isWithin(directory, path.resolve(__dirname, '../..')) && !isWithin(directory, tmpdir())
+    && publicBase === 'https://media.eventqrapp.com';
+  if (!directory || (env.NODE_ENV === 'production' && !productionReady)) {
+    throw { statusCode: 503, code: 'CMS_MEDIA_STORAGE_UNAVAILABLE', exposeMessage: true,
+      message: 'CMS image storage is unavailable. Check the media storage configuration.' };
+  }
+}
+
 export class MediaService {
+  async hasCmsImage(id: string, storage: string, fileName?: string | null): Promise<boolean> {
+    return storage === 'DISK' && !!fileName && /^[0-9a-f]{24}$/.test(id)
+      && [id + '.jpg', id + '.png'].includes(fileName) && (await readMediaFile(fileName)) !== null;
+  }
+
   async generatePresignedUrl(fileName: string, fileType: string): Promise<{ uploadUrl: string; fileKey: string }> {
     const bucket = env.AWS_S3_BUCKET;
     if (!bucket) {
@@ -58,6 +84,8 @@ export class MediaService {
       throw { statusCode: 400, message: 'Only JPG, PNG or WEBP images are supported' };
     }
 
+    if (purpose === MediaPurpose.CMS_PAGE) requireCmsDiskStorage();
+
     // PNG only when transparency matters; opaque images are far smaller as JPEG
     const keepAlpha = !!meta.hasAlpha;
     const pipeline = image.rotate().resize({ width: MAX_EDGE[purpose], height: MAX_EDGE[purpose], fit: 'inside', withoutEnlargement: true });
@@ -93,9 +121,13 @@ export class MediaService {
   // For serving to browsers: the public address of the file when a media address is configured, otherwise the bytes
   async resolveForServing(id: string, usePublicUrl = true): Promise<{ contentType: string; publicUrl?: string; data?: Buffer } | null> {
     if (!mongoose.Types.ObjectId.isValid(id)) return null;
-    const media = await Media.findById(id).select('contentType storage fileName');
+    const media = await Media.findById(id).select('contentType storage fileName purpose');
     if (usePublicUrl && media?.storage === 'DISK') {
       const publicUrl = await publicUrlFor(media.fileName);
+      if (publicUrl) return { contentType: media.contentType, publicUrl };
+    }
+    if (usePublicUrl && media?.storage === 'S3' && media.purpose !== MediaPurpose.CMS_PAGE) {
+      const publicUrl = this.publicS3Url(media.fileName);
       if (publicUrl) return { contentType: media.contentType, publicUrl };
     }
     const image = await this.getImage(id);
@@ -104,16 +136,40 @@ export class MediaService {
 
   async getPublicUrl(id: string): Promise<string | null> {
     if (!mongoose.Types.ObjectId.isValid(id)) return null;
-    const media = await Media.findById(id).select('storage fileName');
-    return media?.storage === 'DISK' ? publicUrlFor(media.fileName) : null;
+    const media = await Media.findById(id).select('storage fileName purpose');
+    if (media?.storage === 'DISK') return publicUrlFor(media.fileName);
+    if (media?.storage === 'S3' && media.purpose !== MediaPurpose.CMS_PAGE) return this.publicS3Url(media.fileName);
+    return null;
   }
 
   async getImage(id: string): Promise<{ contentType: string; updatedAt?: Date; data: Buffer } | null> {
     if (!mongoose.Types.ObjectId.isValid(id)) return null;
-    const media = await Media.findById(id).select('+data contentType updatedAt storage fileName');
+    const media = await Media.findById(id).select('+data contentType updatedAt storage fileName purpose');
     if (!media) return null;
-    const data = media.storage === 'DISK' ? await readMediaFile(media.fileName || '') : media.data;
+    let data: Buffer | undefined | null;
+    if (media.storage === 'DISK') {
+      data = await readMediaFile(media.fileName || '');
+    } else if (media.storage === 'S3') {
+      if (media.purpose === MediaPurpose.CMS_PAGE || !env.AWS_S3_BUCKET || !media.fileName) return null;
+      const object = await s3Client.send(new GetObjectCommand({ Bucket: env.AWS_S3_BUCKET, Key: media.fileName }));
+      const bytes = await object.Body?.transformToByteArray();
+      data = bytes ? Buffer.from(bytes) : null;
+    } else {
+      data = media.data;
+    }
     return data ? { contentType: media.contentType, updatedAt: media.updatedAt, data } : null;
+  }
+
+  private publicS3Url(fileName?: string | null): string | null {
+    const base = (env.AWS_CLOUDFRONT_DOMAIN || '').trim().replace(/\/+$/, '');
+    if (!base || !fileName || !/^cms-pages\/[0-9a-f]{24}\.(jpg|png)$/.test(fileName)) return null;
+    try {
+      const url = new URL(base);
+      if (url.protocol !== 'https:' || url.username || url.password) return null;
+      return `${base}/${fileName.split('/').map(encodeURIComponent).join('/')}`;
+    } catch {
+      return null;
+    }
   }
 }
 
