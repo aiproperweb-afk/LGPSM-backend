@@ -81,7 +81,7 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/api/health', (req, res) => {
   // the web app pings this across origins to wake the server; helmet's default would make the browser report the answer as blocked
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.status(200).json({ status: 'ok', message: 'Backend is running securely', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
+  res.status(200).json({ status: 'ok', message: 'Backend is running securely', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected', cms: req.app.get('cmsReady') ? 'ready' : 'pending' });
 });
 
 // Reject malformed ObjectId path params up-front so they surface as 400s instead of 500 CastErrors

@@ -1,15 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { cmsPageService } from '../services/cmsPage.service';
-import { withoutRetiredCmsSections } from '../validators/cmsPage.validator';
-
-function pageResponse(page: Awaited<ReturnType<typeof cmsPageService.getPage>>) {
-  const data = page.toJSON();
-  return {
-    ...data,
-    draftData: withoutRetiredCmsSections(data.draftData, data.slug),
-    publishedData: withoutRetiredCmsSections(data.publishedData, data.slug)
-  };
-}
 
 function editVersion(req: Request): number {
   const value = req.header('If-Match');
@@ -32,7 +22,7 @@ export const cmsPageController = {
 
   async getPage(req: Request, res: Response, next: NextFunction) {
     try {
-      return res.status(200).json({ success: true, data: pageResponse(await cmsPageService.getPage(req.params.id as string)) });
+      return res.status(200).json({ success: true, data: await cmsPageService.getPage(req.params.id as string) });
     } catch (error) {
       return next(error);
     }
@@ -41,7 +31,7 @@ export const cmsPageController = {
   async saveDraft(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await cmsPageService.saveDraft(req.params.id as string, editVersion(req), req.body.data, req.user!.userId);
-      return res.status(200).json({ success: true, data: pageResponse(data) });
+      return res.status(200).json({ success: true, data });
     } catch (error) {
       return next(error);
     }
@@ -50,7 +40,7 @@ export const cmsPageController = {
   async publish(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await cmsPageService.publish(req.params.id as string, editVersion(req), req.body.data, req.user!.userId);
-      return res.status(200).json({ success: true, data: pageResponse(data) });
+      return res.status(200).json({ success: true, data });
     } catch (error) {
       return next(error);
     }
@@ -59,7 +49,7 @@ export const cmsPageController = {
   async discardDraft(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await cmsPageService.discardDraft(req.params.id as string, editVersion(req), req.user!.userId);
-      return res.status(200).json({ success: true, data: pageResponse(data) });
+      return res.status(200).json({ success: true, data });
     } catch (error) {
       return next(error);
     }
@@ -79,7 +69,7 @@ export const cmsPageController = {
           schemaVersion: page.schemaVersion,
           version: page.version,
           publishedAt: page.publishedAt,
-          content: withoutRetiredCmsSections(page.publishedData, page.slug)
+          content: page.publishedData
         }
       });
     } catch (error) {

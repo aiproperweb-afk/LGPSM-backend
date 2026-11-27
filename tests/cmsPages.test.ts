@@ -314,21 +314,57 @@ describe('CMS pages', () => {
       .toEqual(homepageSeed[0].data);
   });
 
-  it('hides previously seeded unsupported pages and keeps existing homepage content editable', async () => {
-    const retired = await createPage({ name: 'Features', slug: 'features', route: '/features' });
-    const existing = puckData('Existing headline');
-    const expanded = { ...existing, content: [...existing.content, { type: 'Testimonials', props: { id: 'Testimonials' } }] };
-    const home = await createPage({ draftData: expanded, publishedData: expanded });
+  it('lists only the requested public entries even with old dashboard records in the database', async () => {
+    const retired = await createPage({ name: 'Dashboard', slug: 'workspace-dashboard', route: '/dashboard' });
+    expect(await cmsPageService.seedPages(homepageSeed)).toHaveLength(13);
     const list = await request(app).get('/api/v1/admin/pages').set(adminHeaders);
-    expect(list.body.data.map((page: { slug: string }) => page.slug)).toEqual(['home']);
-    expect((await request(app).get('/api/v1/public/pages/features')).status).toBe(404);
+    expect(list.body.data.map((page: { slug: string }) => page.slug).sort())
+      .toEqual(homepageSeed.map(page => page.slug).sort());
+    expect((await request(app).get('/api/v1/public/pages/workspace-dashboard')).status).toBe(404);
     expect((await request(app).get('/api/v1/admin/pages/' + retired.id).set(adminHeaders)).status).toBe(404);
-    const publicHome = await request(app).get('/api/v1/public/pages/home');
-    expect(publicHome.body.data.content).toEqual(existing);
-    const edit = await request(app).patch('/api/v1/admin/pages/' + home.id + '/draft')
-      .set({ ...adminHeaders, 'If-Match': '0' }).send({ data: puckData('New headline') });
-    expect(edit.status).toBe(200);
-    expect(edit.body.data.publishedData).toEqual(existing);
+    expect(await Page.exists({ _id: retired._id })).not.toBeNull();
+    for (const { slug, route } of homepageSeed) {
+      const response = await request(app).get('/api/v1/public/pages/' + slug);
+      expect(response.status).toBe(200);
+      expect(response.body.data.route).toBe(route);
+    }
+  });
+
+  it('opens a legacy Home draft and accepts publishing the expanded Home without replacing existing copy on seed', async () => {
+    const existing = puckData('Existing headline');
+    const legacy = { ...existing, content: existing.content.filter(section => section.type !== 'Testimonials') };
+    const home = await createPage({ draftData: legacy, publishedData: legacy });
+    await cmsPageService.seedPages(homepageSeed);
+    const before = await request(app).get('/api/v1/public/pages/home');
+    expect(before.body.data.content).toEqual(legacy);
+    const publish = await request(app).post('/api/v1/admin/pages/' + home.id + '/publish')
+      .set({ ...adminHeaders, 'If-Match': '0' }).send({ data: existing });
+    expect(publish.status).toBe(200);
+    expect((await request(app).get('/api/v1/public/pages/home')).body.data.content).toEqual(existing);
+  });
+
+  it('serves shared navbar and footer copy and keeps edits private until published', async () => {
+    const shared = homepageSeed.filter(page => page.slug === 'navbar' || page.slug === 'footer');
+    expect(await cmsPageService.seedPages(shared)).toHaveLength(2);
+    for (const { slug, route } of shared) {
+      const publicPath = '/api/v1/public/pages/' + slug;
+      const live = await request(app).get(publicPath);
+      expect(live.status).toBe(200);
+      expect(live.body.data.route).toBe(route);
+      expect(live.body.data.content.content[0].type).toBe('SiteChromeCopy');
+      const page = await Page.findOne({ slug });
+      const endpoint = '/api/v1/admin/pages/' + page!.id;
+      const data = structuredClone(live.body.data.content);
+      data.content[0].props.labels.logoLinkLabel = 'Updated home link';
+      const draft = await request(app).patch(endpoint + '/draft')
+        .set({ ...adminHeaders, 'If-Match': String(page!.editVersion) }).send({ data });
+      expect(draft.status).toBe(200);
+      expect((await request(app).get(publicPath)).body.data.content).toEqual(live.body.data.content);
+      const published = await request(app).post(endpoint + '/publish')
+        .set({ ...adminHeaders, 'If-Match': String(draft.body.data.editVersion) }).send({ data });
+      expect(published.status).toBe(200);
+      expect((await request(app).get(publicPath)).body.data.content).toEqual(data);
+    }
   });
 
   it('seeds published pages idempotently without overwriting admin changes', async () => {

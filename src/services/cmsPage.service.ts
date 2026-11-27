@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { Media, MediaPurpose } from '../models/Media';
 import { Page, PageStatus } from '../models/Page';
 import { cmsPageRepository } from '../repositories/cmsPage.repository';
-import { supportsPageContract, supportedCmsSlugs, validateCmsSeedInput, validatePuckData, withoutRetiredCmsSections } from '../validators/cmsPage.validator';
+import { supportsPageContract, supportedCmsSlugs, validateCmsSeedInput, validatePuckData } from '../validators/cmsPage.validator';
 import { mediaService } from './media.service';
 
 function cmsError(statusCode: number, code: string, message: string, extra?: Record<string, unknown>) {
@@ -53,7 +53,7 @@ async function verifyMediaReferences(mediaIds: string[]) {
 
 function validateStructure(page: { componentStructureLocked: boolean; draftData: unknown; slug: string }, structure: string) {
   if (!page.componentStructureLocked) return;
-  const current = validatePuckData(withoutRetiredCmsSections(page.draftData, page.slug), page.slug).structure;
+  const current = validatePuckData(page.draftData, page.slug).structure;
   if (current !== structure) {
     throw cmsError(409, 'CMS_STRUCTURE_LOCKED', 'This page has a fixed component structure; component insertion, deletion and reordering are not allowed.');
   }

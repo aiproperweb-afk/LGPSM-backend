@@ -57,7 +57,7 @@ async function verifyMediaReferences(mediaIds) {
 function validateStructure(page, structure) {
     if (!page.componentStructureLocked)
         return;
-    const current = (0, cmsPage_validator_1.validatePuckData)((0, cmsPage_validator_1.withoutRetiredCmsSections)(page.draftData, page.slug), page.slug).structure;
+    const current = (0, cmsPage_validator_1.validatePuckData)(page.draftData, page.slug).structure;
     if (current !== structure) {
         throw cmsError(409, 'CMS_STRUCTURE_LOCKED', 'This page has a fixed component structure; component insertion, deletion and reordering are not allowed.');
     }

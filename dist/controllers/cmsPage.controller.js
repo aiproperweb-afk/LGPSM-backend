@@ -2,15 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cmsPageController = void 0;
 const cmsPage_service_1 = require("../services/cmsPage.service");
-const cmsPage_validator_1 = require("../validators/cmsPage.validator");
-function pageResponse(page) {
-    const data = page.toJSON();
-    return {
-        ...data,
-        draftData: (0, cmsPage_validator_1.withoutRetiredCmsSections)(data.draftData, data.slug),
-        publishedData: (0, cmsPage_validator_1.withoutRetiredCmsSections)(data.publishedData, data.slug)
-    };
-}
 function editVersion(req) {
     const value = req.header('If-Match');
     if (value === undefined)
@@ -34,7 +25,7 @@ exports.cmsPageController = {
     },
     async getPage(req, res, next) {
         try {
-            return res.status(200).json({ success: true, data: pageResponse(await cmsPage_service_1.cmsPageService.getPage(req.params.id)) });
+            return res.status(200).json({ success: true, data: await cmsPage_service_1.cmsPageService.getPage(req.params.id) });
         }
         catch (error) {
             return next(error);
@@ -43,7 +34,7 @@ exports.cmsPageController = {
     async saveDraft(req, res, next) {
         try {
             const data = await cmsPage_service_1.cmsPageService.saveDraft(req.params.id, editVersion(req), req.body.data, req.user.userId);
-            return res.status(200).json({ success: true, data: pageResponse(data) });
+            return res.status(200).json({ success: true, data });
         }
         catch (error) {
             return next(error);
@@ -52,7 +43,7 @@ exports.cmsPageController = {
     async publish(req, res, next) {
         try {
             const data = await cmsPage_service_1.cmsPageService.publish(req.params.id, editVersion(req), req.body.data, req.user.userId);
-            return res.status(200).json({ success: true, data: pageResponse(data) });
+            return res.status(200).json({ success: true, data });
         }
         catch (error) {
             return next(error);
@@ -61,7 +52,7 @@ exports.cmsPageController = {
     async discardDraft(req, res, next) {
         try {
             const data = await cmsPage_service_1.cmsPageService.discardDraft(req.params.id, editVersion(req), req.user.userId);
-            return res.status(200).json({ success: true, data: pageResponse(data) });
+            return res.status(200).json({ success: true, data });
         }
         catch (error) {
             return next(error);
@@ -81,7 +72,7 @@ exports.cmsPageController = {
                     schemaVersion: page.schemaVersion,
                     version: page.version,
                     publishedAt: page.publishedAt,
-                    content: (0, cmsPage_validator_1.withoutRetiredCmsSections)(page.publishedData, page.slug)
+                    content: page.publishedData
                 }
             });
         }
