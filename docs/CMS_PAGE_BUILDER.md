@@ -86,7 +86,7 @@ The checked-in v1 seed at `src/validators/cms-pages.v1.json` is generated from t
 
 Administrators upload images through `POST /api/v1/media/upload`, with multipart fields `file` and `purpose=CMS_PAGE`. Persist the returned `media:<id>` key. Public images resolve through the standard media API redirect to the Hostinger media origin. CMS files use disk storage in the existing media directory. Draft and publish validate ownership of the media record by purpose and verify the bytes are available.
 
-Run `npm run seed:cms -- src/validators/cms-pages.v1.json` with the approved database connection. The command creates indexes and initializes draft and published snapshots with an insert-only upsert. Repeating it preserves existing content, versions, and timestamps.
+The backend seeds Home and Contact after connecting to MongoDB at startup. For manual initialization, run `npm run seed:cms -- src/validators/cms-pages.v1.json` with the approved database connection. The command creates indexes and initializes draft and published snapshots with an insert-only upsert. Repeating it preserves existing content, versions, and timestamps.
 
 ## Hostinger media
 

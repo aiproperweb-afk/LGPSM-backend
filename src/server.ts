@@ -6,6 +6,9 @@ import { env } from './config/env';
 import { passNoticeService } from './services/passNotice.service';
 import { cancellationNoticeService } from './services/cancellationNotice.service';
 import { paymentReminderService } from './services/paymentReminder.service';
+import { Page } from './models/Page';
+import { cmsPageService } from './services/cmsPage.service';
+import cmsPageSeed from './validators/cms-pages.v1.json';
 import { recoverOnStartup } from './services/stitch/templateGeneration.service';
 
 // Render containers have no outbound IPv6 route. Node's default DNS ordering can still return an
@@ -50,6 +53,16 @@ process.on('unhandledRejection', (reason: any) => console.error('Unhandled rejec
 async function startServer() {
   try {
     await connectDatabase();
+    try {
+      await Page.createIndexes();
+      const pages = await cmsPageService.seedPages(cmsPageSeed);
+      for (const page of pages) {
+        if (page.inserted) console.log(`Seeded CMS page: ${page.slug}`);
+      }
+    } catch (error) {
+      // A CMS initialization error should leave the existing event API available.
+      console.error('CMS initialization failed:', error instanceof Error ? error.message : error);
+    }
     // generation jobs a restart interrupted are failed (not left "running"), and queued ones resume
     await recoverOnStartup().catch((e) => console.error('Template generation recovery failed:', e?.message));
 

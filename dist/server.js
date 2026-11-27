@@ -11,6 +11,9 @@ const env_1 = require("./config/env");
 const passNotice_service_1 = require("./services/passNotice.service");
 const cancellationNotice_service_1 = require("./services/cancellationNotice.service");
 const paymentReminder_service_1 = require("./services/paymentReminder.service");
+const Page_1 = require("./models/Page");
+const cmsPage_service_1 = require("./services/cmsPage.service");
+const cms_pages_v1_json_1 = __importDefault(require("./validators/cms-pages.v1.json"));
 const templateGeneration_service_1 = require("./services/stitch/templateGeneration.service");
 // Render containers have no outbound IPv6 route. Node's default DNS ordering can still return an
 // IPv6 address first for dual-stack hosts (smtp.gmail.com, some third-party APIs), which then
@@ -55,6 +58,18 @@ process.on('unhandledRejection', (reason) => console.error('Unhandled rejection:
 async function startServer() {
     try {
         await (0, database_1.default)();
+        try {
+            await Page_1.Page.createIndexes();
+            const pages = await cmsPage_service_1.cmsPageService.seedPages(cms_pages_v1_json_1.default);
+            for (const page of pages) {
+                if (page.inserted)
+                    console.log(`Seeded CMS page: ${page.slug}`);
+            }
+        }
+        catch (error) {
+            // A CMS initialization error should leave the existing event API available.
+            console.error('CMS initialization failed:', error instanceof Error ? error.message : error);
+        }
         // generation jobs a restart interrupted are failed (not left "running"), and queued ones resume
         await (0, templateGeneration_service_1.recoverOnStartup)().catch((e) => console.error('Template generation recovery failed:', e?.message));
         // cancellation notices that were still waiting when the process stopped are sent now (they are stored, not held in memory)
