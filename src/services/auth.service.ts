@@ -525,8 +525,6 @@ export const authService = {
       }
       const patch: any = {};
       if (!user.googleId) patch.googleId = payload.sub;
-      // a Google sign-in proves the address belongs to this person
-      if (user.adminCreated && !user.emailConfirmedAt) patch.emailConfirmedAt = new Date();
       // Google has confirmed the address: a sign-up that was still waiting for its code is complete
       if (user.isEmailVerified === false) {
         patch.isEmailVerified = true;
@@ -717,9 +715,7 @@ export const authService = {
     const hashedPassword = await hashPassword(newPassword);
     await userRepository.updateById((user as any)._id.toString(), {
       passwordHash: hashedPassword,
-      // the reset link went to the email address: using it proves the address belongs to this person
-      ...((user as any).adminCreated && !(user as any).emailConfirmedAt ? { emailConfirmedAt: new Date() } : {}),
-    } as any);
+    });
 
     await tokenRepository.revokeAllForUser((user as any)._id.toString());
     securityEvent('PASSWORD_RESET_COMPLETED', undefined, { subject: String((user as any)._id) });

@@ -58,18 +58,6 @@ exports.categoryController = {
             return res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
         }
     },
-    async deleteSubcategory(req, res) {
-        try {
-            const category = await category_service_1.categoryService.deleteSubcategory(req.params.id, req.params.subId);
-            return res.status(200).json({ success: true, message: 'Subcategory deleted', data: category });
-        }
-        catch (error) {
-            if (error.message === 'CATEGORY_NOT_FOUND')
-                return res.status(404).json({ success: false, message: 'Subcategory not found' });
-            console.error('Request failed:', error?.message);
-            return res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
-        }
-    },
     async addSubcategory(req, res) {
         try {
             const category = await category_service_1.categoryService.addSubcategory(req.params.id, req.body.name);
@@ -120,7 +108,7 @@ exports.categoryController = {
     async deleteCategory(req, res) {
         try {
             const category = await category_service_1.categoryService.deleteCategory(req.params.id);
-            return res.status(200).json({ success: true, message: 'Category deleted', data: category });
+            return res.status(200).json({ success: true, message: 'Category deactivated successfully', data: category });
         }
         catch (error) {
             if (error.message === 'CATEGORY_NOT_FOUND')

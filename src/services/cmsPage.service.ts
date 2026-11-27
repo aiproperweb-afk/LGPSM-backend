@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { Media, MediaPurpose } from '../models/Media';
 import { Page, PageStatus } from '../models/Page';
 import { cmsPageRepository } from '../repositories/cmsPage.repository';
-import { editableCmsSlugs, supportsPageContract, supportedCmsSlugs, validateCmsSeedInput, validatePuckData } from '../validators/cmsPage.validator';
+import { supportsPageContract, supportedCmsSlugs, validateCmsSeedInput, validatePuckData } from '../validators/cmsPage.validator';
 import { mediaService } from './media.service';
 
 function cmsError(statusCode: number, code: string, message: string, extra?: Record<string, unknown>) {
@@ -22,7 +22,7 @@ function requireExpectedVersion(expectedVersion: number) {
 async function requirePage(id: string) {
   requirePageId(id);
   const page = await cmsPageRepository.findById(id);
-  if (!page || !editableCmsSlugs.includes(page.slug) || !supportsPageContract(page.slug, page.route, page.schemaVersion)) throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
+  if (!page || !supportsPageContract(page.slug, page.route, page.schemaVersion)) throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
   return page;
 }
 
@@ -52,15 +52,15 @@ async function verifyMediaReferences(mediaIds: string[]) {
 }
 
 function validateStructure(page: { componentStructureLocked: boolean; draftData: unknown; slug: string }, structure: string) {
-  if (!page.componentStructureLocked || page.slug === 'contact') return;
+  if (!page.componentStructureLocked) return;
   const current = validatePuckData(page.draftData, page.slug).structure;
   if (current !== structure) {
     throw cmsError(409, 'CMS_STRUCTURE_LOCKED', 'This page has a fixed component structure; component insertion, deletion and reordering are not allowed.');
   }
 }
 
-async function validateContent(data: unknown, slug: string, publishing = false) {
-  const validated = validatePuckData(data, slug, publishing);
+async function validateContent(data: unknown, slug: string) {
+  const validated = validatePuckData(data, slug);
   await verifyMediaReferences(validated.mediaIds);
   return validated;
 }
@@ -86,7 +86,7 @@ export const cmsPageService = {
 
   async publish(id: string, expectedVersion: number, data: unknown, actorId: string) {
     const page = await requireEditablePage(id, expectedVersion);
-    const validated = await validateContent(data, page.slug, true);
+    const validated = await validateContent(data, page.slug);
     if ((validated.data.content as unknown[]).length === 0) {
       throw cmsError(400, 'CMS_CONTENT_EMPTY', 'A page must contain content before it can be published.');
     }
@@ -115,7 +115,7 @@ export const cmsPageService = {
     if (!Array.isArray(input) || input.length === 0) {
       throw cmsError(400, 'CMS_SEED_EMPTY', 'Provide at least one populated page in the CMS seed file.');
     }
-    const seeds = input.map(validateCmsSeedInput).filter(seed => editableCmsSlugs.includes(seed.slug));
+    const seeds = input.map(validateCmsSeedInput);
     const slugs = new Set<string>();
     const routes = new Set<string>();
     for (const seed of seeds) {

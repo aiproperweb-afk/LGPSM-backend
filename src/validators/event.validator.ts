@@ -1,6 +1,6 @@
 import { isAcceptedImageKey } from '../utils/mediaKey';
 import { z } from 'zod';
-import { EVENT_TITLE_MAX_LENGTH, EVENT_DESCRIPTION_MAX_LENGTH, EVENT_LOCATION_MAX_LENGTH, FOOD_TITLE_MAX_LENGTH, FOOD_OPTION_MAX_LENGTH } from '../constants/eventLimits';
+import { EVENT_TITLE_MAX_LENGTH, EVENT_DESCRIPTION_MAX_LENGTH, EVENT_LOCATION_MAX_LENGTH } from '../constants/eventLimits';
 import { CARD_INFO_FIELDS } from '../utils/cardInfo';
 import { EventFormat, EventStatus } from '../models/Event';
 
@@ -29,26 +29,18 @@ const validateDietaryOptions = (preference: { enabled?: boolean; options?: any[]
   });
   if (!hasValidOptions) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['options'], message: 'Add at least one dietary option for each question.' });
-    return;
-  }
-  const longer = (text: unknown, max: number) => typeof text === 'string' && text.trim().length > max;
-  if (options.some((entry: any) => longer(entry?.title, FOOD_TITLE_MAX_LENGTH))) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['options'], message: `Keep each food question title to ${FOOD_TITLE_MAX_LENGTH} characters.` });
-  }
-  if (options.some((entry: any) => (typeof entry === 'string' ? [entry] : entry.options).some((o: unknown) => longer(o, FOOD_OPTION_MAX_LENGTH)))) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['options'], message: `Keep each food option to ${FOOD_OPTION_MAX_LENGTH} characters.` });
   }
 };
 
 const dietaryPreferenceCreateSchema = z.object({
   enabled: z.boolean().optional(),
-  title: z.string().trim().max(FOOD_TITLE_MAX_LENGTH, `Keep the food question title to ${FOOD_TITLE_MAX_LENGTH} characters.`).optional(),
+  title: z.string().max(100).optional(),
   options: z.array(z.any()).max(50, 'Too many dietary options').optional()
 }).superRefine(validateDietaryOptions);
 
 const dietaryPreferenceUpdateSchema = z.object({
   enabled: z.boolean(),
-  title: z.string().trim().max(FOOD_TITLE_MAX_LENGTH, `Keep the food question title to ${FOOD_TITLE_MAX_LENGTH} characters.`).optional(),
+  title: z.string().max(100).optional(),
   options: z.array(z.any()).max(50, 'Too many dietary options').optional()
 }).superRefine(validateDietaryOptions);
 

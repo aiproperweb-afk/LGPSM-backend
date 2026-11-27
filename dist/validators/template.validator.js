@@ -40,10 +40,7 @@ exports.uploadTemplateSchema = zod_1.z.object({
     // an administrator only: share the design with every organizer (sent by the Templates page, never by Add Event)
     publish: zod_1.z.boolean().optional()
 }).strict();
-exports.updateTemplateSchema = exports.createTemplateSchema.partial().extend({
-    // null takes the subcategory off: the template is then for the whole category
-    subcategoryId: zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/).nullable().optional()
-});
+exports.updateTemplateSchema = exports.createTemplateSchema.partial();
 // An organizer editing their own AI template: a name, whether it is available for their events, and (re-validated
 // in full) its design. Everything that decides who owns or can see it stays out of reach.
 exports.updateOwnTemplateSchema = zod_1.z

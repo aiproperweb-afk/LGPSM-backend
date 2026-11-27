@@ -67,7 +67,6 @@ app.use(cors({
   exposedHeaders: ['X-Invitation-Qr', 'Idempotent-Replay'],
   credentials: true,
 }));
-app.use('/api/v1/admin/pages', express.json({ limit: '420kb' }));
 // The raw bytes are kept so webhook signatures can be verified against exactly what the sender signed
 app.use(express.json({
   verify: (req, _res, buf) => {

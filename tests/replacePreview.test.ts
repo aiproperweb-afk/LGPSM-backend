@@ -11,14 +11,13 @@ import { InviteeSet } from '../src/models/InviteeSet';
 import { AuditLog } from '../src/models/AuditLog';
 import { SystemUserAssignment } from '../src/models/SystemUserAssignment';
 import { generateAccessToken } from '../src/utils/token';
-import { withGuests } from './helpers/withGuests';
 
 jest.setTimeout(60_000);
 let mongo: MongoMemoryServer;
 let orgA: any, orgB: any, staff: any, tA: string, tB: string, tStaff: string, event: any;
 const bearer = (t: string) => ({ Authorization: `Bearer ${t}` });
 const HEAD = ['Name', 'Email', 'Mobile'];
-const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
 const send = (rows: (string | number)[][], mode: 'REPLACE' | 'APPEND', dryRun: boolean, file = 'new.xlsx', who = tA) => {
   const r = request(app).post(`/api/v1/events/${event._id}/invitees/import`).set(bearer(who)).field('mode', mode);
   if (dryRun) r.field('dryRun', 'true');

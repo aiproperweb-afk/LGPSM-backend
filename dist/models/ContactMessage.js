@@ -46,8 +46,6 @@ const ContactMessageSchema = new mongoose_1.Schema({
     email: { type: String, required: true, trim: true, lowercase: true, maxlength: 254 },
     phone: { type: String, trim: true, maxlength: 20 },
     message: { type: String, required: true, maxlength: 2000 },
-    formId: { type: String, maxlength: 80 },
-    customFields: { type: [new mongoose_1.Schema({ id: String, label: String, value: mongoose_1.Schema.Types.Mixed }, { _id: false })], default: undefined },
     status: { type: String, enum: Object.values(ContactMessageStatus), default: ContactMessageStatus.NEW },
     fingerprint: { type: String, required: true },
     dedupeKey: { type: String, required: true, unique: true },

@@ -18,7 +18,6 @@ import { inviteeService, MAX_IMPORT_ROWS } from '../src/services/invitee.service
 import { sanitizeDetail } from '../src/utils/securityLog';
 import { fetchPublicImage, isPrivateAddress } from '../src/utils/safeFetch';
 import { resolveImageKeyBase64 } from '../src/utils/resolveImageBase64';
-import { withGuests } from './helpers/withGuests';
 
 // Security audit regression suite. Every test here encodes an attack that was proven against the
 // code before it was fixed (or a control that must keep holding). No real mail or network is used.
@@ -414,7 +413,7 @@ describe('SEC-002: user-supplied image URLs cannot reach internal networks (SSRF
 describe('SEC-010: spreadsheet imports are bounded', () => {
   const sheet = (rows: unknown[][]) => {
     const wb = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'Invitees');
+    xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'Invitees');
     return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
   };
 

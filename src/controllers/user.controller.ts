@@ -17,8 +17,6 @@ const own = (action: (userId: string, body: any) => Promise<unknown>) => async (
 export const userController = {
   sendPhoneCode: own((userId) => accountSecurityService.sendProfilePhoneCode(userId)),
   verifyPhone: own((userId, body) => accountSecurityService.verifyProfilePhone(userId, body.code)),
-  sendEmailCode: own((userId) => accountSecurityService.sendProfileEmailCode(userId)),
-  verifyEmail: own((userId, body) => accountSecurityService.verifyProfileEmail(userId, body.code)),
   requestEmailChange: own((userId, body) => accountSecurityService.requestEmailChange(userId, body)),
   confirmEmailChange: own((userId, body) => accountSecurityService.confirmEmailChange(userId, body.code)),
 

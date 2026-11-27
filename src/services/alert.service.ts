@@ -39,17 +39,16 @@ async function safely(label: string, work: () => Promise<unknown>) {
 }
 
 export const alertService = {
-  // Platform alerts for administrators: the in-app notification and the email each follow their own switch (Settings > Notifications)
+  // Platform alerts for administrators, governed by the admin notification preferences
   async notifyAdmins(preference: keyof INotificationPreferences, content: AlertContent, opts: { email?: boolean } = {}) {
     await safely(content.title, async () => {
-      const [push, email] = await Promise.all([platformSettingsService.getPushPreferences(), platformSettingsService.getNotificationPreferences()]);
-      const byEmail = opts.email !== false && email[preference]; // (high-volume or purely informative notices are in-app only)
-      if (!push[preference] && !byEmail) return;
+      const prefs = await platformSettingsService.getNotificationPreferences();
+      if (!prefs[preference]) return;
       const admins = await User.find({ role: Role.ADMIN, isActive: true }).select('_id email fullName').lean();
       if (admins.length === 0) return;
-      if (push[preference]) await Notification.insertMany(admins.map((a) => toDoc(a._id, content)));
+      await Notification.insertMany(admins.map((a) => toDoc(a._id, content)));
       // Email goes out in the background so a slow mail server never delays the request
-      if (!byEmail) return;
+      if (opts.email === false) return; // in-app only (high-volume or purely informative notices)
       void Promise.all(
         admins
           .filter((a) => a.email)
@@ -102,7 +101,7 @@ export const alertService = {
   // Check-ins at the door: the event's organizer and the administrators see a running count while guests arrive
   async guestCheckedIn(event: { _id: unknown; title: string; organizerId?: unknown }, staffName: string) {
     await safely('guest check-in', async () => {
-      const prefs = await platformSettingsService.getPushPreferences();
+      const prefs = await platformSettingsService.getNotificationPreferences();
       const admins = prefs.guestCheckIns ? (await User.find({ role: Role.ADMIN, isActive: true }).select('_id').lean()).map((a) => a._id) : [];
       const recipients = [...(event.organizerId ? [event.organizerId] : []), ...admins];
       const minutesText = (m: number) => (m <= 1 ? 'the last minute' : `the last ${m} minutes`);

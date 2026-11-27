@@ -36,22 +36,6 @@ exports.platformSettingsController = {
             next(error);
         }
     },
-    async getPushPreferences(_req, res, next) {
-        try {
-            res.status(200).json({ success: true, data: await platformSettings_service_1.platformSettingsService.getPushPreferences() });
-        }
-        catch (error) {
-            next(error);
-        }
-    },
-    async updatePushPreferences(req, res, next) {
-        try {
-            res.status(200).json({ success: true, data: await platformSettings_service_1.platformSettingsService.updatePushPreferences(req.body) });
-        }
-        catch (error) {
-            next(error);
-        }
-    },
     async getPricing(_req, res, next) {
         try {
             res.status(200).json({ success: true, data: await platformSettings_service_1.platformSettingsService.getPricing() });
@@ -85,7 +69,7 @@ exports.platformSettingsController = {
                 await alert_service_1.alertService.notifyAdmins('changeInPrice', {
                     type: 'BILLING',
                     title: 'Price per invitee changed',
-                    message: `The rate changed from ${before === null ? 'not set' : `${data.currency} ${before}`} to ${data.currency} ${data.ratePerInvitee}. It applies to new events and to events with nothing sent yet.`
+                    message: `The rate changed from ${before === null ? 'not set' : `${data.currency} ${before}`} to ${data.currency} ${data.ratePerInvitee}. It applies to events created from now on.`
                 });
             }
             res.status(200).json({ success: true, data });

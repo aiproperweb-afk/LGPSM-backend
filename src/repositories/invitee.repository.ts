@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { guestLimit } from '../utils/guestCount';
 import { Invitee, IInvitee } from '../models/Invitee';
 import { CheckIn } from '../models/CheckIn';
 
@@ -40,15 +39,12 @@ export const inviteeRepository = {
     ]);
 
     const records = await CheckIn.find({ ...checkInScope, inviteeId: { $in: rows.map((r: any) => r._id) } })
-      .select('inviteeId checkInAt scanCount')
+      .select('inviteeId checkInAt')
       .sort({ checkInAt: 1 })
       .lean();
     // Ascending, so the latest check-in for a guest is the one that stays
     const latest = new Map<string, Date>(records.map((r: any) => [String(r.inviteeId), r.checkInAt]));
-    // how many people of each pass are in: for the session asked about, otherwise the most any one session saw
-    const admitted = new Map<string, number>();
-    for (const r of records as any[]) admitted.set(String(r.inviteeId), Math.max(admitted.get(String(r.inviteeId)) ?? 0, r.scanCount ?? 1));
-    const invitees = rows.map((r: any) => ({ ...r, guestCount: guestLimit(r), admittedCount: admitted.get(String(r._id)) ?? 0, isCheckedIn: latest.has(String(r._id)), checkedInAt: latest.get(String(r._id)) ?? undefined }));
+    const invitees = rows.map((r: any) => ({ ...r, isCheckedIn: latest.has(String(r._id)), checkedInAt: latest.get(String(r._id)) ?? undefined }));
     return { invitees: invitees as any, total };
   },
   async create(data: Partial<IInvitee>): Promise<IInvitee> {

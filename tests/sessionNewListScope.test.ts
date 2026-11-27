@@ -11,7 +11,6 @@ import { Invitee } from '../src/models/Invitee';
 import { Session } from '../src/models/Session';
 import { generateAccessToken } from '../src/utils/token';
 import * as xlsx from 'xlsx';
-import { withGuests } from './helpers/withGuests';
 
 jest.setTimeout(60000);
 const auth = (u: any) => ({ Authorization: `Bearer ${generateAccessToken(String(u._id), u.role)}` });
@@ -63,7 +62,7 @@ describe('deleting a session', () => {
 });
 
 describe('changing a session\'s list (edit session > choose file)', () => {
-  const sheet = (rows: string[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests([['Name', 'Email', 'Mobile'], ...rows])), 'Invitees'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+  const sheet = (rows: string[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet([['Name', 'Email', 'Mobile'], ...rows]), 'Invitees'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
 
   it('takes guests who are not in the new file off that session and adds the new ones, without touching other sessions', async () => {
     const a = (await newSession('Check In')).body.data._id;

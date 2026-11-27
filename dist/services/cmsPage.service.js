@@ -25,7 +25,7 @@ function requireExpectedVersion(expectedVersion) {
 async function requirePage(id) {
     requirePageId(id);
     const page = await cmsPage_repository_1.cmsPageRepository.findById(id);
-    if (!page || !cmsPage_validator_1.editableCmsSlugs.includes(page.slug) || !(0, cmsPage_validator_1.supportsPageContract)(page.slug, page.route, page.schemaVersion))
+    if (!page || !(0, cmsPage_validator_1.supportsPageContract)(page.slug, page.route, page.schemaVersion))
         throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
     return page;
 }
@@ -55,15 +55,15 @@ async function verifyMediaReferences(mediaIds) {
     }
 }
 function validateStructure(page, structure) {
-    if (!page.componentStructureLocked || page.slug === 'contact')
+    if (!page.componentStructureLocked)
         return;
     const current = (0, cmsPage_validator_1.validatePuckData)(page.draftData, page.slug).structure;
     if (current !== structure) {
         throw cmsError(409, 'CMS_STRUCTURE_LOCKED', 'This page has a fixed component structure; component insertion, deletion and reordering are not allowed.');
     }
 }
-async function validateContent(data, slug, publishing = false) {
-    const validated = (0, cmsPage_validator_1.validatePuckData)(data, slug, publishing);
+async function validateContent(data, slug) {
+    const validated = (0, cmsPage_validator_1.validatePuckData)(data, slug);
     await verifyMediaReferences(validated.mediaIds);
     return validated;
 }
@@ -86,7 +86,7 @@ exports.cmsPageService = {
     },
     async publish(id, expectedVersion, data, actorId) {
         const page = await requireEditablePage(id, expectedVersion);
-        const validated = await validateContent(data, page.slug, true);
+        const validated = await validateContent(data, page.slug);
         if (validated.data.content.length === 0) {
             throw cmsError(400, 'CMS_CONTENT_EMPTY', 'A page must contain content before it can be published.');
         }
@@ -117,7 +117,7 @@ exports.cmsPageService = {
         if (!Array.isArray(input) || input.length === 0) {
             throw cmsError(400, 'CMS_SEED_EMPTY', 'Provide at least one populated page in the CMS seed file.');
         }
-        const seeds = input.map(cmsPage_validator_1.validateCmsSeedInput).filter(seed => cmsPage_validator_1.editableCmsSlugs.includes(seed.slug));
+        const seeds = input.map(cmsPage_validator_1.validateCmsSeedInput);
         const slugs = new Set();
         const routes = new Set();
         for (const seed of seeds) {

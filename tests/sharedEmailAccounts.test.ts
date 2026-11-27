@@ -19,7 +19,6 @@ import { EmailVerification } from '../src/models/EmailVerification';
 import { PasswordResetOtp } from '../src/models/PasswordResetOtp';
 import { hashPassword } from '../src/utils/password';
 import { generateAccessToken } from '../src/utils/token';
-import { withGuests } from './helpers/withGuests';
 
 const mockSendEmail = jest.fn().mockResolvedValue(true);
 jest.mock('../src/utils/email.provider', () => ({ sendEmail: (...a: any[]) => mockSendEmail(...a) }));
@@ -371,7 +370,7 @@ describe('abc@example.com: an organizer and a system user on one email', () => {
   const mkEvent = (org: any, title: string) => Event.create({ organizerId: org._id, title, description: 'd', categoryId: null as any, format: 'PHYSICAL', status: 'PUBLISHED', contactNumber: '9007000891', location: { address: 'Kolkata' }, schedule: { start: new Date(Date.now() + day), end: new Date(Date.now() + 2 * day) } });
   const assign = (who: any, ev: any, userId: string) => request(app).post(`/api/v1/events/${ev._id}/assignments`).set(auth(who)).send({ userId, sessionIds: [] });
   const guest = (who: any, ev: any, body: Record<string, unknown>) => request(app).post(`/api/v1/events/${ev._id}/invitees`).set(auth(who)).send(body);
-  const uploadList = (who: any, ev: any, rows: string[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests([['Name', 'Email', 'Mobile'], ...rows])), 'Invitees'); return request(app).post(`/api/v1/events/${ev._id}/invitees/import`).set(auth(who)).field('mode', 'APPEND').attach('file', xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer, 'list.xlsx'); };
+  const uploadList = (who: any, ev: any, rows: string[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet([['Name', 'Email', 'Mobile'], ...rows]), 'Invitees'); return request(app).post(`/api/v1/events/${ev._id}/invitees/import`).set(auth(who)).field('mode', 'APPEND').attach('file', xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer, 'list.xlsx'); };
   beforeEach(async () => {
     const cat: any = await Category.create({ name: 'Corporate', isActive: true });
     abc = await User.create({ fullName: 'Abc Organizer', email: ABC, passwordHash: await hashPassword(ORG_PW), role: Role.ORGANIZER, isActive: true, isEmailVerified: true });

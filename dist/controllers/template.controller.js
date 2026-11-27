@@ -57,20 +57,6 @@ exports.templateController = {
             return res.status(500).json({ error: 'Internal Server Error', message: 'The text areas could not be saved. Please try again.' });
         }
     },
-    async previewTextZones(req, res) {
-        try {
-            const png = await (0, uploadedTemplate_1.previewTextZones)({ userId: req.user.userId }, String(req.params.id), req.body.zones);
-            res.setHeader('Content-Type', 'image/png');
-            res.setHeader('Cache-Control', 'no-store');
-            return res.status(200).send(png);
-        }
-        catch (error) {
-            if (error instanceof uploadedTemplate_1.UploadError)
-                return res.status(error.status).json({ success: false, message: error.message });
-            console.error('Request failed:', error?.message);
-            return res.status(500).json({ error: 'Internal Server Error', message: 'The image could not be created. Please try again.' });
-        }
-    },
     async detectTextZones(req, res) {
         try {
             return res.status(200).json({ success: true, data: await (0, uploadedTemplate_1.redetectTextZones)({ userId: req.user.userId }, String(req.params.id)) });
@@ -202,8 +188,6 @@ exports.templateController = {
         catch (error) {
             if (error.message === 'TEMPLATE_NOT_FOUND')
                 return res.status(404).json({ error: 'Not Found', message: 'Template not found' });
-            if (error?.statusCode === 409)
-                return res.status(409).json({ success: false, error: 'Conflict', message: error.message });
             console.error('Request failed:', error?.message);
             return res.status(500).json({ error: 'Internal Server Error', message: 'Something went wrong. Please try again.' });
         }

@@ -22,8 +22,7 @@ exports.contactService = {
     // Persists first, then alerts admins. A failure while alerting is logged but never undoes (or fails)
     // a request that was already stored.
     async submit(input, meta = {}) {
-        const formFingerprint = input.formId ? JSON.stringify([input.formId, input.customFields?.map(({ id, value }) => [id, value])]) : "";
-        const fingerprint = sha256(`${input.email}\n${normaliseForFingerprint(input.message)}${formFingerprint}`);
+        const fingerprint = sha256(`${input.email}\n${normaliseForFingerprint(input.message)}`);
         const recent = await ContactMessage_1.ContactMessage.findOne({
             fingerprint,
             createdAt: { $gte: new Date(Date.now() - exports.DUPLICATE_WINDOW_MS) }
@@ -38,8 +37,6 @@ exports.contactService = {
                 email: input.email,
                 phone: input.phone,
                 message: input.message,
-                formId: input.formId,
-                customFields: input.customFields,
                 fingerprint,
                 dedupeKey: `${fingerprint}:${bucket}`,
                 ipHash: meta.ip ? crypto_1.default.createHmac('sha256', env_1.env.JWT_SECRET).update(meta.ip).digest('hex').slice(0, 32) : undefined,

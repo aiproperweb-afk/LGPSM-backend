@@ -18,7 +18,6 @@ import { whatsappService } from '../src/services/whatsapp.service';
 import { decryptToken } from '../src/utils/tokenCipher';
 import { admissionPayloadFor, invitationUrlFor } from '../src/utils/qrPayload';
 import { decodeQr } from './helpers/qr';
-import { withGuests } from './helpers/withGuests';
 
 // The whole product through its HTTP API in one database, as the three kinds of user would use it. Every response body and
 // every line the server logs is recorded and, at the end, searched for secrets.
@@ -34,7 +33,7 @@ describe('release journey: admin, organizer, staff and attendee', () => {
   const secrets = new Set<string>();
   const call = async (req: request.Test) => { const res = await req; bodyMeta.push(`${(req as any).method} ${String((req as any).url).replace(/[a-f0-9]{64}/gi, ':token')}`); bodies.push(JSON.stringify(res.body ?? {}, (k, v) => { if (k === 'whatsappWebUrl' && typeof v === 'string') { clickToChat.push(v); return '[click-to-chat link]'; } return v; }) + (typeof res.text === 'string' && !res.body ? res.text : '')); return res; };
   const auth = (t: string) => ({ Authorization: `Bearer ${t}` });
-  const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+  const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
   const login = (email: string, role: string) => call(request(app).post('/api/auth/login').send({ email, password: PASSWORD, role }));
   const scan = (token: string, who: string, extra: Record<string, unknown> = {}) => call(request(app).post('/api/v1/checkins/scan').set(auth(who)).send({ qrCode: admissionPayloadFor(token), eventId, sessionId, ...extra }));
   const tokensOf = async (name: string) => { const g: any = await Invitee.findOne({ name }).select('+qrTokenCipher +invitationTokenCipher'); const t = { id: String(g._id), admission: decryptToken(g.qrTokenCipher)!, invitation: decryptToken(g.invitationTokenCipher)!, qrTokenHash: g.qrTokenHash, invitationTokenHash: g.invitationTokenHash }; ([['admission', t.admission], ['invitation', t.invitation], ['qrTokenHash', t.qrTokenHash], ['invitationTokenHash', t.invitationTokenHash]] as const).forEach(([k, v]) => { secrets.add(String(v)); kind.set(String(v), k); }); return t; };

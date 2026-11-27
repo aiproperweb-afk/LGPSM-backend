@@ -16,7 +16,6 @@ import { encryptToken, decryptToken } from '../src/utils/tokenCipher';
 import { admissionPayloadFor } from '../src/utils/qrPayload';
 import * as mainEmail from '../src/utils/email.provider';
 import { whatsappService as mainWhatsApp } from '../src/services/whatsapp.service';
-import { withGuests } from './helpers/withGuests';
 
 // Production-like validation: a replica set (so multi-document transactions are really used) and TWO independent copies of the
 // application (separate module registries, connections, models and in-process locks) sharing it. Nothing in-process can
@@ -73,7 +72,7 @@ async function mkGuest(ev: any, name = 'Guest') {
 }
 const scan = (inst: Instance, ev: any, session: any, token: string) =>
   inst.checkInService.scanCheckIn(actor(), { qrCode: admissionPayloadFor(token), eventId: String(ev._id), sessionId: String(session._id) }).then((r: any) => ({ ok: true, r }), (e: any) => ({ ok: false, code: e?.message, err: e }));
-const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
 const settle = async (ms = 400) => new Promise((r) => setTimeout(r, ms));
 
 beforeAll(async () => {

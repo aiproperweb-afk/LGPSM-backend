@@ -1,9 +1,9 @@
 import { Page, IPage, PageStatus } from '../models/Page';
-import { PuckData, editableCmsSlugs } from '../validators/cmsPage.validator';
+import { PuckData, supportedCmsSlugs } from '../validators/cmsPage.validator';
 
 export const cmsPageRepository = {
   async list() {
-    return Page.find({ slug: { $in: editableCmsSlugs } })
+    return Page.find({ slug: { $in: supportedCmsSlugs } })
       .select('name slug route status schemaVersion version editVersion componentStructureLocked updatedBy publishedBy publishedAt createdAt updatedAt')
       .populate('updatedBy', 'fullName email')
       .populate('publishedBy', 'fullName email')

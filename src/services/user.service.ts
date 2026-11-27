@@ -1,5 +1,4 @@
 import { smsService } from './sms.service';
-import { verificationPending } from '../utils/organizerVerification';
 import { auditLogService } from './auditLog.service';
 import { EmailVerification } from '../models/EmailVerification';
 import mongoose from 'mongoose';
@@ -148,7 +147,7 @@ async function profileWithAvatarUrl(user: IUser): Promise<Record<string, any>> {
 }
 
 /** The profile as its owner sees it, with whether their mobile number can be verified on this server */
-const ownProfile = async (user: IUser) => ({ ...(await profileWithAvatarUrl(user)), phoneVerificationAvailable: smsService.isConfigured(), verificationPending: verificationPending(user as any) });
+const ownProfile = async (user: IUser) => ({ ...(await profileWithAvatarUrl(user)), phoneVerificationAvailable: smsService.isConfigured() });
 
 export const userService = {
   async getProfile(userId: string) {
@@ -301,9 +300,7 @@ export const userService = {
       passwordHash: hashedPassword,
       authProvider: AuthProvider.LOCAL,
       role: data.role,
-      createdBy: new mongoose.Types.ObjectId(ownerId),
-      // an organizer an administrator adds still has to verify the email and mobile number from their own profile
-      ...(data.role === Role.ORGANIZER && actor.role === Role.ADMIN ? { adminCreated: true } : {})
+      createdBy: new mongoose.Types.ObjectId(ownerId)
     });
 
     if (generatedPassword) {
@@ -419,8 +416,6 @@ export const userService = {
         throw { statusCode: 409, message: 'This person is already one of your system users.' };
       }
       updatePayload.email = data.email;
-      // a new address has not been proved to be the owner's
-      if (target.role === Role.ORGANIZER && (target as any).adminCreated && email !== String(target.email).toLowerCase()) updatePayload.emailConfirmedAt = null;
     }
     if (data.phone !== undefined) {
       updatePayload.phone = normalizePhoneNumber(data.phone);

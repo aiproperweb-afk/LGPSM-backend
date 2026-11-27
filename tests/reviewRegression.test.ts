@@ -13,7 +13,6 @@ import { Template } from '../src/models/Template';
 import { CheckIn } from '../src/models/CheckIn';
 import { generateAccessToken } from '../src/utils/token';
 import { generateSecureToken, hashToken } from '../src/utils/invitation.util';
-import { withGuests } from './helpers/withGuests';
 
 jest.mock('../src/utils/email.provider', () => ({
   sendEmail: jest.fn().mockResolvedValue(true),
@@ -27,7 +26,7 @@ const bearer = (t: string) => ({ Authorization: `Bearer ${t}` });
 
 function sheet(rows: (string | number)[][]): Buffer {
   const wb = xlsx.utils.book_new();
-  xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'Invitees');
+  xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'Invitees');
   return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
 }
 

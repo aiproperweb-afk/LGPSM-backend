@@ -33,10 +33,6 @@ export interface IUser extends Document {
   isPhoneVerified?: boolean;
   /** A new sign-up that may not sign in until its mobile number is verified (set only while text messages can be sent) */
   phoneVerificationRequired?: boolean;
-  /** ORGANIZER: the account was created by an administrator, so its owner still verifies it (utils/organizerVerification.ts) */
-  adminCreated?: boolean;
-  /** When the owner proved the sign-in email is theirs (a code sent to it, or a Google sign-in) */
-  emailConfirmedAt?: Date | null;
   /** Agreed at sign-up to product updates and offers by WhatsApp and SMS */
   marketingConsent?: boolean;
   googleId?: string;
@@ -67,8 +63,6 @@ const UserSchema: Schema = new Schema(
     isEmailVerified: { type: Boolean, default: true },
     isPhoneVerified: { type: Boolean, default: false },
     phoneVerificationRequired: { type: Boolean, default: false },
-    adminCreated: { type: Boolean },
-    emailConfirmedAt: { type: Date },
     marketingConsent: { type: Boolean },
     // the Google account an organizer signed in with (the "sub" of the verified ID token); never used to look people up by email alone
     googleId: { type: String, index: true, sparse: true },

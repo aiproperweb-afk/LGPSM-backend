@@ -1,4 +1,4 @@
-import { inviteesAllowedFilter, inviteeAllowedInSession } from '../utils/sessionAccess';
+import { inviteesAllowedFilter } from '../utils/sessionAccess';
 import { meaningOf, meaningsOf } from '../utils/columnMeaning';
 import { Invitation, InvitationDeliveryStatus } from '../models/Invitation';
 import { credentialStatus } from '../utils/credentialPolicy';
@@ -18,13 +18,12 @@ import { InviteeSet, ImportMode } from '../models/InviteeSet';
 import { lockedSetKeys, setKeyOf, loadActivity, neverAttempted, deliveryStateOf, withEventLock, inviteeSetService } from './inviteeSet.service';
 import { auditLogService } from './auditLog.service';
 import { CredentialEvent } from '../models/CredentialEvent';
-import { GUEST_COUNT_HEADER, MAX_GUESTS_PER_PASS, guestLimit, isGuestCountHeader, parseGuestCount } from '../utils/guestCount';
 import { assertEventOpenForChanges } from '../utils/eventLifecycle';
 import { assertSafeWorkbook } from '../utils/spreadsheetGuard';
 
 // The only guest fields a request can write. Delivery, credential, archive and list fields change through their own workflows;
 // the food choice belongs to the guest (invitation page).
-const GUEST_DETAIL_FIELDS = ['name', 'email', 'mobile', 'companyName', 'company', 'professionalIdentity', 'secondaryIdentity', 'guestCount', 'sessionAccess'] as const;
+const GUEST_DETAIL_FIELDS = ['name', 'email', 'mobile', 'companyName', 'company', 'professionalIdentity', 'secondaryIdentity', 'sessionAccess'] as const;
 const pickGuestDetails = (data: any, extra: readonly string[] = []) => {
   const out: Record<string, unknown> = {};
   for (const key of [...GUEST_DETAIL_FIELDS, ...extra]) if (data?.[key] !== undefined) out[key] = data[key];
@@ -334,71 +333,6 @@ export const inviteeService = {
     return { success: true, updatedCount: invitees.length };
   },
 
-  /**
-   * Takes guests out of ONE session, leaving them in every other session they can attend. Sessions that share a guest list ("keep the same
-   * invitees as") stop sharing first, each keeping its own copy, so the change stays in the chosen session. A guest who can attend no
-   * other session is not touched here: they are reported (`onlyThisSession`), for the caller to delete from the guest list.
-   */
-  async removeFromSession(eventId: string, actor: { userId: string; role: string }, sessionId: string, inviteeIds: string[]) {
-    const event = await findManageableEvent(eventId, actor.userId, actor.role);
-    if (!event) throw new Error('EVENT_NOT_FOUND');
-    assertEventOpenForChanges(event);
-    return withEventLock(eventId, async () => {
-      const sessions = await Session.find({ eventId });
-      const target = sessions.find((s) => String(s._id) === sessionId);
-      if (!target) throw new Error('INVALID_SESSIONS');
-      const ids = [...new Set(inviteeIds)];
-      const guests = await Invitee.find({ _id: { $in: ids }, eventId });
-      if (guests.length !== ids.length) throw new Error('INVALID_INVITEES');
-
-      const attends = (g: IInvitee) => sessions.filter((s) => inviteeAllowedInSession(g as any, s as any)).map((s) => String(s._id));
-      const movers: string[] = [], onlyThisSession: string[] = [];
-      let notInSession = 0;
-      for (const g of guests) {
-        const allowed = attends(g);
-        if (!allowed.includes(sessionId)) notInSession++;
-        else if (allowed.length === 1) onlyThisSession.push(String(g._id));
-        else movers.push(String(g._id));
-      }
-      if (movers.length === 0) return { removed: 0, onlyThisSession, notInSession };
-
-      // Stop sharing: the sessions involved get their own written access before anything is taken away
-      const listOwner = target.inviteeSource === InviteeSource.COPY_SESSION && target.sourceSessionId ? String(target.sourceSessionId) : null;
-      const copies = sessions.filter((s) => s.inviteeSource === InviteeSource.COPY_SESSION && String(s.sourceSessionId) === sessionId);
-      const give = async (from: string, to: mongoose.Types.ObjectId) => {
-        // (an entry already naming the new owner is stale: a session that shared a list was decided by that list alone)
-        await Invitee.updateMany({ eventId, 'sessionAccess.0': { $exists: true } }, { $pull: { sessionAccess: { sessionId: to } } });
-        await Invitee.updateMany({ eventId, sessionAccess: { $elemMatch: { sessionId: from, allowed: true } } }, { $push: { sessionAccess: { sessionId: to, allowed: true } } });
-      };
-      // A guest whose rules named only a stale entry would be left with none, which means "every session": give them an explicit "no" first
-      const keepExplicit = async (stale: mongoose.Types.ObjectId) => Invitee.updateMany(
-        { eventId, 'sessionAccess.sessionId': stale, 'sessionAccess.1': { $exists: false } },
-        { $push: { sessionAccess: { sessionId: new mongoose.Types.ObjectId(listOwner || sessionId), allowed: false } } }
-      );
-      if (listOwner) {
-        await keepExplicit(target._id as mongoose.Types.ObjectId);
-        await give(listOwner, target._id as mongoose.Types.ObjectId);
-        await Session.updateOne({ _id: target._id }, { inviteeSource: InviteeSource.NEW_LIST, sourceSessionId: null });
-      }
-      for (const copy of copies) {
-        await keepExplicit(copy._id as mongoose.Types.ObjectId);
-        await give(sessionId, copy._id as mongoose.Types.ObjectId);
-        await Session.updateOne({ _id: copy._id }, { inviteeSource: InviteeSource.NEW_LIST, sourceSessionId: null });
-      }
-
-      const after = await Session.find({ eventId });
-      for (const g of await Invitee.find({ _id: { $in: movers }, eventId })) {
-        // a guest with no written rules attends every session: their rules are written out, without this one
-        const rules = g.sessionAccess.length
-          ? g.sessionAccess.map((a) => ({ sessionId: a.sessionId, allowed: a.allowed }))
-          : after.filter((s) => s.inviteeSource !== InviteeSource.COPY_SESSION).map((s) => ({ sessionId: s._id as mongoose.Types.ObjectId, allowed: true }));
-        const next = [...rules.filter((a) => String(a.sessionId) !== sessionId), { sessionId: target._id as mongoose.Types.ObjectId, allowed: false }];
-        await Invitee.updateOne({ _id: g._id }, { $set: { sessionAccess: next } });
-      }
-      return { removed: movers.length, onlyThisSession, notInSession };
-    });
-  },
-
   async deleteInvitee(inviteeId: string, organizerId: string, actorRole = 'ORGANIZER'): Promise<IInvitee & { removedWithHistory?: boolean }> {
     const invitee = await this.getInviteeById(inviteeId, organizerId);
     await this.assertGuestEventOpen(invitee);
@@ -544,19 +478,17 @@ export const inviteeService = {
 
     // Header matching (same rules as the frontend preview in utils/inviteeSheet.ts)
     const wanted = wantedGuestDetails((event as any).cardInfo, (event as any).cardDisplay);
-    let nameColIdx = -1, emailColIdx = -1, mobileColIdx = -1, companyColIdx = -1, identityColIdx = -1, secondIdentityColIdx = -1, guestsColIdx = -1;
+    let nameColIdx = -1, emailColIdx = -1, mobileColIdx = -1, companyColIdx = -1, identityColIdx = -1, secondIdentityColIdx = -1;
     const sessionColMap = new Map<number, string>();
     const firstRowCols = nonBlankRows[0].map((c: any) => cleanCellValue(c).toLowerCase());
     const isHeaderPresent = firstRowCols.some(
-      (col: string) => col.includes('name') || col.includes('email') || col.includes('mobile') || col.includes('phone') || col.includes('company') || meaningsOf(col).length > 0 || isGuestCountHeader(col)
+      (col: string) => col.includes('name') || col.includes('email') || col.includes('mobile') || col.includes('phone') || col.includes('company') || meaningsOf(col).length > 0
     );
     if (isHeaderPresent) {
       firstRowCols.forEach((colStr: string, colIdx: number) => {
         if (!colStr) return;
         const customIdentity = String((event as any).cardInfo?.identityLabel || '').trim().toLowerCase();
         const customSecond = String((event as any).cardInfo?.secondaryIdentityLabel || '').trim().toLowerCase();
-        // checked first: "No of Guests" would otherwise be read as the guest's name
-        if (isGuestCountHeader(colStr)) { if (guestsColIdx === -1) guestsColIdx = colIdx; return; }
         if (colStr === 'second identity' || (customSecond && colStr === customSecond)) secondIdentityColIdx = colIdx;
         else if (colStr.includes('identity') || colStr.includes('designation') || (customIdentity && colStr === customIdentity)) identityColIdx = colIdx;
         // a heading is read by what it means: "Ph No", "Telephone" and "Contact no" are the mobile column, "Guest" the name column
@@ -578,8 +510,8 @@ export const inviteeService = {
       });
       // A card detail the event asks for may sit under a heading of the organizer's own (e.g. "Employee ID" or "Department"): the
       // columns nobody else claimed fill the asked-for primary / secondary slot in sheet order, so the card never prints a blank line
-      const taken = new Set<number>([nameColIdx, emailColIdx, mobileColIdx, companyColIdx, identityColIdx, secondIdentityColIdx, guestsColIdx, ...sessionColMap.keys()]);
-      const extras = firstRowCols.map((c: string, i: number) => (c && !taken.has(i) && !isGuestCountHeader(c) ? i : -1)).filter((i: number) => i !== -1);
+      const taken = new Set<number>([nameColIdx, emailColIdx, mobileColIdx, companyColIdx, identityColIdx, secondIdentityColIdx, ...sessionColMap.keys()]);
+      const extras = firstRowCols.map((c: string, i: number) => (c && !taken.has(i) ? i : -1)).filter((i: number) => i !== -1);
       for (const idx of extras) {
         if (wanted.identity && identityColIdx === -1) identityColIdx = idx;
         else if (wanted.identity2 && secondIdentityColIdx === -1) secondIdentityColIdx = idx;
@@ -597,10 +529,6 @@ export const inviteeService = {
     // taken for "replace the list with nothing".
     if (dataRows.length === 0) {
       throw { statusCode: 400, message: 'The sheet has a heading row but no invitee rows under it. Add at least one invitee and upload it again.' };
-    }
-    // How many people each pass admits is asked of every list: without the column nothing is imported
-    if (guestsColIdx === -1) {
-      throw { statusCode: 400, code: 'GUEST_COUNT_COLUMN_MISSING', message: `The sheet needs a "${GUEST_COUNT_HEADER}" column (how many people each guest's pass admits, 1 to ${MAX_GUESTS_PER_PASS}). Download the sample Excel and use its column names.` };
     }
     results.totalRows = dataRows.length;
     const cell = (row: any[], idx: number) => (idx !== -1 && row[idx] !== undefined ? cleanCellValue(row[idx]) : '');
@@ -641,13 +569,6 @@ export const inviteeService = {
       if (email && !isValidEmailFormat(email)) { results.rejected++; results.errors.push({ row: rowNum, error: `Invalid email format '${email}'` }); continue; }
       if (mobile && !isValidMobileFormat(mobile)) { results.rejected++; results.errors.push({ row: rowNum, error: `Invalid mobile number '${mobile}' (must contain 7-15 digits)` }); continue; }
       if (!email && !mobile) { results.rejected++; results.errors.push({ row: rowNum, error: 'Email or mobile is required' }); continue; }
-      const guestText = cell(row, guestsColIdx);
-      const guestCount = parseGuestCount(guestText);
-      if (guestCount === null) {
-        results.rejected++;
-        results.errors.push({ row: rowNum, error: guestText ? `Invalid ${GUEST_COUNT_HEADER} '${guestText}' (must be a whole number from 1 to ${MAX_GUESTS_PER_PASS})` : `${GUEST_COUNT_HEADER} is required` });
-        continue;
-      }
 
       const mobileKey = mobileIdentity(mobile);
       if ((email && seenEmails.has(email)) || (mobileKey && seenMobiles.has(mobileKey))) {
@@ -718,9 +639,6 @@ export const inviteeService = {
         }
         if (professionalIdentity && !existing.professionalIdentity) existing.professionalIdentity = professionalIdentity;
         if (secondaryIdentity && !(existing as any).secondaryIdentity) (existing as any).secondaryIdentity = secondaryIdentity;
-        // the number of people the pass admits follows the latest sheet (a family can grow or shrink after it was invited)
-        if (guestLimit(existing) !== guestCount) results.notices.push({ row: rowNum, message: `${existing.name}: ${GUEST_COUNT_HEADER} changed from ${guestLimit(existing)} to ${guestCount}` });
-        existing.guestCount = guestCount;
         if (kept.length) results.notices.push({ row: rowNum, message: `Matches ${existing.name}; kept the existing ${kept.join(', ')}` });
         existing.sessionAccess = [...access.entries()].map(([sessionId, allowed]) => ({ sessionId: new mongoose.Types.ObjectId(sessionId), allowed })) as any;
         if (!dryRun) await existing.save();
@@ -735,7 +653,6 @@ export const inviteeService = {
           company: company || undefined,
           professionalIdentity: professionalIdentity || undefined,
           secondaryIdentity: secondaryIdentity || undefined,
-          guestCount,
           sessionAccess: rowAccess.map((a) => ({ sessionId: new mongoose.Types.ObjectId(a.sessionId), allowed: a.allowed })),
           invitationStatus: InvitationStatus.PENDING,
           rsvpStatus: RsvpStatus.PENDING

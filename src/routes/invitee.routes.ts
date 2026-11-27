@@ -5,7 +5,7 @@ import { inviteeController } from '../controllers/invitee.controller';
 import { authenticate } from '../middlewares/authenticate';
 import { authorizeRoles } from '../middlewares/authorizeRoles';
 import { Role } from '../models/User';
-import { createInviteeSchema, updateInviteeSchema, updateSessionAccessSchema, bulkUpdateSessionAccessSchema, removeFromSessionSchema } from '../validators/invitee.validator';
+import { createInviteeSchema, updateInviteeSchema, updateSessionAccessSchema, bulkUpdateSessionAccessSchema } from '../validators/invitee.validator';
 import { ZodSchema } from 'zod';
 import multer from 'multer';
 import { importGuard } from '../middlewares/importGuard';
@@ -58,8 +58,6 @@ eventInviteeRoutes.post('/set-aside/restore', authorizeRoles(Role.ADMIN, Role.OR
 eventInviteeRoutes.get('/credential-events', authorizeRoles(Role.ADMIN, Role.ORGANIZER), inviteeController.getCredentialHistory);
 eventInviteeRoutes.post('/pass-notices/retry', authorizeRoles(Role.ADMIN, Role.ORGANIZER), auditAction({ action: 'PASS_NOTICES_RETRY', entityType: 'Event', eventParam: 'eventId', describe: 'Access-pass messages retried', meta: (req) => ({ includeUnknown: (req.body as any)?.includeUnknown === true }) }), inviteeController.retryPassNotices);
 eventInviteeRoutes.put('/session-access/bulk', authorizeRoles(Role.ADMIN, Role.ORGANIZER), validate(bulkUpdateSessionAccessSchema), auditAction({ action: 'INVITEE_SESSION_ACCESS_BULK', entityType: 'Invitee', eventParam: 'eventId' }), inviteeController.bulkUpdateSessionAccess);
-// Delete with one session chosen: the guests leave that session only
-eventInviteeRoutes.post('/session-access/remove', authorizeRoles(Role.ADMIN, Role.ORGANIZER), validate(removeFromSessionSchema), auditAction({ action: 'INVITEE_SESSION_REMOVED', entityType: 'Invitee', eventParam: 'eventId', describe: 'Guests removed from one session', meta: (req, body) => ({ sessionId: (req.body as any)?.sessionId, removed: body?.data?.removed }) }), inviteeController.removeFromSession);
 
 // Upload handling
 eventInviteeRoutes.post('/import', authorizeRoles(Role.ADMIN, Role.ORGANIZER), importLimiter, (req, res, next) => {

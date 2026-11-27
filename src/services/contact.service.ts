@@ -11,8 +11,6 @@ export interface ContactSubmission {
   email: string;
   phone?: string;
   message: string;
-  formId?: string;
-  customFields?: IContactMessage['customFields'];
 }
 
 export interface ContactRequestMeta {
@@ -40,8 +38,7 @@ export const contactService = {
   // Persists first, then alerts admins. A failure while alerting is logged but never undoes (or fails)
   // a request that was already stored.
   async submit(input: ContactSubmission, meta: ContactRequestMeta = {}): Promise<ContactReceipt> {
-    const formFingerprint = input.formId ? JSON.stringify([input.formId, input.customFields?.map(({ id, value }) => [id, value])]) : "";
-    const fingerprint = sha256(`${input.email}\n${normaliseForFingerprint(input.message)}${formFingerprint}`);
+    const fingerprint = sha256(`${input.email}\n${normaliseForFingerprint(input.message)}`);
 
     const recent = await ContactMessage.findOne({
       fingerprint,
@@ -57,8 +54,6 @@ export const contactService = {
         email: input.email,
         phone: input.phone,
         message: input.message,
-        formId: input.formId,
-        customFields: input.customFields,
         fingerprint,
         dedupeKey: `${fingerprint}:${bucket}`,
         ipHash: meta.ip ? crypto.createHmac('sha256', env.JWT_SECRET).update(meta.ip).digest('hex').slice(0, 32) : undefined,

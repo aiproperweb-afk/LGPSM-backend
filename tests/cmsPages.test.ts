@@ -75,31 +75,6 @@ describe('CMS pages', () => {
     expect((await request(app).get('/api/v1/admin/pages').set(organizerHeaders)).status).toBe(403);
   });
 
-  it('round-trips Contact builder dimensions while isolating the public snapshot and other pages', async () => {
-    const home = await createPage();
-    const contact = await createPage({ name: 'Contact', slug: 'contact', route: '/contact' });
-    const data = {
-      root: { props: { builder: 'contact', schemaVersion: 2 } },
-      content: [{
-        type: 'Heading',
-        props: { id: 'hero-heading', text: 'Updated contact', style: { mobile: { width: '75%' } } }
-      }]
-    };
-    const headers = { ...adminHeaders, 'If-Match': '0' };
-    const draftPath = (id: string) => '/api/v1/admin/pages/' + id + '/draft';
-    const livePath = '/api/v1/public/pages/contact';
-    expect((await request(app).patch(draftPath(home.id)).set(headers).send({ data })).status).toBe(400);
-    expect((await request(app).patch(draftPath(contact.id)).set(organizerHeaders).send({ data })).status).toBe(403);
-    const draft = await request(app).patch(draftPath(contact.id)).set(headers).send({ data });
-    expect(draft.status).toBe(200);
-    expect(draft.body.data.draftData.content[0]).toEqual(data.content[0]);
-    expect((await request(app).get(livePath)).body.data.content.root.props.builder).toBeUndefined();
-    const published = await request(app).post('/api/v1/admin/pages/' + contact.id + '/publish')
-      .set({ ...adminHeaders, 'If-Match': '1' }).send({ data });
-    expect(published.status).toBe(200);
-    expect((await request(app).get(livePath)).body.data.content.content[0]).toEqual(data.content[0]);
-  });
-
   it('returns drafts to admins only and validates page IDs', async () => {
     const page = await createPage({ draftData: puckData('Unsaved'), publishedData: puckData('Live') });
     const result = await request(app).get(`/api/v1/admin/pages/${page.id}`).set(adminHeaders);
@@ -341,36 +316,18 @@ describe('CMS pages', () => {
 
   it('lists only the requested public entries even with old dashboard records in the database', async () => {
     const retired = await createPage({ name: 'Dashboard', slug: 'workspace-dashboard', route: '/dashboard' });
-    expect(await cmsPageService.seedPages(homepageSeed)).toHaveLength(6);
+    expect(await cmsPageService.seedPages(homepageSeed)).toHaveLength(13);
     const list = await request(app).get('/api/v1/admin/pages').set(adminHeaders);
     expect(list.body.data.map((page: { slug: string }) => page.slug).sort())
-      .toEqual(homepageSeed.filter(page => page.editable !== false).map(page => page.slug).sort());
+      .toEqual(homepageSeed.map(page => page.slug).sort());
     expect((await request(app).get('/api/v1/public/pages/workspace-dashboard')).status).toBe(404);
     expect((await request(app).get('/api/v1/admin/pages/' + retired.id).set(adminHeaders)).status).toBe(404);
     expect(await Page.exists({ _id: retired._id })).not.toBeNull();
-    for (const { slug, route } of homepageSeed.filter(page => page.editable !== false)) {
+    for (const { slug, route } of homepageSeed) {
       const response = await request(app).get('/api/v1/public/pages/' + slug);
       expect(response.status).toBe(200);
       expect(response.body.data.route).toBe(route);
     }
-  });
-
-  it('preserves existing client category publications while removing their editor access', async () => {
-    const definition = homepageSeed.find(page => page.slug === 'clients-business-corporate')!;
-    const archived = await createPage({
-      name: definition.name,
-      slug: definition.slug,
-      route: definition.route,
-      draftData: definition.data,
-      publishedData: definition.data
-    });
-    const publicPage = await request(app).get('/api/v1/public/pages/' + definition.slug);
-    expect(publicPage.status).toBe(200);
-    expect(publicPage.body.data.content).toEqual(definition.data);
-    const id = '/api/v1/admin/pages/' + archived.id;
-    expect((await request(app).get(id).set(adminHeaders)).status).toBe(404);
-    expect((await request(app).post(id + '/publish').set({ ...adminHeaders, 'If-Match': '0' })
-      .send({ data: definition.data })).status).toBe(404);
   });
 
   it('opens a legacy Home draft and accepts publishing the expanded Home without replacing existing copy on seed', async () => {

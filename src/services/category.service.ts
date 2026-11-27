@@ -30,12 +30,12 @@ export async function canUseCategory(categoryId: string, subcategoryId: string |
   const category: any = await Category.findById(categoryId);
   if (!category) return false;
   if (category.ownerId && !isMine(category.ownerId, viewerId)) return false;
-  // a deleted category (the organizer's own, or one an administrator deleted) stays on the events that already had it, but cannot be chosen again
-  if (category.isActive === false) return false;
+  // a custom category its owner deleted stays on the events that already had it, but cannot be chosen again
+  if (category.ownerId && category.isActive === false) return false;
   if (subcategoryId) {
     const sub = (category.subcategories || []).find((x: any) => String(x._id) === String(subcategoryId));
     if (sub?.ownerId && !isMine(sub.ownerId, viewerId)) return false;
-    if (sub && sub.isActive === false) return false;
+    if (sub?.ownerId && sub.isActive === false) return false;
   }
   return true;
 }
@@ -115,17 +115,8 @@ export const categoryService = {
     const name = String(data.name || '').trim();
     // Organizers' custom categories are private and do not reserve a name on the platform's list
     const existing = await Category.findOne({ name: new RegExp(`^${escapeRegex(name)}$`, 'i'), ownerId: null });
-    if (existing && existing.isActive !== false) {
-      throw { statusCode: 409, message: `A category named "${existing.name}" already exists` };
-    }
-    // A name deleted earlier comes back as the same category, so events that kept it stay linked to it. Its deleted subcategories stay
-    // deleted until each is added again.
     if (existing) {
-      existing.name = name;
-      existing.isActive = true;
-      await existing.save();
-      await alertService.notifyAllOrganizers({ type: 'CATEGORY', title: 'New event category', message: `The category "${name}" is now available when you create an event.`, entityType: 'Category', entityId: existing._id });
-      return existing;
+      throw { statusCode: 409, message: `A category named "${existing.name}" already exists` };
     }
     try {
       const created = await categoryRepository.create({ ...data, name });
@@ -145,17 +136,10 @@ export const categoryService = {
     const name = rawName.trim();
     const category = await Category.findById(id);
     if (!category) throw new Error('CATEGORY_NOT_FOUND');
-    const earlier: any = category.subcategories.find((s) => !s.ownerId && same(s.name, name));
-    if (earlier && earlier.isActive !== false) {
+    if (category.subcategories.some((s) => !s.ownerId && same(s.name, name))) {
       throw { statusCode: 409, message: `"${name}" already exists in ${category.name}` };
     }
-    // a name deleted earlier comes back as the same subcategory
-    if (earlier) {
-      earlier.name = name;
-      earlier.isActive = true;
-    } else {
-      category.subcategories.push({ name, isActive: true } as any);
-    }
+    category.subcategories.push({ name, isActive: true } as any);
     await category.save();
     await alertService.notifyAllOrganizers({ type: 'CATEGORY', title: 'New event subcategory', message: `"${name}" was added under ${category.name}. You can choose it when you create an event.`, entityType: 'Category', entityId: category._id });
     return category;
@@ -188,29 +172,9 @@ export const categoryService = {
     return category;
   },
 
-  /**
-   * An administrator deleting a platform category. It stops being offered, while events that already use it keep it (their cards and
-   * reports still show its name). Templates filed under it become general templates, because choosing one must not fill a category that is
-   * no longer available into a new event.
-   */
   async deleteCategory(id: string): Promise<ICategory> {
-    if (!mongoose.Types.ObjectId.isValid(id)) throw new Error('CATEGORY_NOT_FOUND');
     const category = await categoryRepository.delete(id);
     if (!category) throw new Error('CATEGORY_NOT_FOUND');
-    await Template.updateMany({ categoryId: category._id }, { $unset: { categoryId: 1, subcategoryId: 1 } });
-    return category;
-  },
-
-  /** The same for one subcategory: events keep it, new ones cannot choose it, its templates stay in the category */
-  async deleteSubcategory(categoryId: string, subcategoryId: string): Promise<ICategory> {
-    if (!mongoose.Types.ObjectId.isValid(categoryId) || !mongoose.Types.ObjectId.isValid(subcategoryId)) throw new Error('CATEGORY_NOT_FOUND');
-    const category = await Category.findById(categoryId);
-    const sub: any = category?.subcategories.find((s: any) => String(s._id) === subcategoryId);
-    // an organizer's own subcategory is theirs to remove, not part of the platform's list
-    if (!category || category.ownerId || !sub || sub.ownerId || sub.isActive === false) throw new Error('CATEGORY_NOT_FOUND');
-    sub.isActive = false;
-    await category.save();
-    await Template.updateMany({ subcategoryId: sub._id }, { $unset: { subcategoryId: 1 } });
     return category;
   }
 };

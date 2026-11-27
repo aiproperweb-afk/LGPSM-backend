@@ -38,7 +38,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.eventService = exports.EventService = void 0;
 exports.normalizeLocation = normalizeLocation;
-exports.purgeOperationalData = purgeOperationalData;
 const Invoice_1 = require("../models/Invoice");
 const mediaStorage_1 = require("./mediaStorage");
 const systemUserAssignment_service_1 = require("./systemUserAssignment.service");
@@ -70,9 +69,6 @@ async function isOfferedTemplate(templateId, organizerId) {
     if (!templateId || !mongoose_1.default.Types.ObjectId.isValid(String(templateId)))
         return false;
     if (await Template_1.Template.exists({ _id: String(templateId), cardDesign: { $in: themes_1.SHARED_DESIGNS }, isActive: { $ne: false } }))
-        return true;
-    // a design an administrator uploaded and published for everyone
-    if (await Template_1.Template.exists({ _id: String(templateId), ...masterCard_1.SHARED_UPLOAD_FILTER, isActive: { $ne: false } }))
         return true;
     return isOwnUploadOf(templateId, organizerId);
 }
@@ -159,9 +155,9 @@ class EventService {
      * Rate Locking & Pricing Business Rule:
      * - When an event is created, `platformSettingsService.currentRateSnapshot()` captures the global
      *   per-invitee price rate in effect at that moment.
-     * - This rate (`pricing.ratePerInvitee`) stays with the event once anything has been sent for it.
-     * - Until then, a change of the platform's rate (by Super Admin) applies to it as well
-     *   (platformSettingsService.applyRateToUnsentEvents).
+     * - This rate (`pricing.lockedRatePerInvitee`) is permanently locked to the event.
+     * - Subsequent changes to the platform's global price rate (by Super Admin) do NOT modify existing
+     *   or historical event rates.
      */
     async createEvent(organizerId, rawEventData, adminActorId) {
         // The owner is always the authenticated caller (or, for admins, the id the controller passes in)
@@ -237,7 +233,7 @@ class EventService {
             },
             organizerId: new mongoose_1.default.Types.ObjectId(targetOrganizer),
             status: 'PUBLISHED',
-            // The per-invitee rate in force now goes on the event; a later change reaches it only while nothing has been sent
+            // The per-invitee rate in force now is locked on the event; later rate changes do not affect it
             pricing: await platformSettings_service_1.platformSettingsService.currentRateSnapshot(targetOrganizer)
         };
         const created = await event_repository_1.eventRepository.create(dataToCreate);

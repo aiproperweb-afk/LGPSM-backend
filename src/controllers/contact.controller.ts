@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { validatePublishedContactForm } from '../services/contactBuilderSubmission';
 import { contactService } from '../services/contact.service';
 
 const RECEIVED_MESSAGE = 'Thanks — your message has been received. We will get back to you soon.';
@@ -17,11 +16,9 @@ export const contactController = {
     }
 
     try {
-      const { name, email, phone, message, formId } = req.body;
-      const details = await validatePublishedContactForm(req.body);
-      if (details.errors) return res.status(400).json({ success: false, message: 'Check the form fields and try again.', fieldErrors: details.errors });
+      const { name, email, phone, message } = req.body;
       const receipt = await contactService.submit(
-        { name, email, phone, message, formId, customFields: details.fields },
+        { name, email, phone, message },
         { ip: req.ip, userAgent: req.get('user-agent') || undefined }
       );
       return res.status(receipt.duplicate ? 200 : 201).json({

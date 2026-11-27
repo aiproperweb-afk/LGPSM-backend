@@ -7,7 +7,6 @@ import { User, Role } from '../src/models/User';
 import { Event } from '../src/models/Event';
 import { Invitee } from '../src/models/Invitee';
 import { generateAccessToken } from '../src/utils/token';
-import { withGuests } from './helpers/withGuests';
 
 // An old guest list with more columns than the event needs: only what the event's card settings ask for is stored
 const request = supertest(app);
@@ -16,7 +15,7 @@ jest.setTimeout(60_000);
 describe('importing a sheet with columns the event does not use', () => {
   let mongo: MongoMemoryServer; let org: any, auth: { Authorization: string };
   const H = ['Name', 'Email', 'Mobile', 'Employee ID', 'Company Name'];
-  const sheet = (rows: string[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+  const sheet = (rows: string[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
   const importInto = async (extra: Record<string, unknown>, email: string) => {
     const event = await Event.create({ organizerId: org._id, title: 'E', description: 'd', categoryId: new mongoose.Types.ObjectId(), format: 'PHYSICAL', location: { type: 'Point', address: 'x', coordinates: [0, 0] } as any, schedule: { start: new Date(Date.now() + 3600e3), end: new Date(Date.now() + 7200e3) }, status: 'PUBLISHED', ...extra });
     const res = await request.post(`/api/v1/events/${event._id}/invitees/import`).set(auth).field('mode', 'APPEND').attach('file', sheet([H, ['Pia Roy', email, '9876543210', 'E-4521', 'Acme']]), 'old.xlsx');
