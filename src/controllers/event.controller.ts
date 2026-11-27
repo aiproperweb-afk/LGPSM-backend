@@ -256,6 +256,7 @@ export const eventController = {
     } catch (error: any) {
       if (error.message === 'EVENT_NOT_FOUND') res.status(404).json({ success: false, error: 'Not Found', message: 'Event not found or inaccessible' });
       else if (error.message === 'EVENT_NOT_CLOSED') res.status(409).json({ success: false, error: 'Conflict', code: 'EVENT_NOT_CLOSED', message: 'Only an event that has ended or been cancelled can be deleted. Cancel it first.' });
+      else if (error.message === 'PAYMENT_PENDING') res.status(409).json({ success: false, error: 'Conflict', code: 'PAYMENT_PENDING', message: 'This event has an unpaid Pay Later bill. It can be removed once the bill is paid or marked settled.' });
       else if (error.message === 'NOTICES_PENDING') res.status(409).json({ success: false, error: 'Conflict', code: 'NOTICES_PENDING', message: 'Guests are still being told that this event is cancelled. Try again in a few minutes.' });
       else if (error.message === 'CONFIRMATION_REQUIRED') res.status(400).json({ success: false, error: 'Bad Request', code: 'CONFIRMATION_REQUIRED', message: 'Type the event title exactly to confirm deletion.' });
       else next(error);
@@ -286,6 +287,8 @@ export const eventController = {
         res.status(403).json({ success: false, error: 'Forbidden', message: 'Only authorized ADMIN can perform event operational data cleanup' });
       } else if (error.message === 'EVENT_NOT_CLOSED') {
         res.status(409).json({ success: false, error: 'Conflict', code: 'EVENT_NOT_CLOSED', message: 'This event has not ended yet. Permanent deletion is only available once an event is over.' });
+      } else if (error.message === 'PAYMENT_PENDING') {
+        res.status(409).json({ success: false, error: 'Conflict', code: 'PAYMENT_PENDING', message: 'This event has an unpaid Pay Later bill. It can be removed once the bill is paid or marked settled.' });
       } else if (error.message === 'CONFIRMATION_REQUIRED') {
         res.status(400).json({ success: false, error: 'Bad Request', code: 'CONFIRMATION_REQUIRED', message: 'Type the event title exactly to confirm permanent deletion.' });
       } else {

@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -549,6 +582,7 @@ class EventService {
         if (cancelled && (await CancellationNotice_1.CancellationNotice.exists({ eventId: event._id, $or: [{ 'email.status': { $in: ['PENDING', 'SENDING'] } }, { 'whatsapp.status': { $in: ['PENDING', 'SENDING'] } }] }))) {
             throw new Error('NOTICES_PENDING');
         }
+        await assertNothingOwed(eventId);
         await Invoice_1.Invoice.updateMany({ eventId: event._id }, { $set: { eventName: event.title } }, { timestamps: false });
         await purgeOperationalData(eventId);
         const logoKey = event.media?.logoKey;
@@ -586,6 +620,7 @@ class EventService {
         if (!confirmTitle || confirmTitle.trim() !== String(event.title).trim()) {
             throw new Error('CONFIRMATION_REQUIRED');
         }
+        await assertNothingOwed(eventId);
         // 5. Delete the event's operational data. Not a transaction (it can be far larger than one should be), so the "cleared" mark is
         // written last: an interrupted purge is finished by repeating it. Accounts and the audit trail are kept.
         const { sessionRes, inviteeRes, invitationRes, checkInRes, assignmentRes } = await purgeOperationalData(eventId);
@@ -605,6 +640,12 @@ class EventService {
     }
 }
 exports.EventService = EventService;
+/** Deleting an event's guests would erase a Pay Later bill that is still unpaid */
+async function assertNothingOwed(eventId) {
+    const { billingService } = await Promise.resolve().then(() => __importStar(require('./billing.service')));
+    if (await billingService.hasUnpaidPayLater(eventId))
+        throw new Error('PAYMENT_PENDING');
+}
 /** Deletes everything an event's guests, sessions and passes are made of. Accounts and the audit trail are not touched. */
 async function purgeOperationalData(eventId) {
     const eventObjId = new mongoose_1.default.Types.ObjectId(eventId);

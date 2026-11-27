@@ -10,6 +10,7 @@ const database_1 = __importDefault(require("./config/database"));
 const env_1 = require("./config/env");
 const passNotice_service_1 = require("./services/passNotice.service");
 const cancellationNotice_service_1 = require("./services/cancellationNotice.service");
+const paymentReminder_service_1 = require("./services/paymentReminder.service");
 const templateGeneration_service_1 = require("./services/stitch/templateGeneration.service");
 // Render containers have no outbound IPv6 route. Node's default DNS ordering can still return an
 // IPv6 address first for dual-stack hosts (smtp.gmail.com, some third-party APIs), which then
@@ -25,7 +26,7 @@ function sweepNotices() {
     if (sweeping)
         return;
     sweeping = true;
-    Promise.allSettled([passNotice_service_1.passNoticeService.resumeAll(), cancellationNotice_service_1.cancellationNoticeService.resumeAll()])
+    Promise.allSettled([passNotice_service_1.passNoticeService.resumeAll(), cancellationNotice_service_1.cancellationNoticeService.resumeAll(), paymentReminder_service_1.paymentReminderService.sweep()])
         .then((results) => results.forEach((r) => { if (r.status === 'rejected')
         console.error('Notice sweep failed:', r.reason?.message); }))
         .finally(() => { sweeping = false; });

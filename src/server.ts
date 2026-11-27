@@ -5,6 +5,7 @@ import connectDatabase from './config/database';
 import { env } from './config/env';
 import { passNoticeService } from './services/passNotice.service';
 import { cancellationNoticeService } from './services/cancellationNotice.service';
+import { paymentReminderService } from './services/paymentReminder.service';
 import { recoverOnStartup } from './services/stitch/templateGeneration.service';
 
 // Render containers have no outbound IPv6 route. Node's default DNS ordering can still return an
@@ -22,7 +23,7 @@ let sweeping = false;
 function sweepNotices() {
   if (sweeping) return;
   sweeping = true;
-  Promise.allSettled([passNoticeService.resumeAll(), cancellationNoticeService.resumeAll()])
+  Promise.allSettled([passNoticeService.resumeAll(), cancellationNoticeService.resumeAll(), paymentReminderService.sweep()])
     .then((results) => results.forEach((r) => { if (r.status === 'rejected') console.error('Notice sweep failed:', r.reason?.message); }))
     .finally(() => { sweeping = false; });
 }

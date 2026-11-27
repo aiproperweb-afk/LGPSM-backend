@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.billingService = void 0;
 exports.billedGuestsByEvent = billedGuestsByEvent;
 exports.priceFor = priceFor;
+const crypto_1 = __importDefault(require("crypto"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const Event_1 = require("../models/Event");
 const Invitee_1 = require("../models/Invitee");
@@ -19,6 +20,8 @@ const Invoice_1 = require("../models/Invoice");
 const currency_1 = require("../constants/currency");
 const order_repository_1 = require("../repositories/order.repository");
 const payment_repository_1 = require("../repositories/payment.repository");
+const invoice_repository_1 = require("../repositories/invoice.repository");
+const deadline_1 = require("../utils/deadline");
 const platformSettings_service_1 = require("./platformSettings.service");
 const payment_service_1 = require("./payment.service");
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -65,7 +68,14 @@ async function eventState(event) {
         { $group: { _id: null, amount: { $sum: '$amount' }, invitees: { $sum: '$invitees' } } }
     ]);
     const covered = paid[0]?.invitees || 0;
-    return { rate: rate && rate > 0 ? rate : null, billed, sent: billed.size, covered, paidAmount: round2(paid[0]?.amount || 0) };
+    // Guests invited on credit (Pay Later) and still owed for. Their debt does not eat the credit of a later payment for new guests:
+    // only payments made against what is owed reduce it.
+    const onCredit = (event.payLater?.inviteeIds || []).filter((id) => billed.has(String(id))).length;
+    const towardsDue = onCredit
+        ? (await Order_1.Order.aggregate([{ $match: { eventId: event._id, kind: 'EVENT_BILL', status: Order_1.OrderStatus.PAID, forDue: true } }, { $group: { _id: null, invitees: { $sum: '$invitees' } } }]))[0]?.invitees || 0
+        : 0;
+    const owedOnCredit = Math.max(0, Math.min(onCredit - towardsDue, billed.size));
+    return { rate: rate && rate > 0 ? rate : null, billed, sent: billed.size, covered, owedOnCredit, paidAmount: round2(paid[0]?.amount || 0) };
 }
 function priceFor(invitees, rate, gstPercent) {
     const subtotal = round2(invitees * rate);
@@ -78,7 +88,7 @@ async function billableFor(event, inviteeIds, purpose, known) {
     const st = known ?? (await eventState(event));
     const guests = await Invitee_1.Invitee.find({ eventId: event._id, _id: { $in: inviteeIds } }).select('mobile').lean();
     const toSend = guests.filter((g) => !st.billed.has(String(g._id)) && (purpose === 'CARDS' || hasMobile(g.mobile))).length;
-    const credit = Math.max(0, st.covered - st.sent);
+    const credit = Math.max(0, st.covered - (st.sent - st.owedOnCredit));
     return { rate: st.rate, toSend, credit, billable: Math.max(0, toSend - credit) };
 }
 /** Guests an administrator asked the organizer to pay for that are still unpaid */
@@ -107,8 +117,19 @@ async function eventBill(event, gstPercent) {
         dueSubtotal: due?.subtotal ?? 0,
         dueTax: due?.tax ?? 0,
         due: due?.total ?? 0,
-        currency: currency_1.PLATFORM_CURRENCY
+        currency: currency_1.PLATFORM_CURRENCY,
+        // Pay Later: the amount due is to be paid by the event's end
+        ...(event.payLater?.setAt && dueInvitees > 0 ? { payBy: event.schedule?.end, overdue: new Date(event.schedule?.end).getTime() < Date.now() } : {})
     };
+}
+/** Everything owed on an event now, plus what inviting these further guests would add */
+async function owedWith(event, inviteeIds) {
+    const st = await eventState(event);
+    if (!st.rate)
+        return { rate: null, invitees: 0 };
+    const waiting = whatsapp_service_1.whatsappService.isConfigured() ? [...new Set([...(event.paymentRequest?.inviteeIds || []).map(String), ...inviteeIds])] : [];
+    const further = waiting.length ? (await billableFor(event, waiting, 'WHATSAPP', st)).billable : 0;
+    return { rate: st.rate, invitees: Math.max(0, st.sent - st.covered) + further };
 }
 exports.billingService = {
     /**
@@ -127,11 +148,11 @@ exports.billingService = {
     async listEventBills(organizerId) {
         const gst = await platformSettings_service_1.platformSettingsService.gstPercent();
         const all = await Event_1.Event.find({ organizerId })
-            .select('title schedule createdAt pricing organizerId status paymentRequest')
+            .select('title schedule createdAt pricing organizerId status paymentRequest payLater')
             .sort({ 'schedule.start': -1 })
             .lean();
-        // a cancelled event has nothing left to pay; its past payments still count below
-        const events = all.filter((e) => e.status !== 'CANCELLED');
+        // a cancelled event has nothing left to pay, except what was sent on Pay Later; its past payments still count below
+        const events = all.filter((e) => e.status !== 'CANCELLED' || e.payLater?.setAt);
         const rows = [];
         for (const e of events)
             rows.push(await eventBill(e, gst));
@@ -170,10 +191,111 @@ exports.billingService = {
         const whatsappUnavailable = purpose === 'WHATSAPP' && !whatsapp_service_1.whatsappService.isConfigured();
         const b = purpose === 'EMAIL' || whatsappUnavailable ? { ...(await billableFor(event, [], 'CARDS')), toSend: 0, billable: 0 } : await billableFor(event, inviteeIds, purpose);
         const price = priceFor(b.billable, b.rate ?? 0, gst);
+        // an administrator also sees everything owed so far with these guests, which is what an offline payment settles
+        let admin = {};
+        if (!organizerId && purpose === 'WHATSAPP') {
+            const owed = await owedWith(event, inviteeIds);
+            admin = { owed: priceFor(owed.invitees, owed.rate ?? 0, gst), payBy: event.schedule?.end, payLater: !!event.payLater?.setAt };
+        }
         return {
             ...price, rate: b.rate, selected: b.toSend, alreadyPaid: Math.min(b.toSend, b.credit), payable: b.rate !== null && b.billable > 0,
-            free: purpose === 'EMAIL', whatsappUnavailable, organizerName: owner?.profile?.organizationName || owner?.fullName || 'The organizer'
+            free: purpose === 'EMAIL', whatsappUnavailable, organizerName: owner?.profile?.organizationName || owner?.fullName || 'The organizer', ...admin
         };
+    },
+    /** What is owed on the event now (nothing further), with the amounts */
+    async amountDue(event) {
+        const bill = await eventBill(event, await platformSettings_service_1.platformSettingsService.gstPercent());
+        return { invitees: bill.dueInvitees, total: bill.due, currency: bill.currency };
+    },
+    /**
+     * Pay Later: an administrator lets these guests be invited on WhatsApp now; the organizer pays by the event's end. Recorded before the
+     * messages go, so nothing sent this way is ever left without its deadline.
+     */
+    async deferPayment(event, inviteeIds, adminId) {
+        if (!whatsapp_service_1.whatsappService.isConfigured())
+            return;
+        const st = await eventState(event);
+        if (!st.rate)
+            return;
+        const fresh = inviteeIds.filter((id) => !st.billed.has(String(id)));
+        const b = await billableFor(event, fresh, 'WHATSAPP', st);
+        if (b.billable <= 0)
+            return;
+        const first = !event.payLater?.setAt;
+        await Event_1.Event.updateOne({ _id: event._id }, 
+        // only as many as are really on credit: any that an earlier payment still covers are not
+        { $addToSet: { 'payLater.inviteeIds': { $each: fresh.slice(0, b.billable) } }, ...(first ? { $set: { 'payLater.setBy': adminId, 'payLater.setAt': new Date() } } : {}) }, { timestamps: false });
+        const price = priceFor(b.billable, st.rate, await platformSettings_service_1.platformSettingsService.gstPercent());
+        await alert_service_1.alertService.notifyUser(event.organizerId, {
+            type: 'PAYMENT', title: 'Pay later for WhatsApp invitations',
+            message: `${b.billable} WhatsApp invitation${b.billable === 1 ? ' is' : 's are'} being sent for "${event.title}" (${price.currency} ${price.total.toFixed(2)}, including GST). Please pay from your Billing page before ${(0, deadline_1.deadlineLabel)(event.schedule?.end)}.`,
+            entityType: 'Event', entityId: event._id
+        });
+    },
+    /** Guests about to be invited on a paid send are no longer counted as invited on credit */
+    async endDeferral(event, inviteeIds) {
+        if (!event.payLater?.setAt)
+            return;
+        const billed = (await billedGuestsByEvent([event._id])).get(String(event._id)) ?? new Set();
+        const paidNow = inviteeIds.filter((id) => !billed.has(String(id)));
+        if (paidNow.length)
+            await Event_1.Event.updateOne({ _id: event._id }, { $pull: { 'payLater.inviteeIds': { $in: paidNow.map((id) => new mongoose_1.default.Types.ObjectId(id)) } } }, { timestamps: false });
+    },
+    /**
+     * Payment Settled: the organizer paid the administrator outside the platform. Records a paid bill for everything owed so far, including
+     * the guests about to be invited; guests added later are new dues. It appears on the organizer's Billing as an offline payment.
+     */
+    async settleOffline(adminId, eventId, inviteeIds, note) {
+        const lockedAt = new Date();
+        const event = await Event_1.Event.findOneAndUpdate({ _id: eventId, $or: [{ settlingAt: null }, { settlingAt: { $lt: new Date(lockedAt.getTime() - 30_000) } }] }, { $set: { settlingAt: lockedAt } }, { new: true, timestamps: false }).lean();
+        if (!event) {
+            if (await Event_1.Event.exists({ _id: eventId }))
+                throw new Error('SETTLEMENT_IN_PROGRESS');
+            throw new Error('EVENT_NOT_FOUND');
+        }
+        try {
+            const gst = await platformSettings_service_1.platformSettingsService.gstPercent();
+            const owed = await owedWith(event, inviteeIds);
+            if (owed.rate === null)
+                throw new Error('RATE_NOT_SET');
+            if (owed.invitees <= 0)
+                throw new Error('NOTHING_DUE');
+            const price = priceFor(owed.invitees, owed.rate, gst);
+            const reference = `offline_${new mongoose_1.default.Types.ObjectId()}`;
+            const order = await order_repository_1.orderRepository.create({
+                kind: 'EVENT_BILL', userId: event.organizerId, eventId: event._id, quantity: 1, invitees: owed.invitees,
+                amount: price.total, subtotal: price.subtotal, tax: price.tax, gstPercent: gst, currency: currency_1.PLATFORM_CURRENCY,
+                providerOrderId: reference, status: Order_1.OrderStatus.PAID, forDue: true, settledBy: adminId, note: note || undefined
+            });
+            const payment = await payment_repository_1.paymentRepository.create({
+                orderId: order._id, userId: event.organizerId, eventId: event._id, provider: 'OFFLINE', providerOrderId: reference,
+                amountBase: price.subtotal, taxAmount: price.tax, totalAmount: price.total, currency: currency_1.PLATFORM_CURRENCY,
+                status: Payment_1.PaymentStatus.PAID, signatureVerified: false
+            });
+            const invoiceNumber = `INV-${Date.now()}-${crypto_1.default.randomInt(1000, 10000)}`;
+            await invoice_repository_1.invoiceRepository.create({
+                invoiceNumber, eventName: event.title, paymentId: payment._id, userId: event.organizerId, eventId: event._id,
+                invitees: owed.invitees, subtotal: price.subtotal, tax: price.tax, total: price.total,
+                paymentMethod: 'OFFLINE', paymentStatus: 'PAID', issuedAt: new Date()
+            });
+            await Event_1.Event.updateOne({ _id: event._id }, { $unset: { paymentRequest: 1 } }, { timestamps: false });
+            await alert_service_1.alertService.notifyUser(event.organizerId, {
+                type: 'PAYMENT', title: 'Payment recorded',
+                message: `Your payment of ${price.currency} ${price.total.toFixed(2)} for "${event.title}" was recorded by the administrator (invoice ${invoiceNumber}).`,
+                entityType: 'Event', entityId: event._id
+            });
+            return { ...price, invoiceNumber };
+        }
+        finally {
+            await Event_1.Event.updateOne({ _id: event._id, settlingAt: lockedAt }, { $unset: { settlingAt: 1 } }, { timestamps: false });
+        }
+    },
+    /** Is money still owed for invitations sent on Pay Later? Such an event is not deleted or purged: that would erase the bill. */
+    async hasUnpaidPayLater(eventId) {
+        const event = await Event_1.Event.findById(eventId).lean();
+        if (!event?.payLater?.setAt)
+            return false;
+        return (await this.amountDue(event)).invitees > 0;
     },
     /** An administrator asks the organizer to pay for guests the administrator wants to invite on WhatsApp */
     async requestPayment(adminId, eventId, inviteeIds) {
@@ -203,6 +325,7 @@ exports.billingService = {
         const gst = await platformSettings_service_1.platformSettingsService.gstPercent();
         let count;
         let rate;
+        const forDue = !(inviteeIds && inviteeIds.length);
         if (inviteeIds && inviteeIds.length) {
             if (purpose === 'EMAIL')
                 throw new Error('NOTHING_DUE');
@@ -237,6 +360,7 @@ exports.billingService = {
             gstPercent: gst,
             currency: currency_1.PLATFORM_CURRENCY,
             providerOrderId,
+            forDue,
             status: Order_1.OrderStatus.PENDING
         });
         await payment_repository_1.paymentRepository.create({
@@ -276,7 +400,9 @@ exports.billingService = {
             subtotal: i.subtotal,
             tax: i.tax,
             amount: i.total,
-            currency: currency_1.PLATFORM_CURRENCY
+            currency: currency_1.PLATFORM_CURRENCY,
+            /** true for money the administrator received outside the platform */
+            offline: i.paymentMethod === 'OFFLINE'
         }));
     }
 };

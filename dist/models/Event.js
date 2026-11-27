@@ -120,6 +120,19 @@ const EventSchema = new mongoose_1.Schema({
         requestedBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
         requestedAt: { type: Date }
     },
+    // an administrator let WhatsApp invitations go before payment: the organizer pays by the event's end (services/billing.service.ts)
+    payLater: {
+        /** the guests invited on credit */
+        inviteeIds: { type: [{ type: mongoose_1.Schema.Types.ObjectId, ref: 'Invitee' }], default: undefined },
+        setBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
+        setAt: { type: Date },
+        // each reminder is claimed once (services/paymentReminder.service.ts)
+        reminded3At: { type: Date },
+        reminded1At: { type: Date },
+        overdueAt: { type: Date }
+    },
+    /** held while an offline payment is being recorded, so it cannot be recorded twice at once */
+    settlingAt: { type: Date },
     pricing: {
         ratePerInvitee: { type: Number, default: null },
         currency: { type: String },
@@ -143,4 +156,6 @@ EventSchema.index({ status: 1 });
 EventSchema.index({ categoryId: 1 });
 EventSchema.index({ 'schedule.start': 1 });
 EventSchema.index({ 'location.coordinates': '2dsphere' });
+// the payment reminder sweep reads only events with money owed on credit
+EventSchema.index({ 'payLater.setAt': 1, 'schedule.end': 1 }, { sparse: true });
 exports.Event = mongoose_1.default.model('Event', EventSchema);

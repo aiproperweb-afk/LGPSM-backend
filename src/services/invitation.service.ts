@@ -79,6 +79,17 @@ export function assertEventCanIssue(event: any) {
   if (event.status === EventStatus.COMPLETED || (window && admissionState(window, new Date()) === 'CLOSED')) throw new Error('EVENT_ENDED');
 }
 
+/**
+ * The money side of a WhatsApp send: it must be paid for already, unless an administrator chose Pay Later, which records the debt and its
+ * deadline instead.
+ */
+async function chargeFor(event: any, inviteeIds: string[], userId: string, role: string | undefined, payLater?: boolean) {
+  const { billingService } = await import('./billing.service');
+  if (payLater && role === Role.ADMIN) return billingService.deferPayment(event, inviteeIds, userId);
+  await billingService.assertPaidFor(event, inviteeIds, 'WHATSAPP');
+  await billingService.endDeferral(event, inviteeIds);
+}
+
 /** Read fresh on every use: a cancellation can land while a long send is running. */
 const eventIsCancelled = async (eventId: unknown) => !!(await Event.exists({ _id: eventId as any, status: EventStatus.CANCELLED }));
 
@@ -199,7 +210,7 @@ export const invitationService = {
     });
   },
 
-  async sendInvitations(eventId: string, userOrOrganizerId: any, inviteeIds: string[], channel: DeliveryChannel) {
+  async sendInvitations(eventId: string, userOrOrganizerId: any, inviteeIds: string[], channel: DeliveryChannel, options: { payLater?: boolean } = {}) {
     const isUserObj = typeof userOrOrganizerId === 'object' && userOrOrganizerId !== null;
     const organizerId = isUserObj ? userOrOrganizerId.userId : userOrOrganizerId;
     const userRole = isUserObj ? userOrOrganizerId.role : undefined;
@@ -251,10 +262,7 @@ export const invitationService = {
 
     // No WhatsApp message goes out unpaid, whoever sends it: the organizer pays the bill first (an administrator asks them to). Email is free.
     const onWhatsApp = invitees.filter((i) => !alreadySent.has(String(i._id)) && channelsForInvitee(channel, i).whatsapp).map((i) => String(i._id));
-    if (onWhatsApp.length) {
-      const { billingService } = await import('./billing.service');
-      await billingService.assertPaidFor(event, onWhatsApp, 'WHATSAPP');
-    }
+    if (onWhatsApp.length) await chargeFor(event, onWhatsApp, organizerId, userRole, options.payLater);
 
     const deliverToInvitee = async (invitee: any): Promise<any> => {
       // A send that was already running when the event was cancelled stops here, before any token or provider call
@@ -542,7 +550,7 @@ export const invitationService = {
     return results;
   },
 
-  async resendInvitations(eventId: string, userOrOrganizerId: any, invitationIds: string[], channelOverride?: string) {
+  async resendInvitations(eventId: string, userOrOrganizerId: any, invitationIds: string[], channelOverride?: string, options: { payLater?: boolean } = {}) {
     const isUserObj = typeof userOrOrganizerId === 'object' && userOrOrganizerId !== null;
     const organizerId = isUserObj ? userOrOrganizerId.userId : userOrOrganizerId;
     const userRole = isUserObj ? userOrOrganizerId.role : undefined;
@@ -582,10 +590,7 @@ export const invitationService = {
     const onWhatsApp = invitations
       .filter((i: any) => i.inviteeId && !i.inviteeId.credentialRevokedAt && channelsForInvitee((channelOverride || i.channel) as DeliveryChannel, i.inviteeId).whatsapp)
       .map((i: any) => String(i.inviteeId._id));
-    if (onWhatsApp.length) {
-      const { billingService } = await import('./billing.service');
-      await billingService.assertPaidFor(event, onWhatsApp, 'WHATSAPP');
-    }
+    if (onWhatsApp.length) await chargeFor(event, onWhatsApp, organizerId, userRole, options.payLater);
 
     const results = [];
 

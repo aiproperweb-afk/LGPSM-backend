@@ -55,6 +55,9 @@ const OrderSchema = new mongoose_1.Schema({
     gstPercent: { type: Number, min: 0 },
     currency: { type: String, default: 'INR' },
     providerOrderId: { type: String },
+    forDue: { type: Boolean },
+    settledBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' },
+    note: { type: String, maxlength: 300 },
     status: { type: String, enum: Object.values(OrderStatus), default: OrderStatus.PENDING }
 }, {
     timestamps: true

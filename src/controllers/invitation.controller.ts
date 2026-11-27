@@ -41,7 +41,8 @@ export const invitationController = {
         }
       }
 
-      const results = await invitationService.sendInvitations(eventId, user, inviteeIds, selectedChannel || DeliveryChannel.EMAIL);
+      if (req.body.payLater && user.role !== 'ADMIN') return res.status(403).json({ success: false, message: 'Only an administrator can choose Pay Later.' });
+      const results = await invitationService.sendInvitations(eventId, user, inviteeIds, selectedChannel || DeliveryChannel.EMAIL, { payLater: req.body.payLater === true });
       return res.status(200).json({ success: true, message: 'Invitations processed successfully', results, summary: deliverySummary(results) });
     } catch (error: any) {
       if (error.message === 'EVENT_NOT_FOUND') return res.status(404).json({ error: 'Not Found', message: 'Event not found or access denied' });
@@ -64,7 +65,8 @@ export const invitationController = {
         role: (req as any).user?.role
       };
 
-      const results = await invitationService.resendInvitations(eventId, user, invitationIds, channel);
+      if (req.body.payLater && user.role !== 'ADMIN') return res.status(403).json({ success: false, message: 'Only an administrator can choose Pay Later.' });
+      const results = await invitationService.resendInvitations(eventId, user, invitationIds, channel, { payLater: req.body.payLater === true });
       return res.status(200).json({ success: true, message: 'Invitations resent successfully', results, summary: deliverySummary(results) });
     } catch (error: any) {
       if (error.message === 'EVENT_NOT_FOUND') return res.status(404).json({ error: 'Not Found', message: 'Event not found or access denied' });

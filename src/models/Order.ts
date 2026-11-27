@@ -24,6 +24,11 @@ export interface IOrder extends Document {
   gstPercent?: number;
   currency: string;
   providerOrderId?: string;
+  /** EVENT_BILL: pays what was already owed on the event (not guests about to be invited) */
+  forDue?: boolean;
+  /** recorded by an administrator for money received outside the platform */
+  settledBy?: mongoose.Types.ObjectId;
+  note?: string;
   status: OrderStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -43,6 +48,9 @@ const OrderSchema: Schema = new Schema(
     gstPercent: { type: Number, min: 0 },
     currency: { type: String, default: 'INR' },
     providerOrderId: { type: String },
+    forDue: { type: Boolean },
+    settledBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    note: { type: String, maxlength: 300 },
     status: { type: String, enum: Object.values(OrderStatus), default: OrderStatus.PENDING }
   },
   {

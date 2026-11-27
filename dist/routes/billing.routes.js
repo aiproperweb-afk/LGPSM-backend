@@ -9,6 +9,7 @@ const billingPdf_service_1 = require("../services/billingPdf.service");
 const platformSettings_service_1 = require("../services/platformSettings.service");
 const zod_1 = require("zod");
 const userRateLimit_1 = require("../middlewares/userRateLimit");
+const auditAction_1 = require("../middlewares/auditAction");
 const router = (0, express_1.Router)();
 // applied per route (not router-wide): this router is mounted at /api/v1, so a blanket guard would also answer 401/403 for unknown paths
 const organizerOnly = [authenticate_1.authenticate, (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ORGANIZER)];
@@ -17,6 +18,7 @@ const fail = (res, error) => {
         EVENT_NOT_FOUND: [404, 'Event not found'],
         RATE_NOT_SET: [409, 'No per-invitee rate is set for this event yet, so there is nothing to pay.'],
         NOTHING_DUE: [409, 'Nothing is due for this event.'],
+        SETTLEMENT_IN_PROGRESS: [409, 'This payment is already being recorded. Please wait a moment.'],
         PAYMENT_PROVIDER_NOT_CONFIGURED: [503, 'Online payments are not configured on this server'],
         PAYMENT_PROVIDER_ERROR: [502, 'The payment provider could not create the order. Please try again.']
     };
@@ -71,6 +73,19 @@ router.post('/billing/request', authenticate_1.authenticate, (0, authorizeRoles_
         return res.status(400).json({ success: false, message: 'A valid eventId and the guests are required.' });
     try {
         return res.status(201).json({ success: true, data: await billing_service_1.billingService.requestPayment(req.user.userId, parsed.data.eventId, parsed.data.inviteeIds) });
+    }
+    catch (e) {
+        return fail(res, e);
+    }
+});
+// An administrator records that the organizer paid outside the platform: everything owed so far, with the guests about to be invited
+const settleBody = zod_1.z.object({ eventId: objectId, inviteeIds: zod_1.z.array(objectId).max(5000).optional(), note: zod_1.z.string().trim().max(300).optional() });
+router.post('/billing/settle', authenticate_1.authenticate, (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ADMIN), (0, userRateLimit_1.perUserLimit)('billing-settle', { windowMs: 60_000, max: 20 }), (0, userRateLimit_1.dedupeWindow)('billing-settle', 3_000), (0, auditAction_1.auditAction)({ action: 'PAYMENT_SETTLED_OFFLINE', entityType: 'Event', entityParam: undefined, critical: true, describe: 'Offline payment recorded for an event', meta: (req, body) => ({ eventId: req.body?.eventId, amount: body?.data?.total, invitees: body?.data?.invitees, invoice: body?.data?.invoiceNumber, note: req.body?.note }) }), async (req, res) => {
+    const parsed = settleBody.safeParse(req.body);
+    if (!parsed.success)
+        return res.status(400).json({ success: false, message: 'A valid eventId is required, and the note may be up to 300 characters.' });
+    try {
+        return res.status(201).json({ success: true, data: await billing_service_1.billingService.settleOffline(req.user.userId, parsed.data.eventId, parsed.data.inviteeIds || [], parsed.data.note) });
     }
     catch (e) {
         return fail(res, e);

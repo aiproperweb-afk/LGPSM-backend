@@ -545,6 +545,7 @@ export class EventService {
     if (cancelled && (await CancellationNotice.exists({ eventId: event._id, $or: [{ 'email.status': { $in: ['PENDING', 'SENDING'] } }, { 'whatsapp.status': { $in: ['PENDING', 'SENDING'] } }] }))) {
       throw new Error('NOTICES_PENDING');
     }
+    await assertNothingOwed(eventId);
     await Invoice.updateMany({ eventId: event._id }, { $set: { eventName: event.title } }, { timestamps: false });
     await purgeOperationalData(eventId);
     const logoKey = (event as any).media?.logoKey;
@@ -586,6 +587,7 @@ export class EventService {
     if (!confirmTitle || confirmTitle.trim() !== String(event.title).trim()) {
       throw new Error('CONFIRMATION_REQUIRED');
     }
+    await assertNothingOwed(eventId);
 
     // 5. Delete the event's operational data. Not a transaction (it can be far larger than one should be), so the "cleared" mark is
     // written last: an interrupted purge is finished by repeating it. Accounts and the audit trail are kept.
@@ -606,6 +608,12 @@ export class EventService {
       }
     };
   }
+}
+
+/** Deleting an event's guests would erase a Pay Later bill that is still unpaid */
+async function assertNothingOwed(eventId: unknown) {
+  const { billingService } = await import('./billing.service');
+  if (await billingService.hasUnpaidPayLater(eventId)) throw new Error('PAYMENT_PENDING');
 }
 
 /** Deletes everything an event's guests, sessions and passes are made of. Accounts and the audit trail are not touched. */

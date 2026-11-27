@@ -40,7 +40,9 @@ exports.invitationController = {
                     selectedChannel = Invitation_1.DeliveryChannel.EMAIL;
                 }
             }
-            const results = await invitation_service_1.invitationService.sendInvitations(eventId, user, inviteeIds, selectedChannel || Invitation_1.DeliveryChannel.EMAIL);
+            if (req.body.payLater && user.role !== 'ADMIN')
+                return res.status(403).json({ success: false, message: 'Only an administrator can choose Pay Later.' });
+            const results = await invitation_service_1.invitationService.sendInvitations(eventId, user, inviteeIds, selectedChannel || Invitation_1.DeliveryChannel.EMAIL, { payLater: req.body.payLater === true });
             return res.status(200).json({ success: true, message: 'Invitations processed successfully', results, summary: deliverySummary(results) });
         }
         catch (error) {
@@ -68,7 +70,9 @@ exports.invitationController = {
                 userId: req.user?.userId,
                 role: req.user?.role
             };
-            const results = await invitation_service_1.invitationService.resendInvitations(eventId, user, invitationIds, channel);
+            if (req.body.payLater && user.role !== 'ADMIN')
+                return res.status(403).json({ success: false, message: 'Only an administrator can choose Pay Later.' });
+            const results = await invitation_service_1.invitationService.resendInvitations(eventId, user, invitationIds, channel, { payLater: req.body.payLater === true });
             return res.status(200).json({ success: true, message: 'Invitations resent successfully', results, summary: deliverySummary(results) });
         }
         catch (error) {
