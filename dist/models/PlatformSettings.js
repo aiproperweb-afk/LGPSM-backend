@@ -62,6 +62,21 @@ const PlatformSettingsSchema = new mongoose_1.Schema({
         invitationsSent: on,
         eventCancelled: on
     },
+    // (no defaults: see platformSettingsService.getPushPreferences)
+    pushPreferences: {
+        newOrganizerRegistration: Boolean,
+        newEventAdded: Boolean,
+        deactivatedOrganizerBySuperAdmin: Boolean,
+        changeInPrice: Boolean,
+        invitationSendFailed: Boolean,
+        dayBeforeEventAlert: Boolean,
+        reportDownload: Boolean,
+        customTemplateRequest: Boolean,
+        newContactMessage: Boolean,
+        guestCheckIns: Boolean,
+        invitationsSent: Boolean,
+        eventCancelled: Boolean
+    },
     pricing: {
         ratePerInvitee: { type: Number, default: null, min: 0 },
         gstPercent: { type: Number, default: 18, min: 0, max: 100 },

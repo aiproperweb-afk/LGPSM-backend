@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Invitee = exports.RsvpStatus = exports.InvitationStatus = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const whatsapp_service_1 = require("../services/whatsapp.service");
+const guestCount_1 = require("../utils/guestCount");
 var InvitationStatus;
 (function (InvitationStatus) {
     InvitationStatus["PENDING"] = "PENDING";
@@ -76,6 +77,7 @@ const InviteeSchema = new mongoose_1.Schema({
         type: [{ title: { type: String, required: true }, value: { type: String, required: true } }],
         default: undefined
     },
+    guestCount: { type: Number, default: 1, min: 1, max: guestCount_1.MAX_GUESTS_PER_PASS },
     companyName: { type: String, trim: true },
     professionalIdentity: { type: String, trim: true, maxlength: 100 },
     secondaryIdentity: { type: String, trim: true, maxlength: 100 },

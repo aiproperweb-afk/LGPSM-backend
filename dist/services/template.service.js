@@ -58,7 +58,9 @@ exports.templateService = {
     },
     async updateTemplate(id, updateData) {
         const before = updateData.isPublished === true ? await Template_1.Template.findById(id).select('isPublished').lean() : null;
-        let template = await template_repository_1.templateRepository.update(id, updateData);
+        const { subcategoryId, ...rest } = updateData;
+        const change = subcategoryId === null ? { ...rest, $unset: { subcategoryId: 1 } } : updateData;
+        let template = await template_repository_1.templateRepository.update(id, change);
         if (!template)
             throw new Error('TEMPLATE_NOT_FOUND');
         // publishing an administrator's own private card is what shares it with the organizers
@@ -79,6 +81,10 @@ exports.templateService = {
         return template;
     },
     async deleteTemplate(id) {
+        // every event can fall back on the Master Card while it is the base design, so it stays
+        if ((0, masterCard_1.masterCardOnly)() && mongoose_1.default.Types.ObjectId.isValid(id) && (await Template_1.Template.exists({ _id: id, cardDesign: 'MASTER' }))) {
+            throw Object.assign(new Error('The Master Card is used whenever an event has no other design, so it cannot be deleted.'), { statusCode: 409 });
+        }
         const template = await template_repository_1.templateRepository.delete(id);
         if (!template)
             throw new Error('TEMPLATE_NOT_FOUND');

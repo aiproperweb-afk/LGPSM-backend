@@ -10,6 +10,7 @@ import { Event } from '../src/models/Event';
 import { Invitee } from '../src/models/Invitee';
 import { InviteeSet } from '../src/models/InviteeSet';
 import { generateAccessToken } from '../src/utils/token';
+import { withGuests } from './helpers/withGuests';
 
 const request = supertest(app);
 jest.setTimeout(180_000);
@@ -18,7 +19,7 @@ describe('upload size, lists of 500, one at a time', () => {
   let mongo: MongoMemoryServer; let org: any, event: any, auth: { Authorization: string };
   const H = ['Name', 'Email', 'Mobile'];
   const rows = (n: number, tag = 'g') => [H, ...Array.from({ length: n }, (_, i) => [`Guest ${tag}${i}`, `${tag}${i}@lim.test`, ''])];
-  const sheet = (r: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(r), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+  const sheet = (r: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(r)), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
   const upload = (r: (string | number)[][], extra: Record<string, string> = {}) => {
     let q = request.post(`/api/v1/events/${event._id}/invitees/import`).set(auth).field('mode', 'APPEND');
     for (const [k, v] of Object.entries(extra)) q = q.field(k, v);
@@ -76,7 +77,7 @@ describe('one upload at a time, and a cooldown', () => {
     const auth = { Authorization: `Bearer ${generateAccessToken(String(org._id), org.role)}` };
     const event = await Event.create({ organizerId: org._id, title: 'E', description: 'd', categoryId: new mongoose.Types.ObjectId(), format: 'PHYSICAL', location: { type: 'Point', address: 'x', coordinates: [0, 0] } as any, schedule: { start: new Date(Date.now() + 3600e3), end: new Date(Date.now() + 7200e3) }, status: 'PUBLISHED' });
     const H = ['Name', 'Email', 'Mobile'];
-    const file = (tag: string, n: number) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet([H, ...Array.from({ length: n }, (_, i) => [`G ${tag}${i}`, `${tag}${i}@g.test`, ''])]), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+    const file = (tag: string, n: number) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests([H, ...Array.from({ length: n }, (_, i) => [`G ${tag}${i}`, `${tag}${i}@g.test`, ''])])), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
     const send = (tag: string, n: number, extra: Record<string, string> = {}) => {
       let q = request.post(`/api/v1/events/${event._id}/invitees/import`).set(auth).field('mode', 'APPEND');
       for (const [k, v] of Object.entries(extra)) q = q.field(k, v);

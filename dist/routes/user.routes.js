@@ -4,6 +4,7 @@ const auditAction_1 = require("../middlewares/auditAction");
 const zod_1 = require("zod");
 const User_1 = require("../models/User");
 const platformSettings_service_1 = require("../services/platformSettings.service");
+const organizerErase_service_1 = require("../services/organizerErase.service");
 const express_1 = require("express");
 const user_controller_1 = require("../controllers/user.controller");
 const authenticate_1 = require("../middlewares/authenticate");
@@ -32,6 +33,8 @@ router.patch('/me/password', validate(user_validator_1.changePasswordSchema), (0
 const tenMinutes = 10 * 60 * 1000;
 router.post('/me/phone/send', (0, userRateLimit_1.perUserLimit)('phone-code', { windowMs: tenMinutes, max: 5 }), user_controller_1.userController.sendPhoneCode);
 router.post('/me/phone/verify', (0, userRateLimit_1.perUserLimit)('phone-verify', { windowMs: tenMinutes, max: 15 }), validate(user_validator_1.verificationCodeSchema), user_controller_1.userController.verifyPhone);
+router.post('/me/email/verify/send', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ORGANIZER), (0, userRateLimit_1.perUserLimit)('email-verify-send', { windowMs: tenMinutes, max: 5 }), user_controller_1.userController.sendEmailCode);
+router.post('/me/email/verify/confirm', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ORGANIZER), (0, userRateLimit_1.perUserLimit)('email-verify', { windowMs: tenMinutes, max: 15 }), validate(user_validator_1.verificationCodeSchema), (0, auditAction_1.auditAction)({ action: 'USER_EMAIL_VERIFY', entityType: 'User' }), user_controller_1.userController.verifyEmail);
 router.post('/me/email', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ORGANIZER), (0, userRateLimit_1.perUserLimit)('email-change', { windowMs: tenMinutes, max: 8 }), validate(user_validator_1.changeEmailSchema), (0, auditAction_1.auditAction)({ action: 'USER_EMAIL_CHANGE_REQUEST', entityType: 'User' }), user_controller_1.userController.requestEmailChange);
 router.post('/me/email/confirm', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ORGANIZER), (0, userRateLimit_1.perUserLimit)('email-change-confirm', { windowMs: tenMinutes, max: 15 }), validate(user_validator_1.verificationCodeSchema), (0, auditAction_1.auditAction)({ action: 'USER_EMAIL_CHANGE', entityType: 'User' }), user_controller_1.userController.confirmEmailChange);
 // Endpoint for Admins and Organizers to list users (supports ?role=SYSTEM_USER)
@@ -40,6 +43,23 @@ router.get('/', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ADMIN, User_2.R
 router.post('/', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ADMIN, User_2.Role.ORGANIZER), validate(user_validator_1.createUserSchema), (0, auditAction_1.auditAction)({ action: 'USER_CREATE', entityType: 'User' }), user_controller_1.userController.createUser);
 // Endpoint for Admins and Organizers to view a single sub-user
 router.get('/:id', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ADMIN, User_2.Role.ORGANIZER), user_controller_1.userController.getUserById);
+// Admin: delete an organizer permanently, with everything that belongs to them. The summary is what the warning shows first.
+router.get('/:id/erase-summary', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ADMIN), async (req, res, next) => {
+    try {
+        res.json({ success: true, data: await organizerErase_service_1.organizerEraseService.summary(String(req.params.id)) });
+    }
+    catch (e) {
+        next(e);
+    }
+});
+router.post('/:id/erase', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ADMIN), validate(zod_1.z.object({ confirm: zod_1.z.literal(true) }).strict()), async (req, res, next) => {
+    try {
+        res.json({ success: true, data: await organizerErase_service_1.organizerEraseService.erase(req.user.userId, String(req.params.id)) });
+    }
+    catch (e) {
+        next(e);
+    }
+});
 // Endpoint for Admins and Organizers to delete sub-users
 router.delete('/:id', (0, authorizeRoles_1.authorizeRoles)(User_2.Role.ADMIN, User_2.Role.ORGANIZER), (0, auditAction_1.auditAction)({ action: 'USER_DELETE', entityType: 'User', entityParam: 'id', critical: true }), user_controller_1.userController.deleteUser);
 // Endpoint for Admins and Organizers to update sub-users

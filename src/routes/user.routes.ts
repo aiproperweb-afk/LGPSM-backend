@@ -2,6 +2,7 @@ import { auditAction } from '../middlewares/auditAction';
 import { z } from 'zod';
 import { User } from '../models/User';
 import { platformSettingsService } from '../services/platformSettings.service';
+import { organizerEraseService } from '../services/organizerErase.service';
 import { Router } from 'express';
 import { userController } from '../controllers/user.controller';
 import { authenticate } from '../middlewares/authenticate';
@@ -36,6 +37,8 @@ router.patch('/me/password', validate(changePasswordSchema), auditAction({ actio
 const tenMinutes = 10 * 60 * 1000;
 router.post('/me/phone/send', perUserLimit('phone-code', { windowMs: tenMinutes, max: 5 }), userController.sendPhoneCode);
 router.post('/me/phone/verify', perUserLimit('phone-verify', { windowMs: tenMinutes, max: 15 }), validate(verificationCodeSchema), userController.verifyPhone);
+router.post('/me/email/verify/send', authorizeRoles(Role.ORGANIZER), perUserLimit('email-verify-send', { windowMs: tenMinutes, max: 5 }), userController.sendEmailCode);
+router.post('/me/email/verify/confirm', authorizeRoles(Role.ORGANIZER), perUserLimit('email-verify', { windowMs: tenMinutes, max: 15 }), validate(verificationCodeSchema), auditAction({ action: 'USER_EMAIL_VERIFY', entityType: 'User' }), userController.verifyEmail);
 router.post('/me/email', authorizeRoles(Role.ORGANIZER), perUserLimit('email-change', { windowMs: tenMinutes, max: 8 }), validate(changeEmailSchema), auditAction({ action: 'USER_EMAIL_CHANGE_REQUEST', entityType: 'User' }), userController.requestEmailChange);
 router.post('/me/email/confirm', authorizeRoles(Role.ORGANIZER), perUserLimit('email-change-confirm', { windowMs: tenMinutes, max: 15 }), validate(verificationCodeSchema), auditAction({ action: 'USER_EMAIL_CHANGE', entityType: 'User' }), userController.confirmEmailChange);
 
@@ -60,6 +63,19 @@ router.get(
   '/:id',
   authorizeRoles(Role.ADMIN, Role.ORGANIZER),
   userController.getUserById
+);
+
+// Admin: delete an organizer permanently, with everything that belongs to them. The summary is what the warning shows first.
+router.get('/:id/erase-summary', authorizeRoles(Role.ADMIN), async (req, res, next) => {
+  try { res.json({ success: true, data: await organizerEraseService.summary(String(req.params.id)) }); } catch (e) { next(e); }
+});
+router.post(
+  '/:id/erase',
+  authorizeRoles(Role.ADMIN),
+  validate(z.object({ confirm: z.literal(true) }).strict()),
+  async (req, res, next) => {
+    try { res.json({ success: true, data: await organizerEraseService.erase((req as any).user.userId, String(req.params.id)) }); } catch (e) { next(e); }
+  }
 );
 
 // Endpoint for Admins and Organizers to delete sub-users

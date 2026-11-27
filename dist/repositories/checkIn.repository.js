@@ -53,7 +53,7 @@ exports.checkInRepository = {
             filter.checkInMethod = options.checkInMethod;
         }
         let query = CheckIn_1.CheckIn.find(filter)
-            .populate('inviteeId', 'name email mobile dietaryPreference rsvpStatus')
+            .populate('inviteeId', 'name email mobile dietaryPreference rsvpStatus guestCount')
             .populate('sessionId', 'name schedule')
             .populate('checkedInBy', 'fullName email role')
             .sort({ checkInAt: -1 });

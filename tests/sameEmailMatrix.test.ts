@@ -16,6 +16,7 @@ import { Invitee } from '../src/models/Invitee';
 import { Session } from '../src/models/Session';
 import { SystemUserAssignment } from '../src/models/SystemUserAssignment';
 import { generateAccessToken } from '../src/utils/token';
+import { withGuests } from './helpers/withGuests';
 
 jest.mock('../src/utils/email.provider', () => ({ sendEmail: jest.fn().mockResolvedValue(true) }));
 jest.setTimeout(90000);
@@ -36,7 +37,7 @@ beforeEach(async () => {
 
 const addStaff = (who: any, body: Record<string, unknown>) => request(app).post('/api/users').set(auth(who)).send({ password: 'password123', role: 'SYSTEM_USER', ...body });
 const addGuest = (who: any, body: Record<string, unknown>, ev = eventA) => request(app).post(`/api/v1/events/${ev._id}/invitees`).set(auth(who)).send(body);
-const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'Invitees'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'Invitees'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
 const importGuests = (who: any, rows: (string | number)[][], mode = 'REPLACE') => request(app).post(`/api/v1/events/${eventA._id}/invitees/import`).set(auth(who)).field('mode', mode).attach('file', sheet([['Name', 'Email', 'Mobile'], ...rows]), 'list.xlsx');
 
 describe('system user and invitee: the same person can be both', () => {

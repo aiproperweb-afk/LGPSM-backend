@@ -39,6 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.userService = void 0;
 exports.staffVisibleToOrganizer = staffVisibleToOrganizer;
 const sms_service_1 = require("./sms.service");
+const organizerVerification_1 = require("../utils/organizerVerification");
 const auditLog_service_1 = require("./auditLog.service");
 const EmailVerification_1 = require("../models/EmailVerification");
 const mongoose_1 = __importDefault(require("mongoose"));
@@ -180,7 +181,7 @@ async function profileWithAvatarUrl(user) {
     return result;
 }
 /** The profile as its owner sees it, with whether their mobile number can be verified on this server */
-const ownProfile = async (user) => ({ ...(await profileWithAvatarUrl(user)), phoneVerificationAvailable: sms_service_1.smsService.isConfigured() });
+const ownProfile = async (user) => ({ ...(await profileWithAvatarUrl(user)), phoneVerificationAvailable: sms_service_1.smsService.isConfigured(), verificationPending: (0, organizerVerification_1.verificationPending)(user) });
 exports.userService = {
     async getProfile(userId) {
         const user = await user_repository_1.userRepository.findById(userId);
@@ -330,7 +331,9 @@ exports.userService = {
             passwordHash: hashedPassword,
             authProvider: AuthProvider.LOCAL,
             role: data.role,
-            createdBy: new mongoose_1.default.Types.ObjectId(ownerId)
+            createdBy: new mongoose_1.default.Types.ObjectId(ownerId),
+            // an organizer an administrator adds still has to verify the email and mobile number from their own profile
+            ...(data.role === User_1.Role.ORGANIZER && actor.role === User_1.Role.ADMIN ? { adminCreated: true } : {})
         });
         if (generatedPassword) {
             try {
@@ -434,6 +437,9 @@ exports.userService = {
                 throw { statusCode: 409, message: 'This person is already one of your system users.' };
             }
             updatePayload.email = data.email;
+            // a new address has not been proved to be the owner's
+            if (target.role === User_1.Role.ORGANIZER && target.adminCreated && email !== String(target.email).toLowerCase())
+                updatePayload.emailConfirmedAt = null;
         }
         if (data.phone !== undefined) {
             updatePayload.phone = (0, whatsapp_service_1.normalizePhoneNumber)(data.phone);

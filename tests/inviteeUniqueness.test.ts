@@ -12,13 +12,14 @@ import { inviteeRepository } from '../src/repositories/invitee.repository';
 import { inviteeSetService } from '../src/services/inviteeSet.service';
 import { analyzeInviteeUniqueness, applyInviteeUniqueness } from '../src/migrations/inviteeUniqueness';
 import { generateAccessToken } from '../src/utils/token';
+import { withGuests } from './helpers/withGuests';
 
 jest.setTimeout(60_000);
 
 let mongo: MongoMemoryServer;
 let org: any, tok: string, event: any, event2: any;
 const bearer = (t: string) => ({ Authorization: `Bearer ${t}` });
-const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
 const upload = (rows: (string | number)[][], mode: 'REPLACE' | 'APPEND', extra: Record<string, string> = {}) => {
   const r = request(app).post(`/api/v1/events/${event._id}/invitees/import`).set(bearer(tok)).field('mode', mode);
   for (const [k, v] of Object.entries(extra)) r.field(k, v);

@@ -12,6 +12,7 @@ import { CredentialEvent } from '../src/models/CredentialEvent';
 import { InviteeSet } from '../src/models/InviteeSet';
 import { Session } from '../src/models/Session';
 import { generateAccessToken } from '../src/utils/token';
+import { withGuests } from './helpers/withGuests';
 
 // the in-memory MongoDB can take a while to start on a busy machine (CI runners, parallel jobs); the default 5 s hook limit made the whole suite fail then
 jest.setTimeout(60000);
@@ -21,7 +22,7 @@ let org: any, tok: string, event: any;
 const bearer = (t: string) => ({ Authorization: `Bearer ${t}` });
 const sheet = (rows: (string | number)[][]) => {
   const wb = xlsx.utils.book_new();
-  xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'Invitees');
+  xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'Invitees');
   return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
 };
 const upload = (rows: (string | number)[][], mode?: 'REPLACE' | 'APPEND', file = 'list.xlsx') => {

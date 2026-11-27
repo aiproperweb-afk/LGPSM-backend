@@ -8,6 +8,7 @@ import { Event } from '../src/models/Event';
 import { Invitee } from '../src/models/Invitee';
 import { InviteeSet } from '../src/models/InviteeSet';
 import { generateAccessToken } from '../src/utils/token';
+import { withGuests } from './helpers/withGuests';
 
 // Audit finding F-04: a spreadsheet with only its heading row was accepted (200, nothing imported). It is now refused, and a refused
 // upload changes nothing, in either mode.
@@ -16,7 +17,7 @@ jest.setTimeout(60_000);
 
 describe('importing sheets with nothing to import', () => {
   let mongo: MongoMemoryServer; let org: any, event: any, auth: { Authorization: string };
-  const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+  const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
   const upload = (rows: (string | number)[][] | Buffer, mode: string, extra: Record<string, string> = {}) => {
     let r = request.post(`/api/v1/events/${event._id}/invitees/import`).set(auth).field('mode', mode);
     for (const [k, v] of Object.entries(extra)) r = r.field(k, v);
@@ -83,9 +84,25 @@ describe('importing sheets with nothing to import', () => {
     expect(res.body.data.archived).toBeGreaterThan(0);
     expect(await Invitee.collection.countDocuments({ eventId: event._id, email: 'keep1@imp.test' })).toBe(1); // archived rows are hidden from normal queries, not erased
   });
-  it('a sheet without a heading row and one guest still imports', async () => {
-    const res = await upload([['Headless Person', 'headless@imp.test', '']], 'APPEND');
-    expect(res.status).toBe(200);
-    expect(res.body.data.imported).toBe(1);
+  it('a sheet without the "No of Guests" column is refused with an explanation and nothing changes', async () => {
+    const before = await snapshot();
+    const raw = (rows: string[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+    for (const rows of [[H, ['No Count', 'nocount@imp.test', '']], [['Headless Person', 'headless@imp.test', '']]]) {
+      const res = await upload(raw(rows), 'REPLACE');
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain('"No of Guests" column');
+      expect(await snapshot()).toBe(before);
+    }
+  });
+  it('the number of guests is read per row, required, and kept up to date by a later sheet', async () => {
+    const G = [...H, 'No. of Guests'];
+    const first = await upload([G, ['Family One', 'family@imp.test', '', 10], ['Blank Count', 'blank@imp.test', '', ''], ['Half', 'half@imp.test', '', '2.5'], ['Crowd', 'crowd@imp.test', '', 101], ['Nobody', 'nobody@imp.test', '', 0]], 'APPEND');
+    expect(first.body.data).toMatchObject({ imported: 1, rejected: 4 });
+    expect(first.body.data.errors.map((e: any) => e.error)).toEqual(['No of Guests is required', expect.stringContaining("Invalid No of Guests '2.5'"), expect.stringContaining("'101'"), expect.stringContaining("'0'")]);
+    const family = () => Invitee.findOne({ eventId: event._id, email: 'family@imp.test' }).lean<any>();
+    expect(await family()).toMatchObject({ name: 'Family One', guestCount: 10 });
+    const again = await upload([G, ['Family One', 'family@imp.test', '', 4]], 'APPEND');
+    expect(again.body.data.notices.map((n: any) => n.message)).toContain('Family One: No of Guests changed from 10 to 4');
+    expect((await family()).guestCount).toBe(4);
   });
 });

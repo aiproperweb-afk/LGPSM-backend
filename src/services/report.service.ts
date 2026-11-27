@@ -2,6 +2,7 @@ import { activeAssignmentsOf } from './systemUserAssignment.service';
 import { billedGuestsByEvent } from './billing.service';
 import { PLATFORM_CURRENCY } from '../constants/currency';
 import { inviteesAllowedFilter } from '../utils/sessionAccess';
+import { guestLimit } from '../utils/guestCount';
 import { startOfTodayInAppZone } from '../utils/invitationContent';
 import mongoose from 'mongoose';
 import { platformSettingsService } from './platformSettings.service';
@@ -118,12 +119,15 @@ export const reportService = {
     const todayStart = startOfTodayInAppZone();
     const sessionReports = await Promise.all(
       sessions.map(async (sess) => {
-        const [count, sessionAttendees, invitedCount, checkInsToday] = await Promise.all([
+        const [count, sessionAttendees, invitedCount, checkInsToday, entered, expected] = await Promise.all([
           CheckIn.countDocuments({ eventId: eventObjId, sessionId: sess._id }),
           CheckIn.distinct('inviteeId', { eventId: eventObjId, sessionId: sess._id }),
           // Invitees with no explicit session rules may attend every session
           Invitee.countDocuments({ eventId: eventObjId, ...inviteesAllowedFilter(sess) }),
-          CheckIn.countDocuments({ eventId: eventObjId, sessionId: sess._id, checkInAt: { $gte: todayStart } })
+          CheckIn.countDocuments({ eventId: eventObjId, sessionId: sess._id, checkInAt: { $gte: todayStart } }),
+          // people, not passes: one pass can let in several guests
+          CheckIn.aggregate([{ $match: { eventId: eventObjId, sessionId: sess._id } }, { $group: { _id: null, n: { $sum: { $ifNull: ['$scanCount', 1] } } } }]),
+          Invitee.find({ eventId: eventObjId, ...inviteesAllowedFilter(sess) }).select('guestCount').lean()
         ]);
         // Staff with no session restriction cover every session
         const systemUsers = assignments.filter((a: any) =>
@@ -136,6 +140,8 @@ export const reportService = {
           attendeeCount: sessionAttendees.length,
           invitedCount,
           checkInsToday,
+          admittedCount: entered[0]?.n || 0,
+          expectedGuests: (expected as any[]).reduce((n, g) => n + guestLimit(g), 0),
           systemUsers,
           accessControl: sess.accessControl,
           schedule: sess.schedule
@@ -185,7 +191,7 @@ export const reportService = {
     }
     const events = await Event.find(query)
       .select('title schedule createdAt organizerId pricing status')
-      .populate('organizerId', 'fullName email phone profile')
+      .populate('organizerId', 'fullName email phone profile customRatePerInvitee')
       .sort({ 'schedule.start': -1 })
       .lean();
 
@@ -196,7 +202,9 @@ export const reportService = {
 
     const rows = await Promise.all(events.map(async (e: any) => {
       const locked = e.pricing && e.pricing.lockedAt;
-      const rate: number | null = locked ? e.pricing.ratePerInvitee ?? null : await platformSettingsService.rateInEffectAt(new Date(e.createdAt));
+      // as billed: the organizer's own rate when an administrator set one, otherwise the event's
+      const own = e.organizerId?.customRatePerInvitee;
+      const rate: number | null = typeof own === 'number' ? own : locked ? e.pricing.ratePerInvitee ?? null : await platformSettingsService.rateInEffectAt(new Date(e.createdAt));
       const invites = billed.get(String(e._id))?.size || 0;
       const org = e.organizerId || {};
       return {
@@ -210,7 +218,7 @@ export const reportService = {
         createdAt: e.createdAt,
         invitesSent: invites,
         ratePerInvitee: rate,
-        rateSource: locked ? 'locked' : rate === null ? 'unset' : 'historical',
+        rateSource: typeof own === 'number' ? 'organizer' : locked ? 'locked' : rate === null ? 'unset' : 'historical',
         amount: rate === null ? null : Math.round(invites * rate * 100) / 100
       };
     }));

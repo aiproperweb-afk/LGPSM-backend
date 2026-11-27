@@ -30,7 +30,10 @@ export interface INotificationPreferences {
 export interface IPlatformSettings extends Document {
   key: string;
   eventFeatures: IEventFeatures;
+  /** which administrator alerts go out by email */
   notificationPreferences: INotificationPreferences;
+  /** which alerts appear as in-app notifications (web and app); one never saved follows the email choice, as both did before */
+  pushPreferences?: Partial<INotificationPreferences>;
   pricing: {
     // null until the admin sets a rate
     ratePerInvitee: number | null;
@@ -70,6 +73,21 @@ const PlatformSettingsSchema = new Schema<IPlatformSettings>(
       guestCheckIns: on,
       invitationsSent: on,
       eventCancelled: on
+    },
+    // (no defaults: see platformSettingsService.getPushPreferences)
+    pushPreferences: {
+      newOrganizerRegistration: Boolean,
+      newEventAdded: Boolean,
+      deactivatedOrganizerBySuperAdmin: Boolean,
+      changeInPrice: Boolean,
+      invitationSendFailed: Boolean,
+      dayBeforeEventAlert: Boolean,
+      reportDownload: Boolean,
+      customTemplateRequest: Boolean,
+      newContactMessage: Boolean,
+      guestCheckIns: Boolean,
+      invitationsSent: Boolean,
+      eventCancelled: Boolean
     },
     pricing: {
       ratePerInvitee: { type: Number, default: null, min: 0 },

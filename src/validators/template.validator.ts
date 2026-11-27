@@ -41,7 +41,10 @@ export const uploadTemplateSchema = z.object({
   publish: z.boolean().optional()
 }).strict();
 
-export const updateTemplateSchema = createTemplateSchema.partial();
+export const updateTemplateSchema = createTemplateSchema.partial().extend({
+  // null takes the subcategory off: the template is then for the whole category
+  subcategoryId: z.string().regex(/^[0-9a-fA-F]{24}$/).nullable().optional()
+});
 
 // An organizer editing their own AI template: a name, whether it is available for their events, and (re-validated
 // in full) its design. Everything that decides who owns or can see it stays out of reach.

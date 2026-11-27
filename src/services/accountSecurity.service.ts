@@ -17,6 +17,7 @@ const signupKey = (userId: unknown) => `signup-phone:${String(userId)}`;
 const profileKey = (userId: unknown) => `profile-phone:${String(userId)}`;
 const findKey = (phone: string) => `find-account:${phone}`;
 const emailKey = (userId: unknown) => `change-email:${String(userId)}`;
+const verifyEmailKey = (userId: unknown) => `verify-email:${String(userId)}`;
 
 const maskEmail = (email: string) => {
   const [name, domain] = email.split('@');
@@ -92,6 +93,33 @@ export const accountSecurityService = {
     return { verified: true as const };
   },
 
+  // ─── signed in: verify the sign-in email (an account an administrator created) ───
+
+  async sendProfileEmailCode(userId: string) {
+    const user = await me(userId);
+    if (!user.adminCreated || user.emailConfirmedAt) throw { statusCode: 400, message: 'This email address is already verified.' };
+    await verificationCodeService.issue(verifyEmailKey(userId), user.email, async (code) => {
+      try {
+        await sendEmail(
+          user.email,
+          'Verify your email address',
+          `<p>Hello ${escapeHtml(user.fullName)},</p><p>Use this code to verify the email address of your EventQRapp account. It expires in 10 minutes.</p><p style="font-size:28px;font-weight:700;letter-spacing:8px">${code}</p><p>If you did not ask for this, you can ignore this email.</p>`
+        );
+      } catch (error) {
+        console.error('Email verification code could not be sent:', (error as Error).message);
+        throw { statusCode: 503, exposeMessage: true, message: 'Unable to send the verification email. Please try again later.' };
+      }
+    });
+    return { sentTo: user.email };
+  },
+
+  async verifyProfileEmail(userId: string, code: string) {
+    const address = await verificationCodeService.consume(verifyEmailKey(userId), code);
+    const result = await User.updateOne({ _id: userId, email: address }, { $set: { isEmailVerified: true, emailConfirmedAt: new Date() } });
+    if (!result.matchedCount) throw { statusCode: 400, message: 'The email address changed after the code was sent. Please ask for a new code.' };
+    return { verified: true as const };
+  },
+
   // ─── signed in: change the sign-in email ───────────────────────────────────
 
   /** Step 1: the password, then a code to the new address. Nothing changes until that code is entered. */
@@ -127,7 +155,7 @@ export const accountSecurityService = {
     const previous = user.email;
     try {
       // a linked Google sign-in belonged to the old address
-      await User.updateOne({ _id: userId }, { $set: { email: next, isEmailVerified: true }, $unset: { googleId: 1 } });
+      await User.updateOne({ _id: userId }, { $set: { email: next, isEmailVerified: true, emailConfirmedAt: new Date() }, $unset: { googleId: 1 } });
     } catch (error: any) {
       if (error?.code === 11000) throw TAKEN;
       throw error;

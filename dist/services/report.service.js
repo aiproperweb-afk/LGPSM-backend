@@ -41,6 +41,7 @@ const systemUserAssignment_service_1 = require("./systemUserAssignment.service")
 const billing_service_1 = require("./billing.service");
 const currency_1 = require("../constants/currency");
 const sessionAccess_1 = require("../utils/sessionAccess");
+const guestCount_1 = require("../utils/guestCount");
 const invitationContent_1 = require("../utils/invitationContent");
 const mongoose_1 = __importDefault(require("mongoose"));
 const platformSettings_service_1 = require("./platformSettings.service");
@@ -135,12 +136,15 @@ exports.reportService = {
         const sessions = await Session_1.Session.find({ eventId: eventObjId }).sort({ 'schedule.start': 1 });
         const todayStart = (0, invitationContent_1.startOfTodayInAppZone)();
         const sessionReports = await Promise.all(sessions.map(async (sess) => {
-            const [count, sessionAttendees, invitedCount, checkInsToday] = await Promise.all([
+            const [count, sessionAttendees, invitedCount, checkInsToday, entered, expected] = await Promise.all([
                 CheckIn_1.CheckIn.countDocuments({ eventId: eventObjId, sessionId: sess._id }),
                 CheckIn_1.CheckIn.distinct('inviteeId', { eventId: eventObjId, sessionId: sess._id }),
                 // Invitees with no explicit session rules may attend every session
                 Invitee_1.Invitee.countDocuments({ eventId: eventObjId, ...(0, sessionAccess_1.inviteesAllowedFilter)(sess) }),
-                CheckIn_1.CheckIn.countDocuments({ eventId: eventObjId, sessionId: sess._id, checkInAt: { $gte: todayStart } })
+                CheckIn_1.CheckIn.countDocuments({ eventId: eventObjId, sessionId: sess._id, checkInAt: { $gte: todayStart } }),
+                // people, not passes: one pass can let in several guests
+                CheckIn_1.CheckIn.aggregate([{ $match: { eventId: eventObjId, sessionId: sess._id } }, { $group: { _id: null, n: { $sum: { $ifNull: ['$scanCount', 1] } } } }]),
+                Invitee_1.Invitee.find({ eventId: eventObjId, ...(0, sessionAccess_1.inviteesAllowedFilter)(sess) }).select('guestCount').lean()
             ]);
             // Staff with no session restriction cover every session
             const systemUsers = assignments.filter((a) => !a.sessionIds || a.sessionIds.length === 0 || a.sessionIds.some((id) => id.toString() === sess._id.toString())).length;
@@ -151,6 +155,8 @@ exports.reportService = {
                 attendeeCount: sessionAttendees.length,
                 invitedCount,
                 checkInsToday,
+                admittedCount: entered[0]?.n || 0,
+                expectedGuests: expected.reduce((n, g) => n + (0, guestCount_1.guestLimit)(g), 0),
                 systemUsers,
                 accessControl: sess.accessControl,
                 schedule: sess.schedule
@@ -198,7 +204,7 @@ exports.reportService = {
         }
         const events = await Event_1.Event.find(query)
             .select('title schedule createdAt organizerId pricing status')
-            .populate('organizerId', 'fullName email phone profile')
+            .populate('organizerId', 'fullName email phone profile customRatePerInvitee')
             .sort({ 'schedule.start': -1 })
             .lean();
         // what is charged for: guests invited on WhatsApp or given a printed card (email is free)
@@ -207,7 +213,9 @@ exports.reportService = {
         const currency = currency_1.PLATFORM_CURRENCY; // one platform currency; the stored setting is not consulted for it
         const rows = await Promise.all(events.map(async (e) => {
             const locked = e.pricing && e.pricing.lockedAt;
-            const rate = locked ? e.pricing.ratePerInvitee ?? null : await platformSettings_service_1.platformSettingsService.rateInEffectAt(new Date(e.createdAt));
+            // as billed: the organizer's own rate when an administrator set one, otherwise the event's
+            const own = e.organizerId?.customRatePerInvitee;
+            const rate = typeof own === 'number' ? own : locked ? e.pricing.ratePerInvitee ?? null : await platformSettings_service_1.platformSettingsService.rateInEffectAt(new Date(e.createdAt));
             const invites = billed.get(String(e._id))?.size || 0;
             const org = e.organizerId || {};
             return {
@@ -221,7 +229,7 @@ exports.reportService = {
                 createdAt: e.createdAt,
                 invitesSent: invites,
                 ratePerInvitee: rate,
-                rateSource: locked ? 'locked' : rate === null ? 'unset' : 'historical',
+                rateSource: typeof own === 'number' ? 'organizer' : locked ? 'locked' : rate === null ? 'unset' : 'historical',
                 amount: rate === null ? null : Math.round(invites * rate * 100) / 100
             };
         }));

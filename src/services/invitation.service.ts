@@ -538,7 +538,7 @@ export const invitationService = {
       const organizer: any = await User.findById(event.organizerId).select('fullName profile.organizationName').lean();
       const who = organizer?.profile?.organizationName || organizer?.fullName || 'An organizer';
       const byWhatsApp = results.filter((r: any) => r.whatsappStatus === 'SENT').length;
-      const charge = Number.isFinite(rate) && rate > 0 && byWhatsApp > 0 ? ` ${byWhatsApp} went on WhatsApp: at ${PLATFORM_CURRENCY_SYMBOL}${rate} per invitee that is ${PLATFORM_CURRENCY_SYMBOL}${(rate * byWhatsApp).toLocaleString('en-IN')}.` : ' Email invitations are free.';
+      const charge = Number.isFinite(rate) && rate > 0 && byWhatsApp > 0 ? ` ${byWhatsApp} went on WhatsApp: at ${PLATFORM_CURRENCY_SYMBOL}${rate} per invitee that is ${PLATFORM_CURRENCY_SYMBOL}${(rate * byWhatsApp).toLocaleString('en-IN')}.` : '';
       await alertService.notifyAdmins('invitationsSent', {
         type: 'INVITATION',
         title: 'Invitations sent',

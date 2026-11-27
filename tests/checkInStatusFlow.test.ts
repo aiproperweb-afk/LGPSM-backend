@@ -92,9 +92,13 @@ describe('check-in statuses stay consistent for the door staff, the organizer an
     expect(log.data.every((r: any) => String(r.checkedInBy?._id || r.checkedInBy) === String(staff._id))).toBe(true);
   });
 
-  it('a repeat scan at a no-restriction session is a repeat entry, not a second attendee', async () => {
+  it('a second person on the same pass is a further entry, not a second attendee', async () => {
+    await Invitee.updateOne({ _id: D._id }, { guestCount: 2 });
     expect((await scan('d', s2._id)).status).toBe(201);
-    expect([200, 201]).toContain((await scan('d', s2._id)).status); // Dinner allows repeat entry
+    expect((await scan('d', s2._id)).status).toBe(201);
+    expect((await scan('d', s2._id)).status).toBe(409); // both guests of the pass are in
+    const dev = (await list(`sessionId=${s2._id}&checkInStatus=CHECKED_IN`)).data.find((g: any) => g.name === 'Dev');
+    expect(dev).toMatchObject({ guestCount: 2, admittedCount: 2 });
     expect(names(await list(`sessionId=${s2._id}&checkInStatus=CHECKED_IN`))).toEqual(['Dev']);
     const rep = (await request(app).get(`/api/v1/reports/events/${event._id}`).set(auth(tOrg))).body.data;
     expect(rep.uniqueAttendees).toBe(1);

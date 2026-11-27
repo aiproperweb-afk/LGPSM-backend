@@ -420,7 +420,7 @@ describe('Phase 6 — Step 12: Check-in, Access Validation & Logs', () => {
 
       expect(res2.statusCode).toBe(409);
       expect(res2.body.success).toBe(false);
-      expect(res2.body.message).toContain('ONLY_ONCE rule');
+      expect(res2.body.message).toContain('already checked into this session');
     });
 
     it('requires a check-in to the primary session when it has access validation enabled', async () => {

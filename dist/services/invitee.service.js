@@ -56,11 +56,12 @@ const InviteeSet_1 = require("../models/InviteeSet");
 const inviteeSet_service_1 = require("./inviteeSet.service");
 const auditLog_service_1 = require("./auditLog.service");
 const CredentialEvent_1 = require("../models/CredentialEvent");
+const guestCount_1 = require("../utils/guestCount");
 const eventLifecycle_1 = require("../utils/eventLifecycle");
 const spreadsheetGuard_1 = require("../utils/spreadsheetGuard");
 // The only guest fields a request can write. Delivery, credential, archive and list fields change through their own workflows;
 // the food choice belongs to the guest (invitation page).
-const GUEST_DETAIL_FIELDS = ['name', 'email', 'mobile', 'companyName', 'company', 'professionalIdentity', 'secondaryIdentity', 'sessionAccess'];
+const GUEST_DETAIL_FIELDS = ['name', 'email', 'mobile', 'companyName', 'company', 'professionalIdentity', 'secondaryIdentity', 'guestCount', 'sessionAccess'];
 const pickGuestDetails = (data, extra = []) => {
     const out = {};
     for (const key of [...GUEST_DETAIL_FIELDS, ...extra])
@@ -316,6 +317,71 @@ exports.inviteeService = {
         await invitee_repository_1.inviteeRepository.bulkUpdateSessionAccess(inviteeIds, mappedSessionAccess);
         return { success: true, updatedCount: invitees.length };
     },
+    /**
+     * Takes guests out of ONE session, leaving them in every other session they can attend. Sessions that share a guest list ("keep the same
+     * invitees as") stop sharing first, each keeping its own copy, so the change stays in the chosen session. A guest who can attend no
+     * other session is not touched here: they are reported (`onlyThisSession`), for the caller to delete from the guest list.
+     */
+    async removeFromSession(eventId, actor, sessionId, inviteeIds) {
+        const event = await (0, eventAccess_1.findManageableEvent)(eventId, actor.userId, actor.role);
+        if (!event)
+            throw new Error('EVENT_NOT_FOUND');
+        (0, eventLifecycle_1.assertEventOpenForChanges)(event);
+        return (0, inviteeSet_service_1.withEventLock)(eventId, async () => {
+            const sessions = await Session_1.Session.find({ eventId });
+            const target = sessions.find((s) => String(s._id) === sessionId);
+            if (!target)
+                throw new Error('INVALID_SESSIONS');
+            const ids = [...new Set(inviteeIds)];
+            const guests = await Invitee_1.Invitee.find({ _id: { $in: ids }, eventId });
+            if (guests.length !== ids.length)
+                throw new Error('INVALID_INVITEES');
+            const attends = (g) => sessions.filter((s) => (0, sessionAccess_1.inviteeAllowedInSession)(g, s)).map((s) => String(s._id));
+            const movers = [], onlyThisSession = [];
+            let notInSession = 0;
+            for (const g of guests) {
+                const allowed = attends(g);
+                if (!allowed.includes(sessionId))
+                    notInSession++;
+                else if (allowed.length === 1)
+                    onlyThisSession.push(String(g._id));
+                else
+                    movers.push(String(g._id));
+            }
+            if (movers.length === 0)
+                return { removed: 0, onlyThisSession, notInSession };
+            // Stop sharing: the sessions involved get their own written access before anything is taken away
+            const listOwner = target.inviteeSource === Session_2.InviteeSource.COPY_SESSION && target.sourceSessionId ? String(target.sourceSessionId) : null;
+            const copies = sessions.filter((s) => s.inviteeSource === Session_2.InviteeSource.COPY_SESSION && String(s.sourceSessionId) === sessionId);
+            const give = async (from, to) => {
+                // (an entry already naming the new owner is stale: a session that shared a list was decided by that list alone)
+                await Invitee_1.Invitee.updateMany({ eventId, 'sessionAccess.0': { $exists: true } }, { $pull: { sessionAccess: { sessionId: to } } });
+                await Invitee_1.Invitee.updateMany({ eventId, sessionAccess: { $elemMatch: { sessionId: from, allowed: true } } }, { $push: { sessionAccess: { sessionId: to, allowed: true } } });
+            };
+            // A guest whose rules named only a stale entry would be left with none, which means "every session": give them an explicit "no" first
+            const keepExplicit = async (stale) => Invitee_1.Invitee.updateMany({ eventId, 'sessionAccess.sessionId': stale, 'sessionAccess.1': { $exists: false } }, { $push: { sessionAccess: { sessionId: new mongoose_1.default.Types.ObjectId(listOwner || sessionId), allowed: false } } });
+            if (listOwner) {
+                await keepExplicit(target._id);
+                await give(listOwner, target._id);
+                await Session_1.Session.updateOne({ _id: target._id }, { inviteeSource: Session_2.InviteeSource.NEW_LIST, sourceSessionId: null });
+            }
+            for (const copy of copies) {
+                await keepExplicit(copy._id);
+                await give(sessionId, copy._id);
+                await Session_1.Session.updateOne({ _id: copy._id }, { inviteeSource: Session_2.InviteeSource.NEW_LIST, sourceSessionId: null });
+            }
+            const after = await Session_1.Session.find({ eventId });
+            for (const g of await Invitee_1.Invitee.find({ _id: { $in: movers }, eventId })) {
+                // a guest with no written rules attends every session: their rules are written out, without this one
+                const rules = g.sessionAccess.length
+                    ? g.sessionAccess.map((a) => ({ sessionId: a.sessionId, allowed: a.allowed }))
+                    : after.filter((s) => s.inviteeSource !== Session_2.InviteeSource.COPY_SESSION).map((s) => ({ sessionId: s._id, allowed: true }));
+                const next = [...rules.filter((a) => String(a.sessionId) !== sessionId), { sessionId: target._id, allowed: false }];
+                await Invitee_1.Invitee.updateOne({ _id: g._id }, { $set: { sessionAccess: next } });
+            }
+            return { removed: movers.length, onlyThisSession, notInSession };
+        });
+    },
     async deleteInvitee(inviteeId, organizerId, actorRole = 'ORGANIZER') {
         const invitee = await this.getInviteeById(inviteeId, organizerId);
         await this.assertGuestEventOpen(invitee);
@@ -454,16 +520,22 @@ exports.inviteeService = {
         }
         // Header matching (same rules as the frontend preview in utils/inviteeSheet.ts)
         const wanted = (0, cardInfo_1.wantedGuestDetails)(event.cardInfo, event.cardDisplay);
-        let nameColIdx = -1, emailColIdx = -1, mobileColIdx = -1, companyColIdx = -1, identityColIdx = -1, secondIdentityColIdx = -1;
+        let nameColIdx = -1, emailColIdx = -1, mobileColIdx = -1, companyColIdx = -1, identityColIdx = -1, secondIdentityColIdx = -1, guestsColIdx = -1;
         const sessionColMap = new Map();
         const firstRowCols = nonBlankRows[0].map((c) => cleanCellValue(c).toLowerCase());
-        const isHeaderPresent = firstRowCols.some((col) => col.includes('name') || col.includes('email') || col.includes('mobile') || col.includes('phone') || col.includes('company') || (0, columnMeaning_1.meaningsOf)(col).length > 0);
+        const isHeaderPresent = firstRowCols.some((col) => col.includes('name') || col.includes('email') || col.includes('mobile') || col.includes('phone') || col.includes('company') || (0, columnMeaning_1.meaningsOf)(col).length > 0 || (0, guestCount_1.isGuestCountHeader)(col));
         if (isHeaderPresent) {
             firstRowCols.forEach((colStr, colIdx) => {
                 if (!colStr)
                     return;
                 const customIdentity = String(event.cardInfo?.identityLabel || '').trim().toLowerCase();
                 const customSecond = String(event.cardInfo?.secondaryIdentityLabel || '').trim().toLowerCase();
+                // checked first: "No of Guests" would otherwise be read as the guest's name
+                if ((0, guestCount_1.isGuestCountHeader)(colStr)) {
+                    if (guestsColIdx === -1)
+                        guestsColIdx = colIdx;
+                    return;
+                }
                 if (colStr === 'second identity' || (customSecond && colStr === customSecond))
                     secondIdentityColIdx = colIdx;
                 else if (colStr.includes('identity') || colStr.includes('designation') || (customIdentity && colStr === customIdentity))
@@ -494,8 +566,8 @@ exports.inviteeService = {
             });
             // A card detail the event asks for may sit under a heading of the organizer's own (e.g. "Employee ID" or "Department"): the
             // columns nobody else claimed fill the asked-for primary / secondary slot in sheet order, so the card never prints a blank line
-            const taken = new Set([nameColIdx, emailColIdx, mobileColIdx, companyColIdx, identityColIdx, secondIdentityColIdx, ...sessionColMap.keys()]);
-            const extras = firstRowCols.map((c, i) => (c && !taken.has(i) ? i : -1)).filter((i) => i !== -1);
+            const taken = new Set([nameColIdx, emailColIdx, mobileColIdx, companyColIdx, identityColIdx, secondIdentityColIdx, guestsColIdx, ...sessionColMap.keys()]);
+            const extras = firstRowCols.map((c, i) => (c && !taken.has(i) && !(0, guestCount_1.isGuestCountHeader)(c) ? i : -1)).filter((i) => i !== -1);
             for (const idx of extras) {
                 if (wanted.identity && identityColIdx === -1)
                     identityColIdx = idx;
@@ -521,6 +593,10 @@ exports.inviteeService = {
         // taken for "replace the list with nothing".
         if (dataRows.length === 0) {
             throw { statusCode: 400, message: 'The sheet has a heading row but no invitee rows under it. Add at least one invitee and upload it again.' };
+        }
+        // How many people each pass admits is asked of every list: without the column nothing is imported
+        if (guestsColIdx === -1) {
+            throw { statusCode: 400, code: 'GUEST_COUNT_COLUMN_MISSING', message: `The sheet needs a "${guestCount_1.GUEST_COUNT_HEADER}" column (how many people each guest's pass admits, 1 to ${guestCount_1.MAX_GUESTS_PER_PASS}). Download the sample Excel and use its column names.` };
         }
         results.totalRows = dataRows.length;
         const cell = (row, idx) => (idx !== -1 && row[idx] !== undefined ? cleanCellValue(row[idx]) : '');
@@ -576,6 +652,13 @@ exports.inviteeService = {
             if (!email && !mobile) {
                 results.rejected++;
                 results.errors.push({ row: rowNum, error: 'Email or mobile is required' });
+                continue;
+            }
+            const guestText = cell(row, guestsColIdx);
+            const guestCount = (0, guestCount_1.parseGuestCount)(guestText);
+            if (guestCount === null) {
+                results.rejected++;
+                results.errors.push({ row: rowNum, error: guestText ? `Invalid ${guestCount_1.GUEST_COUNT_HEADER} '${guestText}' (must be a whole number from 1 to ${guestCount_1.MAX_GUESTS_PER_PASS})` : `${guestCount_1.GUEST_COUNT_HEADER} is required` });
                 continue;
             }
             const mobileKey = mobileIdentity(mobile);
@@ -670,6 +753,10 @@ exports.inviteeService = {
                     existing.professionalIdentity = professionalIdentity;
                 if (secondaryIdentity && !existing.secondaryIdentity)
                     existing.secondaryIdentity = secondaryIdentity;
+                // the number of people the pass admits follows the latest sheet (a family can grow or shrink after it was invited)
+                if ((0, guestCount_1.guestLimit)(existing) !== guestCount)
+                    results.notices.push({ row: rowNum, message: `${existing.name}: ${guestCount_1.GUEST_COUNT_HEADER} changed from ${(0, guestCount_1.guestLimit)(existing)} to ${guestCount}` });
+                existing.guestCount = guestCount;
                 if (kept.length)
                     results.notices.push({ row: rowNum, message: `Matches ${existing.name}; kept the existing ${kept.join(', ')}` });
                 existing.sessionAccess = [...access.entries()].map(([sessionId, allowed]) => ({ sessionId: new mongoose_1.default.Types.ObjectId(sessionId), allowed }));
@@ -687,6 +774,7 @@ exports.inviteeService = {
                     company: company || undefined,
                     professionalIdentity: professionalIdentity || undefined,
                     secondaryIdentity: secondaryIdentity || undefined,
+                    guestCount,
                     sessionAccess: rowAccess.map((a) => ({ sessionId: new mongoose_1.default.Types.ObjectId(a.sessionId), allowed: a.allowed })),
                     invitationStatus: Invitee_2.InvitationStatus.PENDING,
                     rsvpStatus: Invitee_2.RsvpStatus.PENDING

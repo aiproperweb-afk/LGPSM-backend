@@ -1,4 +1,5 @@
 import { auditAction } from '../middlewares/auditAction';
+import { requireVerifiedOrganizer } from '../middlewares/requireVerifiedOrganizer';
 import { invitationSendLimiter } from '../middlewares/rateLimiter';
 import { Router, Request, Response, NextFunction } from 'express';
 import { invitationController } from '../controllers/invitation.controller';
@@ -23,10 +24,10 @@ const validate = (schema: ZodSchema) => (req: Request, res: Response, next: Next
 router.use(authenticate);
 
 // POST /api/v1/events/:eventId/invitations/send
-router.post('/send', authorizeRoles(Role.ORGANIZER, Role.ADMIN), invitationSendLimiter, validate(sendInvitationSchema), auditAction({ action: 'INVITATION_SEND', entityType: 'Invitation', critical: true, describe: 'Invitations dispatched' }), invitationController.sendInvitations);
+router.post('/send', authorizeRoles(Role.ORGANIZER, Role.ADMIN), requireVerifiedOrganizer, invitationSendLimiter, validate(sendInvitationSchema), auditAction({ action: 'INVITATION_SEND', entityType: 'Invitation', critical: true, describe: 'Invitations dispatched' }), invitationController.sendInvitations);
 
 // POST /api/v1/events/:eventId/invitations/resend
-router.post('/resend', authorizeRoles(Role.ORGANIZER, Role.ADMIN), invitationSendLimiter, validate(resendInvitationSchema), auditAction({ action: 'INVITATION_RESEND', entityType: 'Invitation', critical: true, describe: 'Invitations re-dispatched (previous credential superseded)' }), invitationController.resendInvitations);
+router.post('/resend', authorizeRoles(Role.ORGANIZER, Role.ADMIN), requireVerifiedOrganizer, invitationSendLimiter, validate(resendInvitationSchema), auditAction({ action: 'INVITATION_RESEND', entityType: 'Invitation', critical: true, describe: 'Invitations re-dispatched (previous credential superseded)' }), invitationController.resendInvitations);
 
 // GET /api/v1/events/:eventId/invitations/preview
 router.get('/preview', authorizeRoles(Role.ORGANIZER, Role.ADMIN), invitationController.previewInvitationCard);

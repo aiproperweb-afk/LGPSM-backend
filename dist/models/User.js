@@ -67,6 +67,8 @@ const UserSchema = new mongoose_1.Schema({
     isEmailVerified: { type: Boolean, default: true },
     isPhoneVerified: { type: Boolean, default: false },
     phoneVerificationRequired: { type: Boolean, default: false },
+    adminCreated: { type: Boolean },
+    emailConfirmedAt: { type: Date },
     marketingConsent: { type: Boolean },
     // the Google account an organizer signed in with (the "sub" of the verified ID token); never used to look people up by email alone
     googleId: { type: String, index: true, sparse: true },

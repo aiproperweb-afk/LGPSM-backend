@@ -36,6 +36,7 @@ router.get('/:id', withViewer, categoryController.getCategoryById);
 router.post('/', authenticate, authorizeRoles(Role.ADMIN), validate(createCategorySchema), categoryController.createCategory);
 router.patch('/:id', authenticate, authorizeRoles(Role.ADMIN), validate(updateCategorySchema), categoryController.updateCategory);
 router.post('/:id/subcategories', authenticate, authorizeRoles(Role.ADMIN), validate(addSubcategorySchema), categoryController.addSubcategory);
+router.delete('/:id/subcategories/:subId', authenticate, authorizeRoles(Role.ADMIN), categoryController.deleteSubcategory);
 router.delete('/:id', authenticate, authorizeRoles(Role.ADMIN), categoryController.deleteCategory);
 
 export default router;

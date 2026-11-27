@@ -51,6 +51,17 @@ export const categoryController = {
     }
   },
 
+  async deleteSubcategory(req: Request, res: Response) {
+    try {
+      const category = await categoryService.deleteSubcategory(req.params.id as string, req.params.subId as string);
+      return res.status(200).json({ success: true, message: 'Subcategory deleted', data: category });
+    } catch (error: any) {
+      if (error.message === 'CATEGORY_NOT_FOUND') return res.status(404).json({ success: false, message: 'Subcategory not found' });
+      console.error('Request failed:', error?.message);
+      return res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
+    }
+  },
+
   async addSubcategory(req: Request, res: Response) {
     try {
       const category = await categoryService.addSubcategory(req.params.id as string, req.body.name);
@@ -97,7 +108,7 @@ export const categoryController = {
   async deleteCategory(req: Request, res: Response) {
     try {
       const category = await categoryService.deleteCategory(req.params.id as string);
-      return res.status(200).json({ success: true, message: 'Category deactivated successfully', data: category });
+      return res.status(200).json({ success: true, message: 'Category deleted', data: category });
     } catch (error: any) {
       if (error.message === 'CATEGORY_NOT_FOUND') return res.status(404).json({ error: 'Not Found', message: 'Category not found' });
       console.error('Request failed:', error?.message);

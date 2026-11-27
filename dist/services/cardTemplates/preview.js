@@ -23,7 +23,7 @@ async function renderTemplatePreview(templateId, input, isAdmin, userId) {
     // the person's own uploaded design are drawn as themselves)
     const loaded = templateId ? await Template_1.Template.findOne({ _id: templateId, isActive: { $ne: false } }).select('cardDesign isPublished isSystemTemplate isActive ownerId kind designSpec templateData').lean() : null;
     const ownUpload = !!loaded && loaded.cardDesign === 'CUSTOM' && !!loaded.ownerId && !!userId && String(loaded.ownerId) === String(userId);
-    const offered = !(0, masterCard_1.masterCardOnly)() || ownUpload || (0, themes_1.isSharedDesign)(loaded?.cardDesign);
+    const offered = !(0, masterCard_1.masterCardOnly)() || ownUpload || (0, themes_1.isSharedDesign)(loaded?.cardDesign) || (0, masterCard_1.isSharedUpload)(loaded);
     const rawTemplate = offered ? loaded : null;
     // organizers only see what the template list shows them: published templates and their own, never another organizer's
     if (templateId && (!(0, masterCard_1.masterCardOnly)() || (loaded && offered)) && (!rawTemplate || !(0, template_service_1.templateVisibleTo)(rawTemplate, { userId, isAdmin })))

@@ -8,7 +8,7 @@ import { resolveCardDesign } from './designs';
 import { safeParseDesignSpec } from './designSpec';
 import { cardGuestLines, CardInfo } from '../../utils/cardInfo';
 import { templateVisibleTo } from '../template.service';
-import { masterCardOnly } from '../../constants/masterCard';
+import { masterCardOnly, isSharedUpload } from '../../constants/masterCard';
 import { isSharedDesign } from './themes';
 
 export interface TemplatePreviewInput {
@@ -40,7 +40,7 @@ export async function renderTemplatePreview(templateId: string | null, input: Te
   // the person's own uploaded design are drawn as themselves)
   const loaded = templateId ? await Template.findOne({ _id: templateId, isActive: { $ne: false } }).select('cardDesign isPublished isSystemTemplate isActive ownerId kind designSpec templateData').lean() : null;
   const ownUpload = !!loaded && (loaded as any).cardDesign === 'CUSTOM' && !!(loaded as any).ownerId && !!userId && String((loaded as any).ownerId) === String(userId);
-  const offered = !masterCardOnly() || ownUpload || isSharedDesign((loaded as any)?.cardDesign);
+  const offered = !masterCardOnly() || ownUpload || isSharedDesign((loaded as any)?.cardDesign) || isSharedUpload(loaded as any);
   const rawTemplate = offered ? loaded : null;
   // organizers only see what the template list shows them: published templates and their own, never another organizer's
   if (templateId && (!masterCardOnly() || (loaded && offered)) && (!rawTemplate || !templateVisibleTo(rawTemplate as any, { userId, isAdmin }))) throw new Error('TEMPLATE_NOT_FOUND');

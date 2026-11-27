@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { Template, ITemplate } from '../models/Template';
 import { User, Role } from '../models/User';
-import { masterCardOnly } from '../constants/masterCard';
+import { masterCardOnly, SHARED_UPLOAD_FILTER } from '../constants/masterCard';
 import { SHARED_DESIGNS } from '../services/cardTemplates/themes';
 
 /**
@@ -27,8 +27,13 @@ const CATEGORY_FIELDS = 'name description isActive';
 function listQuery(categoryId: string | undefined, viewer: TemplateViewer, options: TemplateListOptions, adminIds?: mongoose.Types.ObjectId[]) {
   const query: any = { isActive: true };
   const own = viewer.userId && mongoose.Types.ObjectId.isValid(viewer.userId) ? { ownerId: new mongoose.Types.ObjectId(viewer.userId) } : null;
-  // in master-card-only mode only the current shared designs are listed (not the older ones); a person's own uploaded templates still are
-  if (masterCardOnly()) query.$and = [{ $or: [{ cardDesign: { $in: SHARED_DESIGNS } }, ...(own ? [{ cardDesign: 'CUSTOM', ...own }] : [])] }];
+  // in master-card-only mode only the current shared designs are listed (not the older ones), with the designs an administrator uploaded
+  // for everyone; a person's own uploaded templates still are. An administrator also sees the drafts they unpublished.
+  if (masterCardOnly()) {
+    const shared: any[] = [{ cardDesign: { $in: SHARED_DESIGNS } }, { ...SHARED_UPLOAD_FILTER }];
+    if (viewer.isAdmin) shared.push({ cardDesign: 'CUSTOM', isSystemTemplate: true, 'templateData.dynamicDetails': true });
+    query.$and = [{ $or: [...shared, ...(own ? [{ cardDesign: 'CUSTOM', ...own }] : [])] }];
+  }
   if (categoryId) query.categoryId = categoryId;
   if (options.kind) query.kind = options.kind === 'INVITATION' ? { $in: ['INVITATION', null] } : 'POSTER';
   if (options.mineOnly) {

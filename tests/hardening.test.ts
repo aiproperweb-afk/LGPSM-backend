@@ -22,6 +22,7 @@ import * as emailProvider from '../src/utils/email.provider';
 import { generateAccessToken } from '../src/utils/token';
 import { isPrivateAddress } from '../src/utils/safeFetch';
 import { generateSecureToken, hashToken } from '../src/utils/invitation.util';
+import { withGuests } from './helpers/withGuests';
 
 // Regression tests from the production-readiness audit. Each block names the defect it pins down; every assertion reads the
 // database or the HTTP response, never a mock's return value.
@@ -36,7 +37,7 @@ describe('production hardening', () => {
   let tOrg = '', tOther = '', tAdmin = '', tStaff = '';
   const mails: { to: string; subject: string; html: string }[] = [];
   const auth = (t: string) => ({ Authorization: `Bearer ${t}` });
-  const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+  const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
 
   const mkEvent = (over: Record<string, unknown> = {}) => Event.create({
     organizerId: organizer._id, title: 'Audit Event', description: 'd', categoryId: new mongoose.Types.ObjectId(), format: 'PHYSICAL',

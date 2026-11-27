@@ -4,6 +4,10 @@ import mongoose from 'mongoose';
 import { User } from '../models/User';
 import { PlatformSettings, IEventFeatures, INotificationPreferences } from '../models/PlatformSettings';
 import { PriceRateChange } from '../models/PriceRateChange';
+import { Event } from '../models/Event';
+import { Invitee } from '../models/Invitee';
+import { Invitation, InvitationDeliveryStatus } from '../models/Invitation';
+import { Order, OrderStatus } from '../models/Order';
 
 const KEY = 'global';
 
@@ -55,9 +59,23 @@ export const platformSettingsService = {
   },
 
   async updateNotificationPreferences(prefs: Partial<INotificationPreferences>): Promise<INotificationPreferences> {
+    // the in-app choices that so far followed the email ones are written down first, so changing email leaves them as they were
+    const before = await this.getPushPreferences();
+    await PlatformSettings.updateOne({ key: KEY }, [{ $set: Object.fromEntries(notificationKeys.map((k) => [`pushPreferences.${k}`, { $ifNull: [`$pushPreferences.${k}`, before[k]] }])) }]);
     const set = Object.fromEntries(Object.entries(prefs).filter(([k]) => notificationKeys.includes(k as any)).map(([k, v]) => [`notificationPreferences.${k}`, !!v]));
     const doc = await PlatformSettings.findOneAndUpdate({ key: KEY }, { $set: set }, { new: true, upsert: true, setDefaultsOnInsert: true });
     return pick(doc!.notificationPreferences, notificationKeys);
+  },
+
+  async getPushPreferences(): Promise<INotificationPreferences> {
+    const settings = await loadCached();
+    return Object.fromEntries(notificationKeys.map((k) => [k, !!(settings.pushPreferences?.[k] ?? settings.notificationPreferences?.[k])])) as unknown as INotificationPreferences;
+  },
+
+  async updatePushPreferences(prefs: Partial<INotificationPreferences>): Promise<INotificationPreferences> {
+    const set = Object.fromEntries(Object.entries(prefs).filter(([k]) => notificationKeys.includes(k as any)).map(([k, v]) => [`pushPreferences.${k}`, !!v]));
+    await PlatformSettings.findOneAndUpdate({ key: KEY }, { $set: set }, { new: true, upsert: true, setDefaultsOnInsert: true });
+    return this.getPushPreferences();
   },
 
   async getPricing() {
@@ -72,11 +90,39 @@ export const platformSettingsService = {
     };
   },
 
-  // The new rate applies to events created from now on; existing events keep their locked rate
+  /**
+   * Gives the rate to every event nothing has been sent for yet (no invitation delivered, no card made, nothing paid, not on Pay Later),
+   * so the price shown for them is the price that will be charged. An event whose invitations went out keeps the rate it was sent at.
+   * Organizers with a rate of their own are left to it. `organizerId` limits this to one organizer's events.
+   */
+  async applyRateToUnsentEvents(ratePerInvitee: number, organizerId?: string): Promise<number> {
+    const [sent, printed, paid, ownRate] = await Promise.all([
+      Invitation.distinct('eventId', { status: InvitationDeliveryStatus.SENT }),
+      Invitee.distinct('eventId', { cardDownloadedAt: { $ne: null } }).setOptions({ includeArchived: true } as any),
+      Order.distinct('eventId', { kind: 'EVENT_BILL', status: OrderStatus.PAID }),
+      User.distinct('_id', { customRatePerInvitee: { $type: 'number' } })
+    ]);
+    const res = await Event.updateMany(
+      {
+        _id: { $nin: [...sent, ...printed, ...paid] },
+        'payLater.setAt': { $exists: false },
+        $and: [{ organizerId: { $nin: ownRate } }, ...(organizerId ? [{ organizerId: new mongoose.Types.ObjectId(organizerId) }] : [])],
+        'pricing.ratePerInvitee': { $ne: ratePerInvitee }
+      },
+      { $set: { pricing: { ratePerInvitee, currency: PLATFORM_CURRENCY, lockedAt: new Date() } } },
+      // (not a change to the event itself: an open edit form must not be told the event was changed under it)
+      { timestamps: false }
+    );
+    return res.modifiedCount || 0;
+  },
+
+  // The new rate applies to new events and to existing ones with nothing sent yet; events already sent keep their rate
   async updateRate(actorId: string, ratePerInvitee: number) {
     const settings = await load();
     const previous = settings.pricing?.ratePerInvitee ?? null;
     if (previous !== null && Math.abs(previous - ratePerInvitee) < 0.00001) {
+      // saved again unchanged: nothing to record, but events that missed the rate are brought to it
+      await this.applyRateToUnsentEvents(ratePerInvitee);
       return this.getPricing();
     }
     const currency = PLATFORM_CURRENCY;
@@ -85,6 +131,7 @@ export const platformSettingsService = {
       { $set: { 'pricing.ratePerInvitee': ratePerInvitee, 'pricing.updatedAt': new Date(), 'pricing.updatedBy': new mongoose.Types.ObjectId(actorId) } }
     );
     await PriceRateChange.create({ previousRate: previous, newRate: ratePerInvitee, currency, changedBy: actorId });
+    await this.applyRateToUnsentEvents(ratePerInvitee);
     return this.getPricing();
   },
 
@@ -127,6 +174,8 @@ export const platformSettingsService = {
 
   async setOrganizerRate(actorId: string, organizerId: string, rate: number | null) {
     await User.updateOne({ _id: organizerId, role: 'ORGANIZER' }, { $set: { customRatePerInvitee: rate } });
+    // back on the platform rate: their events with nothing sent take it
+    if (rate === null) await this.applyRateToUnsentEvents(platformRate(await load()), organizerId);
     return this.rateForOrganizer(organizerId);
   },
 

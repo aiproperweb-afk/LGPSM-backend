@@ -11,6 +11,7 @@ import { Event, EventStatus } from '../models/Event';
 import { User, Role } from '../models/User';
 import { auditLogService } from './auditLog.service';
 import { whatsappService } from './whatsapp.service';
+import { guestLimit } from '../utils/guestCount';
 
 // Guests without a tracked list (added by hand, or before lists were tracked) are treated as one "earlier" list.
 export const LEGACY_SET = 'legacy';
@@ -149,7 +150,7 @@ export const inviteeSetService = {
     await manageableEvent(actor, eventId);
     const eid = new mongoose.Types.ObjectId(eventId);
     const [invitees, sets] = await Promise.all([
-      Invitee.find({ eventId: eid }).select('inviteeSetId invitationStatus rsvpStatus qrTokenHash createdAt').lean<IInvitee[]>(),
+      Invitee.find({ eventId: eid }).select('inviteeSetId invitationStatus rsvpStatus qrTokenHash createdAt sessionAccess').lean<IInvitee[]>(),
       InviteeSet.find({ eventId: eid }).sort({ createdAt: 1 }).lean()
     ]);
     const allSets = sets as any[];
@@ -172,8 +173,13 @@ export const inviteeSetService = {
     const aside = await Invitee.aggregate([{ $match: { eventId: eid, archivedAt: { $ne: null } } }, { $group: { _id: { $ifNull: ['$inviteeSetId', LEGACY_SET] }, n: { $sum: 1 } } }]).option({ includeArchived: true } as any);
     const asideBySet = new Map<string, number>(aside.map((r: any) => [String(r._id), r.n]));
     const rows = new Map<string, { total: number; sent: number; notSent: number; failed: number; unknown: number; rsvp: number; checkedIn: number }>();
+    // a list uploaded to one session counts the guests who can still attend it (a guest removed from that session is no longer in it)
+    const sessionsOfEvent = await Session.find({ eventId: eid }).lean();
+    const boundTo = new Map((sets as any[]).filter((s) => s.sessionId).map((s) => [String(s._id), sessionsOfEvent.find((x: any) => String(x._id) === String(s.sessionId))]));
     for (const inv of invitees) {
       const k = setKeyOf(inv);
+      const bound = boundTo.get(k);
+      if (bound && !inviteeAllowedInSession(inv, bound as any)) continue;
       const r = rows.get(k) || { total: 0, sent: 0, notSent: 0, failed: 0, unknown: 0, rsvp: 0, checkedIn: 0 };
       const a = activity.get(String(inv._id))!;
       r.total++;
@@ -241,7 +247,7 @@ export const inviteeSetService = {
       uploadedBy: s.createdBy ? people.get(String(s.createdBy)) || null : null, removedBy: s.removedBy ? removedBy.get(String(s.removedBy)) || null : null,
       setAside: asideBySet.get(String(s._id)) || 0
     }));
-    return { sets: out, sessionLists, removedLists, archivedCount, hasSent: out.some((s) => s.locked) };
+    return { sets: out, sessionLists, removedLists, archivedCount, totalGuests: invitees.length, hasSent: out.some((s) => s.locked) };
   },
 
   /**
@@ -350,7 +356,12 @@ export const inviteeSetService = {
       const sess = await Session.findOne({ _id: sessionView, eventId: eid });
       if (!sess) throw fail(404, 'List not found');
       Object.assign(filter, inviteesAllowedFilter(sess as any));
-    } else if (setId !== ALL_SETS) filter.inviteeSetId = setId === LEGACY_SET ? null : new mongoose.Types.ObjectId(setId);
+    } else if (setId !== ALL_SETS) {
+      filter.inviteeSetId = setId === LEGACY_SET ? null : new mongoose.Types.ObjectId(setId);
+      const own: any = setId === LEGACY_SET ? null : await InviteeSet.findOne({ _id: setId, eventId: eid }).select('sessionId').lean();
+      const bound = own?.sessionId ? await Session.findOne({ _id: own.sessionId, eventId: eid }) : null;
+      if (bound) filter.$and = [inviteesAllowedFilter(bound as any)];
+    }
     const term = q.trim().slice(0, 100);
     if (term) {
       const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -358,7 +369,7 @@ export const inviteeSetService = {
     }
     const lim = Math.min(Math.max(limit, 1), 100);
     const [guests, total] = await Promise.all([
-      Invitee.find(filter).select('name email mobile companyName company invitationStatus rsvpStatus qrTokenHash inviteeSetId sessionAccess').sort({ name: 1 }).skip((Math.max(page, 1) - 1) * lim).limit(lim).lean<IInvitee[]>(),
+      Invitee.find(filter).select('name email mobile companyName company guestCount invitationStatus rsvpStatus qrTokenHash inviteeSetId sessionAccess').sort({ name: 1 }).skip((Math.max(page, 1) - 1) * lim).limit(lim).lean<IInvitee[]>(),
       Invitee.countDocuments(filter)
     ]);
     const activity = await loadActivity(eid, guests);
@@ -371,7 +382,7 @@ export const inviteeSetService = {
       total, page, limit: lim,
       members: guests.map((g) => {
         const a = activity.get(String(g._id))!;
-        return { id: String(g._id), name: g.name, email: g.email || null, mobile: g.mobile || null, company: g.companyName || g.company || null, delivery: deliveryStateOf(a), rsvpStatus: g.rsvpStatus, checkedIn: a.checkedIn, setId: setKeyOf(g), setName: g.inviteeSetId ? listName.get(String(g.inviteeSetId)) || 'Removed list' : 'Manual', sessions: sessionNamesOf(g), sessionCount: eventSessions.length };
+        return { id: String(g._id), name: g.name, email: g.email || null, mobile: g.mobile || null, company: g.companyName || g.company || null, guestCount: guestLimit(g), delivery: deliveryStateOf(a), rsvpStatus: g.rsvpStatus, checkedIn: a.checkedIn, setId: setKeyOf(g), setName: g.inviteeSetId ? listName.get(String(g.inviteeSetId)) || 'Removed list' : 'Manual', sessions: sessionNamesOf(g), sessionCount: eventSessions.length };
       })
     };
   },

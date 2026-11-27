@@ -1,3 +1,4 @@
+import { requireVerifiedOrganizer } from '../middlewares/requireVerifiedOrganizer';
 import { auditAction } from '../middlewares/auditAction';
 import { idempotent } from '../middlewares/idempotency';
 import { Router, Request, Response, NextFunction } from 'express';
@@ -37,7 +38,7 @@ router.patch('/:eventId/admission', authorizeRoles(Role.ADMIN, Role.ORGANIZER), 
 router.post('/:eventId/close', authorizeRoles(Role.ADMIN, Role.ORGANIZER), auditAction({ action: 'EVENT_CLOSE', entityType: 'Event', entityParam: 'eventId', critical: true, describe: 'Event closed (data retained)' }), eventController.closeEvent);
 
 // Routes accessible to ADMIN and ORGANIZER
-router.post('/', authorizeRoles(Role.ADMIN, Role.ORGANIZER), validate(createEventSchema), idempotent('events.create'), auditAction({ action: 'EVENT_CREATE', entityType: 'Event' }), eventController.createEvent);
+router.post('/', authorizeRoles(Role.ADMIN, Role.ORGANIZER), requireVerifiedOrganizer, validate(createEventSchema), idempotent('events.create'), auditAction({ action: 'EVENT_CREATE', entityType: 'Event' }), eventController.createEvent);
 router.get('/', authorizeRoles(Role.ADMIN, Role.ORGANIZER), eventController.getEvents);
 // SYSTEM_USER may read details of events they are assigned to (for check-in)
 router.get('/:eventId', authorizeRoles(Role.ADMIN, Role.ORGANIZER, Role.SYSTEM_USER), eventController.getEventById);

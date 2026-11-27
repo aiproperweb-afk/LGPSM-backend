@@ -14,6 +14,7 @@ import { AuditLog } from '../src/models/AuditLog';
 import { SystemUserAssignment } from '../src/models/SystemUserAssignment';
 import { inviteeRepository } from '../src/repositories/invitee.repository';
 import { generateAccessToken } from '../src/utils/token';
+import { withGuests } from './helpers/withGuests';
 
 jest.setTimeout(60_000);
 
@@ -25,7 +26,7 @@ const bearer = (t: string) => ({ Authorization: `Bearer ${t}` });
 const HEAD = ['Name', 'Email', 'Mobile'];
 const sheet = (rows: (string | number)[][]) => {
   const wb = xlsx.utils.book_new();
-  xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'Invitees');
+  xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'Invitees');
   return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
 };
 const upload = (rows: (string | number)[][], mode: 'REPLACE' | 'APPEND', file = 'list.xlsx', who = tA, ev = event) =>

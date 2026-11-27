@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.inviteeRepository = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
+const guestCount_1 = require("../utils/guestCount");
 const Invitee_1 = require("../models/Invitee");
 const CheckIn_1 = require("../models/CheckIn");
 exports.inviteeRepository = {
@@ -32,12 +33,16 @@ exports.inviteeRepository = {
             Invitee_1.Invitee.countDocuments(match),
         ]);
         const records = await CheckIn_1.CheckIn.find({ ...checkInScope, inviteeId: { $in: rows.map((r) => r._id) } })
-            .select('inviteeId checkInAt')
+            .select('inviteeId checkInAt scanCount')
             .sort({ checkInAt: 1 })
             .lean();
         // Ascending, so the latest check-in for a guest is the one that stays
         const latest = new Map(records.map((r) => [String(r.inviteeId), r.checkInAt]));
-        const invitees = rows.map((r) => ({ ...r, isCheckedIn: latest.has(String(r._id)), checkedInAt: latest.get(String(r._id)) ?? undefined }));
+        // how many people of each pass are in: for the session asked about, otherwise the most any one session saw
+        const admitted = new Map();
+        for (const r of records)
+            admitted.set(String(r.inviteeId), Math.max(admitted.get(String(r.inviteeId)) ?? 0, r.scanCount ?? 1));
+        const invitees = rows.map((r) => ({ ...r, guestCount: (0, guestCount_1.guestLimit)(r), admittedCount: admitted.get(String(r._id)) ?? 0, isCheckedIn: latest.has(String(r._id)), checkedInAt: latest.get(String(r._id)) ?? undefined }));
         return { invitees: invitees, total };
     },
     async create(data) {

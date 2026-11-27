@@ -44,6 +44,7 @@ router.post('/upload', authorizeRoles(Role.ORGANIZER, Role.ADMIN), validate(uplo
 // the wording of an uploaded design that the event's details replace: read, set by hand, or looked for again (only its owner)
 router.get('/:id/text-zones', authorizeRoles(Role.ORGANIZER, Role.ADMIN), templateController.getTextZones);
 router.put('/:id/text-zones', authorizeRoles(Role.ORGANIZER, Role.ADMIN), validate(textZonesSchema), templateController.putTextZones);
+router.post('/:id/text-zones/preview', authorizeRoles(Role.ORGANIZER, Role.ADMIN), templateRenderLimiter, validate(textZonesSchema), templateController.previewTextZones);
 router.post('/:id/detect-text', authorizeRoles(Role.ORGANIZER, Role.ADMIN), templateController.detectTextZones);
 // Before any body is validated: admins pass; an organizer must own the template. The designers' templates answer 403
 // (as before), another organizer's private template answers 404 so its id reveals nothing.

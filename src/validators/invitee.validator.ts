@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { InvitationStatus, RsvpStatus } from '../models/Invitee';
 import { optionalPhoneSchema } from './phone.validator';
+import { MAX_GUESTS_PER_PASS } from '../utils/guestCount';
+
+const guestCount = z.number({ message: 'No of Guests must be a number' }).int('No of Guests must be a whole number').min(1, 'No of Guests must be at least 1').max(MAX_GUESTS_PER_PASS, `No of Guests can be at most ${MAX_GUESTS_PER_PASS}`).optional();
 
 export const createInviteeSchema = z.object({
   body: z.object({
@@ -11,6 +14,7 @@ export const createInviteeSchema = z.object({
     company: z.string().trim().max(200, 'Company must be 200 characters or less').optional(),
     professionalIdentity: z.string().trim().max(100).optional(),
     secondaryIdentity: z.string().trim().max(100).optional(),
+    guestCount,
     dietaryPreference: z.string().max(200).optional(),
     sessionAccess: z.array(z.object({
       sessionId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid session ID'),
@@ -31,6 +35,7 @@ export const updateInviteeSchema = z.object({
     company: z.string().trim().max(200, 'Company must be 200 characters or less').optional(),
     professionalIdentity: z.string().trim().max(100).optional(),
     secondaryIdentity: z.string().trim().max(100).optional(),
+    guestCount,
     dietaryPreference: z.string().max(200).optional(),
     rsvpStatus: z.enum(['PENDING', 'ACCEPTED', 'DECLINED']).optional(),
     sessionAccess: z.array(z.object({
@@ -56,5 +61,12 @@ export const bulkUpdateSessionAccessSchema = z.object({
       sessionId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid session ID'),
       allowed: z.boolean()
     }))
+  })
+});
+
+export const removeFromSessionSchema = z.object({
+  body: z.object({
+    sessionId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid session ID'),
+    inviteeIds: z.array(z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid invitee ID')).min(1, 'At least one invitee required').max(5000, 'Too many invitees in one request')
   })
 });
