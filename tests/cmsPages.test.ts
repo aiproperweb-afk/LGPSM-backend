@@ -316,18 +316,36 @@ describe('CMS pages', () => {
 
   it('lists only the requested public entries even with old dashboard records in the database', async () => {
     const retired = await createPage({ name: 'Dashboard', slug: 'workspace-dashboard', route: '/dashboard' });
-    expect(await cmsPageService.seedPages(homepageSeed)).toHaveLength(13);
+    expect(await cmsPageService.seedPages(homepageSeed)).toHaveLength(6);
     const list = await request(app).get('/api/v1/admin/pages').set(adminHeaders);
     expect(list.body.data.map((page: { slug: string }) => page.slug).sort())
-      .toEqual(homepageSeed.map(page => page.slug).sort());
+      .toEqual(homepageSeed.filter(page => page.editable !== false).map(page => page.slug).sort());
     expect((await request(app).get('/api/v1/public/pages/workspace-dashboard')).status).toBe(404);
     expect((await request(app).get('/api/v1/admin/pages/' + retired.id).set(adminHeaders)).status).toBe(404);
     expect(await Page.exists({ _id: retired._id })).not.toBeNull();
-    for (const { slug, route } of homepageSeed) {
+    for (const { slug, route } of homepageSeed.filter(page => page.editable !== false)) {
       const response = await request(app).get('/api/v1/public/pages/' + slug);
       expect(response.status).toBe(200);
       expect(response.body.data.route).toBe(route);
     }
+  });
+
+  it('preserves existing client category publications while removing their editor access', async () => {
+    const definition = homepageSeed.find(page => page.slug === 'clients-business-corporate')!;
+    const archived = await createPage({
+      name: definition.name,
+      slug: definition.slug,
+      route: definition.route,
+      draftData: definition.data,
+      publishedData: definition.data
+    });
+    const publicPage = await request(app).get('/api/v1/public/pages/' + definition.slug);
+    expect(publicPage.status).toBe(200);
+    expect(publicPage.body.data.content).toEqual(definition.data);
+    const id = '/api/v1/admin/pages/' + archived.id;
+    expect((await request(app).get(id).set(adminHeaders)).status).toBe(404);
+    expect((await request(app).post(id + '/publish').set({ ...adminHeaders, 'If-Match': '0' })
+      .send({ data: definition.data })).status).toBe(404);
   });
 
   it('opens a legacy Home draft and accepts publishing the expanded Home without replacing existing copy on seed', async () => {

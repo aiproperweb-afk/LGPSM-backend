@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { Media, MediaPurpose } from '../models/Media';
 import { Page, PageStatus } from '../models/Page';
 import { cmsPageRepository } from '../repositories/cmsPage.repository';
-import { supportsPageContract, supportedCmsSlugs, validateCmsSeedInput, validatePuckData } from '../validators/cmsPage.validator';
+import { editableCmsSlugs, supportsPageContract, supportedCmsSlugs, validateCmsSeedInput, validatePuckData } from '../validators/cmsPage.validator';
 import { mediaService } from './media.service';
 
 function cmsError(statusCode: number, code: string, message: string, extra?: Record<string, unknown>) {
@@ -22,7 +22,7 @@ function requireExpectedVersion(expectedVersion: number) {
 async function requirePage(id: string) {
   requirePageId(id);
   const page = await cmsPageRepository.findById(id);
-  if (!page || !supportsPageContract(page.slug, page.route, page.schemaVersion)) throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
+  if (!page || !editableCmsSlugs.includes(page.slug) || !supportsPageContract(page.slug, page.route, page.schemaVersion)) throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
   return page;
 }
 
@@ -115,7 +115,7 @@ export const cmsPageService = {
     if (!Array.isArray(input) || input.length === 0) {
       throw cmsError(400, 'CMS_SEED_EMPTY', 'Provide at least one populated page in the CMS seed file.');
     }
-    const seeds = input.map(validateCmsSeedInput);
+    const seeds = input.map(validateCmsSeedInput).filter(seed => editableCmsSlugs.includes(seed.slug));
     const slugs = new Set<string>();
     const routes = new Set<string>();
     for (const seed of seeds) {

@@ -1139,6 +1139,7 @@
     "name": "Clients - Business & Corporate",
     "slug": "clients-business-corporate",
     "route": "/clients/business-corporate",
+    "editable": false,
     "schemaVersion": 1,
     "componentStructureLocked": true,
     "data": {
@@ -1265,6 +1266,7 @@
     "name": "Clients - Wedding & Pre-Wedding",
     "slug": "clients-wedding-pre-wedding",
     "route": "/clients/wedding-pre-wedding",
+    "editable": false,
     "schemaVersion": 1,
     "componentStructureLocked": true,
     "data": {
@@ -1391,6 +1393,7 @@
     "name": "Clients - Education & Campus",
     "slug": "clients-education-campus",
     "route": "/clients/education-campus",
+    "editable": false,
     "schemaVersion": 1,
     "componentStructureLocked": true,
     "data": {
@@ -1517,6 +1520,7 @@
     "name": "Clients - Personal & Family",
     "slug": "clients-personal-family",
     "route": "/clients/personal-family",
+    "editable": false,
     "schemaVersion": 1,
     "componentStructureLocked": true,
     "data": {
@@ -1643,6 +1647,7 @@
     "name": "Clients - Festivals & Culture",
     "slug": "clients-festivals-culture",
     "route": "/clients/festivals-culture",
+    "editable": false,
     "schemaVersion": 1,
     "componentStructureLocked": true,
     "data": {
@@ -1769,6 +1774,7 @@
     "name": "Clients - Sports & Fitness",
     "slug": "clients-sports-fitness",
     "route": "/clients/sports-fitness",
+    "editable": false,
     "schemaVersion": 1,
     "componentStructureLocked": true,
     "data": {
@@ -1895,6 +1901,7 @@
     "name": "Clients - Entertainment & Social",
     "slug": "clients-entertainment-social",
     "route": "/clients/entertainment-social",
+    "editable": false,
     "schemaVersion": 1,
     "componentStructureLocked": true,
     "data": {

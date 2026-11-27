@@ -5,7 +5,7 @@ const Page_1 = require("../models/Page");
 const cmsPage_validator_1 = require("../validators/cmsPage.validator");
 exports.cmsPageRepository = {
     async list() {
-        return Page_1.Page.find({ slug: { $in: cmsPage_validator_1.supportedCmsSlugs } })
+        return Page_1.Page.find({ slug: { $in: cmsPage_validator_1.editableCmsSlugs } })
             .select('name slug route status schemaVersion version editVersion componentStructureLocked updatedBy publishedBy publishedAt createdAt updatedAt')
             .populate('updatedBy', 'fullName email')
             .populate('publishedBy', 'fullName email')

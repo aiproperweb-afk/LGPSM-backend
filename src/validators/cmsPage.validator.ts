@@ -8,6 +8,7 @@ const MAX_TEXT_LENGTH = 4000;
 const contracts = new Map(seed.map(page => [page.slug, page]));
 
 export const supportedCmsSlugs = [...contracts.keys()];
+export const editableCmsSlugs = seed.filter(page => page.editable !== false).map(page => page.slug);
 
 export function supportsPageContract(slug: string, route: string, schemaVersion: number) {
   const contract = contracts.get(slug);
@@ -23,6 +24,7 @@ export const cmsPageSeedSchema = z.object({
   slug: slugSchema,
   route: routeSchema,
   schemaVersion: z.literal(1),
+  editable: z.boolean().optional(),
   data: z.record(z.string(), z.unknown()),
   componentStructureLocked: z.boolean().optional().default(false)
 }).strict();

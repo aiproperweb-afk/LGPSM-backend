@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cmsPublishBodySchema = exports.cmsDraftBodySchema = exports.cmsPageSeedSchema = exports.supportedCmsSlugs = exports.MAX_CMS_PAYLOAD_BYTES = void 0;
+exports.cmsPublishBodySchema = exports.cmsDraftBodySchema = exports.cmsPageSeedSchema = exports.editableCmsSlugs = exports.supportedCmsSlugs = exports.MAX_CMS_PAYLOAD_BYTES = void 0;
 exports.supportsPageContract = supportsPageContract;
 exports.validatePuckData = validatePuckData;
 exports.validateCmsSeedInput = validateCmsSeedInput;
@@ -13,6 +13,7 @@ exports.MAX_CMS_PAYLOAD_BYTES = 90 * 1024;
 const MAX_TEXT_LENGTH = 4000;
 const contracts = new Map(cms_pages_v1_json_1.default.map(page => [page.slug, page]));
 exports.supportedCmsSlugs = [...contracts.keys()];
+exports.editableCmsSlugs = cms_pages_v1_json_1.default.filter(page => page.editable !== false).map(page => page.slug);
 function supportsPageContract(slug, route, schemaVersion) {
     const contract = contracts.get(slug);
     return contract?.route === route && contract.schemaVersion === schemaVersion;
@@ -25,6 +26,7 @@ exports.cmsPageSeedSchema = zod_1.z.object({
     slug: slugSchema,
     route: routeSchema,
     schemaVersion: zod_1.z.literal(1),
+    editable: zod_1.z.boolean().optional(),
     data: zod_1.z.record(zod_1.z.string(), zod_1.z.unknown()),
     componentStructureLocked: zod_1.z.boolean().optional().default(false)
 }).strict();

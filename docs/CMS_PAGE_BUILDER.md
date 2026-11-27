@@ -13,7 +13,7 @@ The backend stores Puck JSON snapshots in MongoDB. It does not install Puck or s
 | `updatedBy`, `publishedBy`, `publishedAt` | User references and publication timestamp. Seeding sets the timestamp without a user actor. |
 | `createdAt`, `updatedAt`, `componentStructureLocked` | Mongoose timestamps and a boolean policy for fixed layouts. |
 
-The CMS contains only the public site content, including all seven client categories and the shared navbar and footer. The backend reports `cms: ready` in `/api/health` after startup seeding succeeds. Previously seeded workspace records are excluded from the supported contracts.
+The CMS contains only the public site content, including the shared navbar and footer. The backend reports `cms: ready` in `/api/health` after startup seeding succeeds. Previously seeded workspace records are excluded from supported contracts. Existing client category publications remain readable by the public site. Client category records are excluded from the editor and startup seeding.
 
 ## Routes
 

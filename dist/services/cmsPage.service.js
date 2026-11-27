@@ -25,7 +25,7 @@ function requireExpectedVersion(expectedVersion) {
 async function requirePage(id) {
     requirePageId(id);
     const page = await cmsPage_repository_1.cmsPageRepository.findById(id);
-    if (!page || !(0, cmsPage_validator_1.supportsPageContract)(page.slug, page.route, page.schemaVersion))
+    if (!page || !cmsPage_validator_1.editableCmsSlugs.includes(page.slug) || !(0, cmsPage_validator_1.supportsPageContract)(page.slug, page.route, page.schemaVersion))
         throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
     return page;
 }
@@ -117,7 +117,7 @@ exports.cmsPageService = {
         if (!Array.isArray(input) || input.length === 0) {
             throw cmsError(400, 'CMS_SEED_EMPTY', 'Provide at least one populated page in the CMS seed file.');
         }
-        const seeds = input.map(cmsPage_validator_1.validateCmsSeedInput);
+        const seeds = input.map(cmsPage_validator_1.validateCmsSeedInput).filter(seed => cmsPage_validator_1.editableCmsSlugs.includes(seed.slug));
         const slugs = new Set();
         const routes = new Set();
         for (const seed of seeds) {
