@@ -75,6 +75,31 @@ describe('CMS pages', () => {
     expect((await request(app).get('/api/v1/admin/pages').set(organizerHeaders)).status).toBe(403);
   });
 
+  it('round-trips Contact builder dimensions while isolating the public snapshot and other pages', async () => {
+    const home = await createPage();
+    const contact = await createPage({ name: 'Contact', slug: 'contact', route: '/contact' });
+    const data = {
+      root: { props: { builder: 'contact', schemaVersion: 2 } },
+      content: [{
+        type: 'Heading',
+        props: { id: 'hero-heading', text: 'Updated contact', style: { mobile: { width: '75%' } } }
+      }]
+    };
+    const headers = { ...adminHeaders, 'If-Match': '0' };
+    const draftPath = (id: string) => '/api/v1/admin/pages/' + id + '/draft';
+    const livePath = '/api/v1/public/pages/contact';
+    expect((await request(app).patch(draftPath(home.id)).set(headers).send({ data })).status).toBe(400);
+    expect((await request(app).patch(draftPath(contact.id)).set(organizerHeaders).send({ data })).status).toBe(403);
+    const draft = await request(app).patch(draftPath(contact.id)).set(headers).send({ data });
+    expect(draft.status).toBe(200);
+    expect(draft.body.data.draftData.content[0]).toEqual(data.content[0]);
+    expect((await request(app).get(livePath)).body.data.content.root.props.builder).toBeUndefined();
+    const published = await request(app).post('/api/v1/admin/pages/' + contact.id + '/publish')
+      .set({ ...adminHeaders, 'If-Match': '1' }).send({ data });
+    expect(published.status).toBe(200);
+    expect((await request(app).get(livePath)).body.data.content.content[0]).toEqual(data.content[0]);
+  });
+
   it('returns drafts to admins only and validates page IDs', async () => {
     const page = await createPage({ draftData: puckData('Unsaved'), publishedData: puckData('Live') });
     const result = await request(app).get(`/api/v1/admin/pages/${page.id}`).set(adminHeaders);

@@ -37,7 +37,9 @@ export const submitContactSchema = z.object({
           .refine((v) => countLinks(v) <= MAX_LINKS_PER_MESSAGE, { message: 'Please remove links from your message' })
       ),
     // Honeypot: hidden in the UI, so only automated form-fillers put anything here
-    website: z.string().max(200).optional()
+    website: z.string().max(200).optional(),
+    formId: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/).optional(),
+    customFields: z.array(z.object({ id: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/), value: z.union([z.string().transform(multiLine).pipe(z.string().max(2000)), z.boolean()]) }).strict()).max(30).optional()
   })
 });
 

@@ -52,15 +52,15 @@ async function verifyMediaReferences(mediaIds: string[]) {
 }
 
 function validateStructure(page: { componentStructureLocked: boolean; draftData: unknown; slug: string }, structure: string) {
-  if (!page.componentStructureLocked) return;
+  if (!page.componentStructureLocked || page.slug === 'contact') return;
   const current = validatePuckData(page.draftData, page.slug).structure;
   if (current !== structure) {
     throw cmsError(409, 'CMS_STRUCTURE_LOCKED', 'This page has a fixed component structure; component insertion, deletion and reordering are not allowed.');
   }
 }
 
-async function validateContent(data: unknown, slug: string) {
-  const validated = validatePuckData(data, slug);
+async function validateContent(data: unknown, slug: string, publishing = false) {
+  const validated = validatePuckData(data, slug, publishing);
   await verifyMediaReferences(validated.mediaIds);
   return validated;
 }
@@ -86,7 +86,7 @@ export const cmsPageService = {
 
   async publish(id: string, expectedVersion: number, data: unknown, actorId: string) {
     const page = await requireEditablePage(id, expectedVersion);
-    const validated = await validateContent(data, page.slug);
+    const validated = await validateContent(data, page.slug, true);
     if ((validated.data.content as unknown[]).length === 0) {
       throw cmsError(400, 'CMS_CONTENT_EMPTY', 'A page must contain content before it can be published.');
     }

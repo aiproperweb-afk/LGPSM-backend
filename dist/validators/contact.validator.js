@@ -35,6 +35,8 @@ exports.submitContactSchema = zod_1.z.object({
             .max(2000, 'Message must be at most 2000 characters')
             .refine((v) => (0, exports.countLinks)(v) <= exports.MAX_LINKS_PER_MESSAGE, { message: 'Please remove links from your message' })),
         // Honeypot: hidden in the UI, so only automated form-fillers put anything here
-        website: zod_1.z.string().max(200).optional()
+        website: zod_1.z.string().max(200).optional(),
+        formId: zod_1.z.string().regex(/^[A-Za-z0-9_-]{1,80}$/).optional(),
+        customFields: zod_1.z.array(zod_1.z.object({ id: zod_1.z.string().regex(/^[A-Za-z0-9_-]{1,80}$/), value: zod_1.z.union([zod_1.z.string().transform(multiLine).pipe(zod_1.z.string().max(2000)), zod_1.z.boolean()]) }).strict()).max(30).optional()
     })
 });

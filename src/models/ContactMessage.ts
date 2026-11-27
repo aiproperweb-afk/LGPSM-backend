@@ -13,6 +13,8 @@ export interface IContactMessage extends Document {
   email: string;
   phone?: string;
   message: string;
+  formId?: string;
+  customFields?: { id: string; label: string; value: string | boolean }[];
   status: ContactMessageStatus;
   // sha256(email + normalised message): lets a retry / double-click be recognised as the same request
   fingerprint: string;
@@ -31,6 +33,8 @@ const ContactMessageSchema: Schema = new Schema(
     email: { type: String, required: true, trim: true, lowercase: true, maxlength: 254 },
     phone: { type: String, trim: true, maxlength: 20 },
     message: { type: String, required: true, maxlength: 2000 },
+    formId: { type: String, maxlength: 80 },
+    customFields: { type: [new Schema({ id: String, label: String, value: Schema.Types.Mixed }, { _id: false })], default: undefined },
     status: { type: String, enum: Object.values(ContactMessageStatus), default: ContactMessageStatus.NEW },
     fingerprint: { type: String, required: true },
     dedupeKey: { type: String, required: true, unique: true },

@@ -55,15 +55,15 @@ async function verifyMediaReferences(mediaIds) {
     }
 }
 function validateStructure(page, structure) {
-    if (!page.componentStructureLocked)
+    if (!page.componentStructureLocked || page.slug === 'contact')
         return;
     const current = (0, cmsPage_validator_1.validatePuckData)(page.draftData, page.slug).structure;
     if (current !== structure) {
         throw cmsError(409, 'CMS_STRUCTURE_LOCKED', 'This page has a fixed component structure; component insertion, deletion and reordering are not allowed.');
     }
 }
-async function validateContent(data, slug) {
-    const validated = (0, cmsPage_validator_1.validatePuckData)(data, slug);
+async function validateContent(data, slug, publishing = false) {
+    const validated = (0, cmsPage_validator_1.validatePuckData)(data, slug, publishing);
     await verifyMediaReferences(validated.mediaIds);
     return validated;
 }
@@ -86,7 +86,7 @@ exports.cmsPageService = {
     },
     async publish(id, expectedVersion, data, actorId) {
         const page = await requireEditablePage(id, expectedVersion);
-        const validated = await validateContent(data, page.slug);
+        const validated = await validateContent(data, page.slug, true);
         if (validated.data.content.length === 0) {
             throw cmsError(400, 'CMS_CONTENT_EMPTY', 'A page must contain content before it can be published.');
         }
