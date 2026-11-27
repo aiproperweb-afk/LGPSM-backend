@@ -32,6 +32,21 @@ const FONT_FILES = {
     'Playfair Display:700': 'PlayfairDisplay-Bold.ttf',
     'Manrope:500': 'Manrope-Medium.ttf',
     'Manrope:700': 'Manrope-Bold.ttf',
+    'Poppins:500': 'Poppins-Medium.ttf',
+    'Poppins:600': 'Poppins-SemiBold.ttf',
+    'Montserrat:400': 'Montserrat-Regular.ttf',
+    'Montserrat:500': 'Montserrat-Medium.ttf',
+    'Montserrat:700': 'Montserrat-Bold.ttf',
+    'Judson:700': 'Judson-Bold.ttf',
+    'Lobster Two:400': 'LobsterTwo-Regular.ttf',
+    'Alice:400': 'Alice-Regular.ttf',
+    'Luckiest Guy:400': 'LuckiestGuy-Regular.ttf',
+    'Alkatra:500': 'Alkatra-Medium.ttf',
+    'Abril Fatface:400': 'AbrilFatface-Regular.ttf',
+    'Nunito:400': 'Nunito-Regular.ttf',
+    'Nunito:700': 'Nunito-Bold.ttf',
+    'Chewy:400': 'Chewy-Regular.ttf',
+    'Young Serif:400': 'YoungSerif-Regular.ttf',
 };
 /** Families tried, in order, when a glyph is missing (Bengali and Devanagari names, for example). */
 exports.FALLBACK_FAMILIES = ['Noto Sans Bengali', 'Noto Sans Devanagari', 'Inter'];

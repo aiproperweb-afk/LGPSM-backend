@@ -9,6 +9,7 @@ import { safeParseDesignSpec } from './designSpec';
 import { cardGuestLines, CardInfo } from '../../utils/cardInfo';
 import { templateVisibleTo } from '../template.service';
 import { masterCardOnly } from '../../constants/masterCard';
+import { isSharedDesign } from './themes';
 
 export interface TemplatePreviewInput {
   title?: string;
@@ -35,13 +36,14 @@ export interface TemplatePreviewInput {
  */
 export async function renderTemplatePreview(templateId: string | null, input: TemplatePreviewInput, isAdmin: boolean, userId?: string): Promise<Buffer> {
   // With no template chosen the card still gets the design that suits the event type, exactly as it will when sent
-  // (while the master card is the only design, the preview is always the master card, whatever template the form still remembers)
-  // (the person's own uploaded design is still drawn while the master card is the only shared one)
+  // (in master-card-only mode an older design, still remembered by the form, previews as the master card; the current shared designs and
+  // the person's own uploaded design are drawn as themselves)
   const loaded = templateId ? await Template.findOne({ _id: templateId, isActive: { $ne: false } }).select('cardDesign isPublished isSystemTemplate isActive ownerId kind designSpec templateData').lean() : null;
   const ownUpload = !!loaded && (loaded as any).cardDesign === 'CUSTOM' && !!(loaded as any).ownerId && !!userId && String((loaded as any).ownerId) === String(userId);
-  const rawTemplate = !masterCardOnly() || ownUpload ? loaded : null;
+  const offered = !masterCardOnly() || ownUpload || isSharedDesign((loaded as any)?.cardDesign);
+  const rawTemplate = offered ? loaded : null;
   // organizers only see what the template list shows them: published templates and their own, never another organizer's
-  if (templateId && (!masterCardOnly() || ownUpload) && (!rawTemplate || !templateVisibleTo(rawTemplate as any, { userId, isAdmin }))) throw new Error('TEMPLATE_NOT_FOUND');
+  if (templateId && (!masterCardOnly() || (loaded && offered)) && (!rawTemplate || !templateVisibleTo(rawTemplate as any, { userId, isAdmin }))) throw new Error('TEMPLATE_NOT_FOUND');
   // (an admin's upload saved before the design's own wording was read has it read now, once)
   const template = await withCurrentLayout(rawTemplate as any);
   // a custom design is drawn from its stored specification

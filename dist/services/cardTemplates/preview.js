@@ -12,19 +12,21 @@ const designSpec_1 = require("./designSpec");
 const cardInfo_1 = require("../../utils/cardInfo");
 const template_service_1 = require("../template.service");
 const masterCard_1 = require("../../constants/masterCard");
+const themes_1 = require("./themes");
 /**
  * The card a template produces for the event being entered, with a placeholder guest and a clearly marked sample QR.
  * Lets the Add Event form show the real card (and the wording written for this kind of event) before anything is saved.
  */
 async function renderTemplatePreview(templateId, input, isAdmin, userId) {
     // With no template chosen the card still gets the design that suits the event type, exactly as it will when sent
-    // (while the master card is the only design, the preview is always the master card, whatever template the form still remembers)
-    // (the person's own uploaded design is still drawn while the master card is the only shared one)
+    // (in master-card-only mode an older design, still remembered by the form, previews as the master card; the current shared designs and
+    // the person's own uploaded design are drawn as themselves)
     const loaded = templateId ? await Template_1.Template.findOne({ _id: templateId, isActive: { $ne: false } }).select('cardDesign isPublished isSystemTemplate isActive ownerId kind designSpec templateData').lean() : null;
     const ownUpload = !!loaded && loaded.cardDesign === 'CUSTOM' && !!loaded.ownerId && !!userId && String(loaded.ownerId) === String(userId);
-    const rawTemplate = !(0, masterCard_1.masterCardOnly)() || ownUpload ? loaded : null;
+    const offered = !(0, masterCard_1.masterCardOnly)() || ownUpload || (0, themes_1.isSharedDesign)(loaded?.cardDesign);
+    const rawTemplate = offered ? loaded : null;
     // organizers only see what the template list shows them: published templates and their own, never another organizer's
-    if (templateId && (!(0, masterCard_1.masterCardOnly)() || ownUpload) && (!rawTemplate || !(0, template_service_1.templateVisibleTo)(rawTemplate, { userId, isAdmin })))
+    if (templateId && (!(0, masterCard_1.masterCardOnly)() || (loaded && offered)) && (!rawTemplate || !(0, template_service_1.templateVisibleTo)(rawTemplate, { userId, isAdmin })))
         throw new Error('TEMPLATE_NOT_FOUND');
     // (an admin's upload saved before the design's own wording was read has it read now, once)
     const template = await (0, uploadedTemplate_1.withCurrentLayout)(rawTemplate);

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.sameDay = exports.toDate = void 0;
 exports.parts = parts;
 exports.masterDateTime = masterDateTime;
+exports.masterDateParts = masterDateParts;
 exports.ordinal = ordinal;
 exports.shortDateRange = shortDateRange;
 exports.longDate = longDate;
@@ -38,6 +39,17 @@ function masterDateTime(startIso, endIso) {
     if (!end || end.getTime() <= start.getTime())
         return at(start);
     return (0, exports.sameDay)(start, end) ? `${at(start)} – ${fmt(end, { hour: 'numeric', minute: '2-digit', hour12: true })}` : `${at(start)} – ${at(end)}`;
+}
+/** The start of a one-day event in the parts a large date block shows; nothing for an event that runs into another day. */
+function masterDateParts(startIso, endIso) {
+    const start = (0, exports.toDate)(startIso);
+    if (!start)
+        return null;
+    const end = (0, exports.toDate)(endIso);
+    if (end && end.getTime() > start.getTime() && !(0, exports.sameDay)(start, end))
+        return null;
+    const p = parts(start);
+    return { month: p.monthLong, weekday: p.weekday, day: p.day, time: `At ${p.time}` };
 }
 function ordinal(n) {
     const mod100 = n % 100;

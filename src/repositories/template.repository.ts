@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { Template, ITemplate } from '../models/Template';
 import { User, Role } from '../models/User';
 import { masterCardOnly } from '../constants/masterCard';
+import { SHARED_DESIGNS } from '../services/cardTemplates/themes';
 
 /**
  * Who is asking, for visibility. Admins see every template (drafts included); an organizer sees the published
@@ -26,8 +27,8 @@ const CATEGORY_FIELDS = 'name description isActive';
 function listQuery(categoryId: string | undefined, viewer: TemplateViewer, options: TemplateListOptions, adminIds?: mongoose.Types.ObjectId[]) {
   const query: any = { isActive: true };
   const own = viewer.userId && mongoose.Types.ObjectId.isValid(viewer.userId) ? { ownerId: new mongoose.Types.ObjectId(viewer.userId) } : null;
-  // while the master card is the only shared design, it is the only shared template listed; a person's own uploaded templates still are
-  if (masterCardOnly()) query.$and = [{ $or: [{ cardDesign: 'MASTER' }, ...(own ? [{ cardDesign: 'CUSTOM', ...own }] : [])] }];
+  // in master-card-only mode only the current shared designs are listed (not the older ones); a person's own uploaded templates still are
+  if (masterCardOnly()) query.$and = [{ $or: [{ cardDesign: { $in: SHARED_DESIGNS } }, ...(own ? [{ cardDesign: 'CUSTOM', ...own }] : [])] }];
   if (categoryId) query.categoryId = categoryId;
   if (options.kind) query.kind = options.kind === 'INVITATION' ? { $in: ['INVITATION', null] } : 'POSTER';
   if (options.mineOnly) {

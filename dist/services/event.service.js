@@ -24,11 +24,20 @@ const Template_1 = require("../models/Template");
 const eventLimits_1 = require("../constants/eventLimits");
 const masterCard_1 = require("../constants/masterCard");
 const defaultTemplates_1 = require("./cardTemplates/defaultTemplates");
+const themes_1 = require("./cardTemplates/themes");
 /** Is this template an uploaded design owned by this organizer (the one kind that is kept while the master card is the only shared design)? */
 async function isOwnUploadOf(templateId, organizerId) {
     if (!templateId || !mongoose_1.default.Types.ObjectId.isValid(String(templateId)) || !mongoose_1.default.Types.ObjectId.isValid(organizerId))
         return false;
     return !!(await Template_1.Template.exists({ _id: String(templateId), ownerId: organizerId, cardDesign: 'CUSTOM', isActive: { $ne: false } }));
+}
+/** May the event keep this template in master-card-only mode? A current shared design, or the organizer's own upload. */
+async function isOfferedTemplate(templateId, organizerId) {
+    if (!templateId || !mongoose_1.default.Types.ObjectId.isValid(String(templateId)))
+        return false;
+    if (await Template_1.Template.exists({ _id: String(templateId), cardDesign: { $in: themes_1.SHARED_DESIGNS }, isActive: { $ne: false } }))
+        return true;
+    return isOwnUploadOf(templateId, organizerId);
 }
 const eventAccess_1 = require("../utils/eventAccess");
 const platformSettings_service_1 = require("./platformSettings.service");
@@ -156,8 +165,8 @@ class EventService {
         else {
             delete eventData.templateId;
         }
-        // while the master card is the only shared design, every event is made with it, except one made with the organizer's own uploaded design
-        if ((0, masterCard_1.masterCardOnly)() && !(await isOwnUploadOf(eventData.templateId, String(organizerId)))) {
+        // in master-card-only mode an event with no current design chosen (none, or an older one) is made with the master card
+        if ((0, masterCard_1.masterCardOnly)() && !(await isOfferedTemplate(eventData.templateId, String(organizerId)))) {
             const masterId = await (0, defaultTemplates_1.ensureMasterTemplate)();
             if (masterId)
                 eventData.templateId = masterId;
@@ -319,7 +328,7 @@ class EventService {
             }
         }
         // while the master card is the only shared design, an event is only ever made with it, or with the organizer's own uploaded design
-        if (updateData.templateId && (0, masterCard_1.masterCardOnly)() && !(await isOwnUploadOf(updateData.templateId, String(existingEvent.organizerId)))) {
+        if (updateData.templateId && (0, masterCard_1.masterCardOnly)() && !(await isOfferedTemplate(updateData.templateId, String(existingEvent.organizerId)))) {
             const masterId = await (0, defaultTemplates_1.ensureMasterTemplate)();
             if (masterId)
                 updateData.templateId = masterId;

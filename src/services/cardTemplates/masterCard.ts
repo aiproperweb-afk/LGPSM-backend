@@ -35,6 +35,8 @@ export interface MasterCardInput {
   /** the second additional-information line */
   secondary?: string;
   dateTime?: string;
+  /** the same moment in parts, for a card that sets the date large; given only for a one-day event */
+  date?: { month: string; weekday: string; day: string; time: string } | null;
   location?: string;
   /** event logo / picture (any image sharp reads); `useSampleLogo` shows the designers' placeholder on previews */
   logo?: Buffer | null;
@@ -52,14 +54,14 @@ interface Block {
 }
 
 const round = (n: number) => Math.round(n * 100) / 100;
-const escapeXml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+export const escapeXml = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // eslint-disable-next-line no-control-regex
-const clean = (t?: string) => (t || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+export const clean = (t?: string) => (t || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
 
-interface Wrapped { lines: string[]; size: number }
+export interface Wrapped { lines: string[]; size: number }
 
-/** Wraps `text` to the content width in at most `maxLines` lines, shrinking from `size` to `minSize` first; ends in "…" only as a last resort. */
-async function fit(text: string, family: string, weight: number, size: number, minSize: number, maxLines: number): Promise<Wrapped> {
+/** Wraps `text` to `width` in at most `maxLines` lines, shrinking from `size` to `minSize` first; ends in "…" only as a last resort. */
+export async function fit(text: string, family: string, weight: number, size: number, minSize: number, maxLines: number, width: number = CONTENT_WIDTH): Promise<Wrapped> {
   const words = text.split(' ').filter(Boolean);
   const widthAt = (t: string, s: number) => measureText(t, family, weight, s);
   const wrapAt = async (s: number): Promise<string[]> => {
@@ -67,13 +69,13 @@ async function fit(text: string, family: string, weight: number, size: number, m
     let current = '';
     for (const w of words) {
       const next = current ? `${current} ${w}` : w;
-      if (!current || (await widthAt(next, s)) <= CONTENT_WIDTH) current = next;
+      if (!current || (await widthAt(next, s)) <= width) current = next;
       else { lines.push(current); current = w; }
     }
     if (current) lines.push(current);
     return lines;
   };
-  const fits = async (lines: string[], s: number) => lines.length <= maxLines && (await Promise.all(lines.map((l) => widthAt(l, s)))).every((w) => w <= CONTENT_WIDTH + 0.5);
+  const fits = async (lines: string[], s: number) => lines.length <= maxLines && (await Promise.all(lines.map((l) => widthAt(l, s)))).every((w) => w <= width + 0.5);
   let s = size;
   let lines = await wrapAt(s);
   while (!(await fits(lines, s)) && s - 0.5 >= minSize) { s = round(s - 0.5); lines = await wrapAt(s); }
@@ -81,7 +83,7 @@ async function fit(text: string, family: string, weight: number, size: number, m
     // last resort: keep the first lines and shorten the final one with an ellipsis
     lines = lines.slice(0, maxLines);
     let last = lines[lines.length - 1] || '';
-    while (last.length > 1 && (await widthAt(`${last}…`, s)) > CONTENT_WIDTH) last = last.slice(0, -1).trimEnd();
+    while (last.length > 1 && (await widthAt(`${last}…`, s)) > width) last = last.slice(0, -1).trimEnd();
     lines[lines.length - 1] = `${last}…`;
   }
   return { lines, size: s };

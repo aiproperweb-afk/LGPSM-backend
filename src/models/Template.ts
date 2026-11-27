@@ -9,6 +9,19 @@ export const CARD_DESIGNS = [
   'BIRTHDAY',
   // The master card: one watercolour design whose details are laid out as a column (services/cardTemplates/masterCard.ts)
   'MASTER',
+  // The cards made for one event type each: a fixed background with the details laid out as a column (services/cardTemplates/themes.ts)
+  'BUSINESS_CONFERENCE',
+  'PRODUCT_LAUNCH',
+  'NETWORKING_EVENT',
+  'CORPORATE_MEET',
+  'FESTIVAL_CELEBRATION',
+  'PUJA_GATHERING',
+  'CULTURAL_PROGRAM',
+  'COMMUNITY_FAIR',
+  'BIRTHDAY_GOLD',
+  'BIRTHDAY_LILAC',
+  'BIRTHDAY_BLUSH',
+  'BIRTHDAY_RAINBOW',
   // Rendered from `designSpec` (see services/cardTemplates/designSpec.ts) instead of fixed Figma artwork
   'CUSTOM'
 ] as const;

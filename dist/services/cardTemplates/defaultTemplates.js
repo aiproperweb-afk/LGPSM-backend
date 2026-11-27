@@ -3,9 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_TEMPLATES = void 0;
+exports.ensureMasterTemplate = exports.DEFAULT_TEMPLATES = void 0;
 exports.planDefaultTemplates = planDefaultTemplates;
-exports.ensureMasterTemplate = ensureMasterTemplate;
+exports.ensureSharedTemplates = ensureSharedTemplates;
 exports.installDefaultTemplates = installDefaultTemplates;
 const mongoose_1 = __importDefault(require("mongoose"));
 const sharp_1 = __importDefault(require("sharp"));
@@ -16,8 +16,11 @@ const Media_1 = require("../../models/Media");
 const User_1 = require("../../models/User");
 const renderer_1 = require("./renderer");
 const masterCard_1 = require("./masterCard");
+const themedCard_1 = require("./themedCard");
+const themes_1 = require("./themes");
 exports.DEFAULT_TEMPLATES = [
-    { key: 'master-card', name: 'Master Card', cardDesign: 'MASTER' }
+    { key: 'master-card', name: 'Master Card', cardDesign: 'MASTER' },
+    ...themes_1.THEMED_DESIGNS.map((design) => ({ key: themes_1.THEMES[design].key, name: themes_1.THEMES[design].name, cardDesign: design, category: themes_1.THEMES[design].category, subcategory: themes_1.THEMES[design].subcategory }))
 ];
 const same = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
 const findCategory = (cats, name) => cats.find((c) => same(c.name, name));
@@ -71,6 +74,10 @@ async function storePreview(spec, ownerId) {
     if (spec.cardDesign === 'MASTER') {
         png = await (0, masterCard_1.renderMasterCard)({ ...masterCard_1.MASTER_SAMPLE, qr, useSampleLogo: true, scale: 1.5 });
     }
+    else if ((0, themes_1.isThemedDesign)(spec.cardDesign)) {
+        const theme = themes_1.THEMES[spec.cardDesign];
+        png = await (0, themedCard_1.renderThemedCard)(spec.cardDesign, { ...theme.sample, date: theme.sampleDate, qr, useSampleLogo: true, scale: 1.5 });
+    }
     else {
         if (!(0, renderer_1.isTemplateDesign)(spec.cardDesign))
             throw new Error(`No artwork for design ${spec.cardDesign}`);
@@ -91,31 +98,43 @@ async function storePreview(spec, ownerId) {
 }
 let ensuring = null;
 /**
- * The master card's template id, installing it first when the database has none yet (an administrator owns its preview picture). Lets the
- * master-card-only mode work without a manual install step. Null when there is no administrator account to own it.
+ * Installs the shared designs a database does not have yet (an administrator owns their preview pictures), so they appear without a manual
+ * step. A themed card an administrator deleted stays deleted; the master card, which every event can fall back to, is always there.
+ * Returns the master card's template id, or null when there is no administrator account to own the pictures.
  */
-function ensureMasterTemplate() {
+function ensureSharedTemplates() {
     if (!ensuring) {
         ensuring = (async () => {
-            const find = () => Template_1.Template.findOne({ cardDesign: 'MASTER', isActive: { $ne: false } }).select('_id').lean();
-            const existing = await find();
-            if (existing)
-                return String(existing._id);
+            const master = () => Template_1.Template.findOne({ cardDesign: 'MASTER', isActive: { $ne: false } }).select('_id').lean();
+            const existing = await master();
+            // (deleted templates still count here)
+            const everInstalled = new Set(await Template_1.Template.distinct('cardDesign', { cardDesign: { $in: themes_1.THEMED_DESIGNS } }));
+            const wanted = exports.DEFAULT_TEMPLATES.filter((t) => (t.cardDesign === 'MASTER' ? !existing : !everInstalled.has(t.cardDesign)));
+            if (wanted.length === 0)
+                return existing ? String(existing._id) : null;
             const admin = await User_1.User.findOne({ role: User_1.Role.ADMIN, isActive: { $ne: false } }).select('_id').lean();
             if (!admin)
-                return null;
-            await installDefaultTemplates(String(admin._id));
-            const installed = await find();
+                return existing ? String(existing._id) : null;
+            try {
+                await installDefaultTemplates(String(admin._id), new Set(wanted.map((t) => t.key)));
+            }
+            catch (err) {
+                // the list and event creation carry on with what is there; the next request tries again
+                console.warn('[cards] The shared templates could not all be installed:', err instanceof Error ? err.message : 'unknown error');
+            }
+            const installed = await master();
             return installed ? String(installed._id) : null;
         })().finally(() => { ensuring = null; });
     }
     return ensuring;
 }
-async function installDefaultTemplates(ownerId) {
+/** The master card's template id, installing the shared designs first when needed. */
+exports.ensureMasterTemplate = ensureSharedTemplates;
+async function installDefaultTemplates(ownerId, only) {
     const plan = await planDefaultTemplates();
     const created = [];
     for (const spec of exports.DEFAULT_TEMPLATES) {
-        if (!plan.templatesToCreate.some((t) => t.name === spec.name))
+        if ((only && !only.has(spec.key)) || !plan.templatesToCreate.some((t) => t.name === spec.name))
             continue;
         if (!spec.category) {
             if (await Template_1.Template.exists({ cardDesign: spec.cardDesign, categoryId: { $exists: false }, isActive: { $ne: false } }))

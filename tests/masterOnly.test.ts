@@ -1,6 +1,6 @@
 /**
- * For the testing round the master card is the only template: the only one listed (Templates, template selection, Change template), the
- * one every event is made with, and the card every event gets, whatever template it had before.
+ * Master-card-only mode: the shared designs are the master card and the themed cards. The designs from before the master card are not
+ * listed or drawn, and an event made with one gets the master card.
  */
 import request from 'supertest';
 import mongoose from 'mongoose';
@@ -35,16 +35,47 @@ describe('the master card is the only template', () => {
   });
   afterAll(async () => { delete process.env.MASTER_CARD_ONLY; await mongoose.disconnect(); await mongo.stop(); });
 
-  it('lists only the master card (installed the first time it is needed) to an organizer and to an admin', async () => {
+  const SHARED = ['Master Card', 'Business Conference', 'Product Launch', 'Networking Event', 'Corporate Meet', 'Festival Celebration', 'Puja Gathering', 'Cultural Program', 'Community Fair', 'Birthday Gold Balloons', 'Birthday Lilac Balloons', 'Birthday Pink Watercolour', 'Birthday Rainbow Stars'];
+  const names = async (who: any, query = '') => (await request(app).get(`/api/v1/templates${query}`).set(auth(who))).body.data.map((t: any) => t.name).sort();
+
+  it('lists only the current shared cards (installed the first time they are needed) to an organizer and to an admin', async () => {
     for (const who of [org, admin]) {
       const res = await request(app).get('/api/v1/templates').set(auth(who));
       expect(res.status).toBe(200);
-      expect(res.body.data.map((t: any) => t.name)).toEqual(['Master Card']);
+      expect(res.body.data.map((t: any) => t.name).sort()).toEqual([...SHARED].sort());
     }
     expect(await Template.countDocuments({ cardDesign: 'MASTER' })).toBe(1);
   });
 
-  it('makes every event with the master card, whatever template was asked for', async () => {
+  it('keeps a themed card the organizer chose, and draws it for the event and in the form preview', async () => {
+    const chosen: any = await Template.findOne({ cardDesign: 'PUJA_GATHERING' }).lean();
+    const made = await request(app).post('/api/v1/events').set(auth(org)).send({
+      title: 'Ganesh Puja', description: 'd', format: 'PHYSICAL', categoryId: String(chosen.categoryId), subcategoryId: String(chosen.subcategoryId), templateId: String(chosen._id),
+      location: { address: 'Hall' }, schedule: { start: '2031-03-01T10:00:00.000Z', end: '2031-03-01T12:00:00.000Z' }
+    });
+    expect(made.status).toBe(201);
+    const event: any = await Event.findById(made.body.data.eventId).lean();
+    expect(String(event.templateId)).toBe(String(chosen._id));
+    expect((await loadCardContext(event)).cardDesign).toBe('PUJA_GATHERING');
+    const input = { title: 'Ganesh Puja', venue: 'Hall' };
+    const themed = await renderTemplatePreview(String(chosen._id), input, false, String(org._id));
+    expect(await sharp(themed).metadata()).toMatchObject({ width: 786, height: 1364 });
+    expect(themed.equals(await renderTemplatePreview(null, input, false, String(org._id)))).toBe(false);
+  });
+
+  it('hides an unpublished card from organizers, and does not bring back one an administrator deleted', async () => {
+    await Template.updateOne({ cardDesign: 'PRODUCT_LAUNCH' }, { isPublished: false });
+    const launch: any = await Template.findOne({ cardDesign: 'PRODUCT_LAUNCH' }).lean();
+    expect(await names(org)).not.toContain('Product Launch');
+    expect(await names(admin)).toContain('Product Launch');
+    await expect(renderTemplatePreview(String(launch._id), { title: 'x' }, false, String(org._id))).rejects.toThrow('TEMPLATE_NOT_FOUND');
+    const fair: any = await Template.findOne({ cardDesign: 'COMMUNITY_FAIR' }).lean();
+    expect((await request(app).delete(`/api/v1/templates/${fair._id}`).set(auth(admin))).status).toBe(200);
+    expect(await names(admin)).not.toContain('Community Fair');
+    expect(await Template.countDocuments({ cardDesign: 'COMMUNITY_FAIR' })).toBe(1);
+  });
+
+  it('makes an event that asks for an older template with the master card', async () => {
     const category = await Category.create({ name: 'Personal', isActive: true });
     const res = await request(app).post('/api/v1/events').set(auth(org)).send({
       title: 'Birthday Bash', description: 'd', format: 'PHYSICAL', categoryId: String(category._id), templateId: String(oldTemplate._id),
@@ -74,9 +105,9 @@ describe('the master card is the only template', () => {
     const uploadId = String(up.body.data._id);
 
     // the owner sees it next to the master card, in "all" and in "mine"; nobody else does
-    expect((await request(app).get('/api/v1/templates').set(auth(org))).body.data.map((t: any) => t.name).sort()).toEqual(['Master Card', 'My Static Card']);
+    expect(await names(org)).toEqual(expect.arrayContaining(['Master Card', 'My Static Card']));
     expect((await request(app).get('/api/v1/templates?scope=mine').set(auth(org))).body.data.map((t: any) => t.name)).toContain('My Static Card');
-    expect((await request(app).get('/api/v1/templates').set(auth(other))).body.data.map((t: any) => t.name)).toEqual(['Master Card']);
+    expect(await names(other)).not.toContain('My Static Card');
 
     // an event made with it keeps it, and its card is the uploaded picture
     const category = await Category.create({ name: 'Uploads', isActive: true });

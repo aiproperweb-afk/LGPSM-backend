@@ -21,7 +21,13 @@ const probe = `
       const png = await renderTemplateCard({ design: d, texts: sampleTexts(d), scale: 1 });
       if (png.length < 5000) throw new Error(d + ' rendered an empty card');
     }
-    console.log('OK: all ' + TEMPLATE_DESIGNS.length + ' designs render from dist/ with assets resolved from src/assets');
+    const { renderThemedCard } = require(${JSON.stringify(path.join(root, 'dist/services/cardTemplates/themedCard'))});
+    const { THEMES, THEMED_DESIGNS } = require(${JSON.stringify(path.join(root, 'dist/services/cardTemplates/themes'))});
+    for (const d of THEMED_DESIGNS) {
+      const png = await renderThemedCard(d, { ...THEMES[d].sample, useSampleLogo: true, scale: 1 });
+      if (png.length < 5000) throw new Error(d + ' rendered an empty card');
+    }
+    console.log('OK: all ' + (TEMPLATE_DESIGNS.length + THEMED_DESIGNS.length) + ' designs render from dist/ with assets resolved from src/assets');
   })().catch((e) => { console.error('FAILED:', e.message); process.exit(1); });
 `;
 const result = spawnSync(process.execPath, ['-e', probe], { cwd: os.tmpdir(), stdio: 'inherit' });

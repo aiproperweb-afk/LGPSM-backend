@@ -48,6 +48,16 @@ export function masterDateTime(startIso?: string | Date | null, endIso?: string 
   return sameDay(start, end) ? `${at(start)} – ${fmt(end, { hour: 'numeric', minute: '2-digit', hour12: true })}` : `${at(start)} – ${at(end)}`;
 }
 
+/** The start of a one-day event in the parts a large date block shows; nothing for an event that runs into another day. */
+export function masterDateParts(startIso?: string | Date | null, endIso?: string | Date | null): { month: string; weekday: string; day: string; time: string } | null {
+  const start = toDate(startIso);
+  if (!start) return null;
+  const end = toDate(endIso);
+  if (end && end.getTime() > start.getTime() && !sameDay(start, end)) return null;
+  const p = parts(start);
+  return { month: p.monthLong, weekday: p.weekday, day: p.day, time: `At ${p.time}` };
+}
+
 export function ordinal(n: number): string {
   const mod100 = n % 100;
   if (mod100 >= 11 && mod100 <= 13) return `${n}th`;

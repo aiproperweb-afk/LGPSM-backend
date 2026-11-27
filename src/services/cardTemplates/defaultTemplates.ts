@@ -7,15 +7,17 @@ import { Media, MediaPurpose } from '../../models/Media';
 import { User, Role } from '../../models/User';
 import { renderTemplateCard, sampleTexts, isTemplateDesign } from './renderer';
 import { renderMasterCard, MASTER_SAMPLE } from './masterCard';
+import { renderThemedCard } from './themedCard';
+import { isThemedDesign, THEMED_DESIGNS, THEMES } from './themes';
 
 // The invitation templates the designers made (Event Management Invitation Card.fig), as ready-to-use template
 // records. Installing them creates what is missing and never changes or removes anything that already exists:
 //  - a template is skipped when one with the same design already exists for the same event type;
 //  - categories and subcategories are matched by name (ignoring case) and only created when absent.
 //
-// For now the master card is the only template offered. It is not tied to an event type, so it suits every event. The designs
-// made earlier (corporate, wedding, rice ceremony, birthday) still render for events that were created with them, but they are
-// no longer installed or listed; more templates are added here as they are designed.
+// The master card is not tied to an event type, so it suits every event. The themed cards (themes.ts) each belong to a
+// category and subcategory. The designs made before the master card (corporate, wedding, rice ceremony, birthday) still
+// render for events that were created with them in the full-set mode, but are not installed.
 
 export interface DefaultTemplateSpec {
   key: string;
@@ -27,7 +29,8 @@ export interface DefaultTemplateSpec {
 }
 
 export const DEFAULT_TEMPLATES: DefaultTemplateSpec[] = [
-  { key: 'master-card', name: 'Master Card', cardDesign: 'MASTER' }
+  { key: 'master-card', name: 'Master Card', cardDesign: 'MASTER' },
+  ...THEMED_DESIGNS.map((design) => ({ key: THEMES[design].key, name: THEMES[design].name, cardDesign: design, category: THEMES[design].category, subcategory: THEMES[design].subcategory }))
 ];
 
 export interface DefaultTemplatePlan {
@@ -90,6 +93,9 @@ async function storePreview(spec: DefaultTemplateSpec, ownerId: string): Promise
   let png: Buffer;
   if (spec.cardDesign === 'MASTER') {
     png = await renderMasterCard({ ...MASTER_SAMPLE, qr, useSampleLogo: true, scale: 1.5 });
+  } else if (isThemedDesign(spec.cardDesign)) {
+    const theme = THEMES[spec.cardDesign];
+    png = await renderThemedCard(spec.cardDesign, { ...theme.sample, date: theme.sampleDate, qr, useSampleLogo: true, scale: 1.5 });
   } else {
     if (!isTemplateDesign(spec.cardDesign)) throw new Error(`No artwork for design ${spec.cardDesign}`);
     png = await renderTemplateCard({ design: spec.cardDesign, texts: sampleTexts(spec.cardDesign), qr, scale: 1.5, useSamplePhoto: true });
@@ -111,35 +117,47 @@ async function storePreview(spec: DefaultTemplateSpec, ownerId: string): Promise
 let ensuring: Promise<string | null> | null = null;
 
 /**
- * The master card's template id, installing it first when the database has none yet (an administrator owns its preview picture). Lets the
- * master-card-only mode work without a manual install step. Null when there is no administrator account to own it.
+ * Installs the shared designs a database does not have yet (an administrator owns their preview pictures), so they appear without a manual
+ * step. A themed card an administrator deleted stays deleted; the master card, which every event can fall back to, is always there.
+ * Returns the master card's template id, or null when there is no administrator account to own the pictures.
  */
-export function ensureMasterTemplate(): Promise<string | null> {
+export function ensureSharedTemplates(): Promise<string | null> {
   if (!ensuring) {
     ensuring = (async () => {
-      const find = () => Template.findOne({ cardDesign: 'MASTER', isActive: { $ne: false } }).select('_id').lean();
-      const existing = await find();
-      if (existing) return String(existing._id);
+      const master = () => Template.findOne({ cardDesign: 'MASTER', isActive: { $ne: false } }).select('_id').lean();
+      const existing = await master();
+      // (deleted templates still count here)
+      const everInstalled = new Set(await Template.distinct('cardDesign', { cardDesign: { $in: THEMED_DESIGNS } }));
+      const wanted = DEFAULT_TEMPLATES.filter((t) => (t.cardDesign === 'MASTER' ? !existing : !everInstalled.has(t.cardDesign)));
+      if (wanted.length === 0) return existing ? String(existing._id) : null;
       const admin = await User.findOne({ role: Role.ADMIN, isActive: { $ne: false } }).select('_id').lean();
-      if (!admin) return null;
-      await installDefaultTemplates(String(admin._id));
-      const installed = await find();
+      if (!admin) return existing ? String(existing._id) : null;
+      try {
+        await installDefaultTemplates(String(admin._id), new Set(wanted.map((t) => t.key)));
+      } catch (err) {
+        // the list and event creation carry on with what is there; the next request tries again
+        console.warn('[cards] The shared templates could not all be installed:', err instanceof Error ? err.message : 'unknown error');
+      }
+      const installed = await master();
       return installed ? String(installed._id) : null;
     })().finally(() => { ensuring = null; });
   }
   return ensuring;
 }
 
+/** The master card's template id, installing the shared designs first when needed. */
+export const ensureMasterTemplate = ensureSharedTemplates;
+
 export interface InstallResult extends DefaultTemplatePlan {
   created: string[];
 }
 
-export async function installDefaultTemplates(ownerId: string): Promise<InstallResult> {
+export async function installDefaultTemplates(ownerId: string, only?: Set<string>): Promise<InstallResult> {
   const plan = await planDefaultTemplates();
   const created: string[] = [];
 
   for (const spec of DEFAULT_TEMPLATES) {
-    if (!plan.templatesToCreate.some((t) => t.name === spec.name)) continue;
+    if ((only && !only.has(spec.key)) || !plan.templatesToCreate.some((t) => t.name === spec.name)) continue;
 
     if (!spec.category) {
       if (await Template.exists({ cardDesign: spec.cardDesign, categoryId: { $exists: false }, isActive: { $ne: false } })) continue;

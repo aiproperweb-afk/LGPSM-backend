@@ -40,9 +40,9 @@ exports.templateService = {
         const limit = Math.min(Math.max(options.limit || 25, 1), 100);
         const skip = (page - 1) * limit;
         const listOptions = { skip, limit, mineOnly: options.mineOnly, kind: options.kind };
-        // (the master card is installed the first time it is needed, so no manual step stands between the code and the list)
+        // (the shared designs are installed the first time they are needed, so no manual step stands between the code and the list)
         if ((0, masterCard_1.masterCardOnly)())
-            await (0, defaultTemplates_1.ensureMasterTemplate)();
+            await (0, defaultTemplates_1.ensureSharedTemplates)();
         const [templates, total] = await Promise.all([
             template_repository_1.templateRepository.findAll(categoryId, viewer, listOptions),
             template_repository_1.templateRepository.count(categoryId, viewer, listOptions),

@@ -3,7 +3,7 @@ import { alertService } from './alert.service';
 import { templateRepository, TemplateViewer } from '../repositories/template.repository';
 import { ITemplate, Template } from '../models/Template';
 import { masterCardOnly } from '../constants/masterCard';
-import { ensureMasterTemplate } from './cardTemplates/defaultTemplates';
+import { ensureSharedTemplates } from './cardTemplates/defaultTemplates';
 import { shareAdminUpload } from './cardTemplates/uploadedTemplate';
 
 /** Can this viewer see/use this template? Mirrors the list rules in template.repository.ts. */
@@ -36,8 +36,8 @@ export const templateService = {
     const limit = Math.min(Math.max(options.limit || 25, 1), 100);
     const skip = (page - 1) * limit;
     const listOptions = { skip, limit, mineOnly: options.mineOnly, kind: options.kind };
-    // (the master card is installed the first time it is needed, so no manual step stands between the code and the list)
-    if (masterCardOnly()) await ensureMasterTemplate();
+    // (the shared designs are installed the first time they are needed, so no manual step stands between the code and the list)
+    if (masterCardOnly()) await ensureSharedTemplates();
 
     const [templates, total] = await Promise.all([
       templateRepository.findAll(categoryId, viewer, listOptions),

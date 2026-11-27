@@ -1,4 +1,5 @@
 import { CardDesign } from '../../models/Template';
+import { THEMED_DESIGNS, THEMES } from './themes';
 
 // The look of the page a guest lands on (the "Digital access" link in the email) follows the invitation card they
 // were sent: same palette, same serif/sans character. Colours are plain #RRGGBB values that are validated here, so the
@@ -15,6 +16,7 @@ export interface PublicTheme {
 
 // Taken from the artwork of each fixed design (src/assets/cardTemplates/*/background.png)
 const FIXED: Record<string, Omit<PublicTheme, 'design'>> = {
+  ...Object.fromEntries(THEMED_DESIGNS.map((d) => [d, THEMES[d].palette])),
   CORPORATE_V1: { background: '#EEF2F7', primary: '#1B4B8F', accent: '#F08A1C', ink: '#14233C', heading: 'sans' },
   CORPORATE_V2: { background: '#F6F7F9', primary: '#E3340F', accent: '#123C8F', ink: '#15191C', heading: 'sans' },
   WEDDING: { background: '#F7F5F0', primary: '#2B2B2B', accent: '#A8946A', ink: '#202020', heading: 'serif' },

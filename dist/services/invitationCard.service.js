@@ -11,6 +11,8 @@ const assetPath_1 = require("../utils/assetPath");
 const renderer_1 = require("./cardTemplates/renderer");
 const content_1 = require("./cardTemplates/content");
 const masterCard_1 = require("./cardTemplates/masterCard");
+const themedCard_1 = require("./cardTemplates/themedCard");
+const themes_1 = require("./cardTemplates/themes");
 const specRenderer_1 = require("./cardTemplates/specRenderer");
 const infoFooter_1 = require("./cardTemplates/infoFooter");
 const cardDisplay_1 = require("../utils/cardDisplay");
@@ -409,20 +411,21 @@ async function renderFromSpec(fullSpec, data, bottomInset = 0) {
     return result.png;
 }
 /**
- * The master card: its details are a column that closes up around whatever is switched off: the guest's QR code, the logo, the title, the
- * date, the event's location and the additional information all follow "Select data to show on card".
- * Nothing is added under or over it: no details block, no guest band.
+ * The master card and the themed cards: their details are a column that closes up around whatever is switched off: the guest's QR code,
+ * the logo, the title, the date, the event's location and the additional information all follow "Select data to show on card".
+ * Nothing is added under or over them: no details block, no guest band.
  */
-async function renderMasterFromData(data) {
+async function columnCardInput(data) {
     const show = (0, cardDisplay_1.cardDisplayOf)(data.cardDisplay);
     let qr = show.qr ? dataUrlToBuffer(data.qrDataUrl) : undefined;
     if (show.qr && !qr && data.invitationUrl)
         qr = await qrcode_1.default.toBuffer(data.invitationUrl, { errorCorrectionLevel: 'H', margin: 4, width: 480 });
     const logo = show.logo ? dataUrlToBuffer(data.event.photoBase64) : undefined;
-    return (0, masterCard_1.renderMasterCard)({
+    return {
         title: show.title ? data.event.title || '' : '',
         primary: data.invitee?.name || '',
         secondary: data.invitee?.companyName || '',
+        date: show.dateTime ? (0, content_1.masterDateParts)(data.event.startIso, data.event.endIso) : null,
         // (a preview with nothing entered yet shows where each detail will go)
         dateTime: show.dateTime ? (0, content_1.masterDateTime)(data.event.startIso, data.event.endIso) || (data.isPreview ? 'Event date and time' : '') : '',
         location: show.location ? (0, content_1.addressLine)({ design: 'CORPORATE_V1', title: '', venue: data.event.venue, locationSub: data.event.locationSub, isVirtual: data.event.isVirtual }) || (data.isPreview ? 'Event location' : '') : '',
@@ -430,7 +433,7 @@ async function renderMasterFromData(data) {
         // the designers' placeholder logo only ever stands in on previews, never on a card that is sent
         useSampleLogo: show.logo && !logo && data.isPreview === true,
         qr
-    });
+    };
 }
 exports.invitationCardService = {
     /** SVG of the generic design. The template designs are drawn as images, see generateInvitationCardPNG. */
@@ -439,7 +442,9 @@ exports.invitationCardService = {
     },
     async generateInvitationCardPNG(data) {
         if (data.cardDesign === 'MASTER' && !data.designSpec)
-            return renderMasterFromData(data);
+            return (0, masterCard_1.renderMasterCard)(await columnCardInput(data));
+        if ((0, themes_1.isThemedDesign)(data.cardDesign) && !data.designSpec)
+            return (0, themedCard_1.renderThemedCard)(data.cardDesign, await columnCardInput(data));
         if (data.designSpec) {
             const spec = data.designSpec;
             const covered = (0, coverage_1.coverageOfSpec)(spec);

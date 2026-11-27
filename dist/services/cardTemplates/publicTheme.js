@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.publicThemeFor = publicThemeFor;
+const themes_1 = require("./themes");
 // Taken from the artwork of each fixed design (src/assets/cardTemplates/*/background.png)
 const FIXED = {
+    ...Object.fromEntries(themes_1.THEMED_DESIGNS.map((d) => [d, themes_1.THEMES[d].palette])),
     CORPORATE_V1: { background: '#EEF2F7', primary: '#1B4B8F', accent: '#F08A1C', ink: '#14233C', heading: 'sans' },
     CORPORATE_V2: { background: '#F6F7F9', primary: '#E3340F', accent: '#123C8F', ink: '#15191C', heading: 'sans' },
     WEDDING: { background: '#F7F5F0', primary: '#2B2B2B', accent: '#A8946A', ink: '#202020', heading: 'serif' },

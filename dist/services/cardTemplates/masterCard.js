@@ -3,7 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MASTER_SAMPLE = exports.MASTER_HEIGHT = exports.MASTER_WIDTH = void 0;
+exports.MASTER_SAMPLE = exports.clean = exports.escapeXml = exports.MASTER_HEIGHT = exports.MASTER_WIDTH = void 0;
+exports.fit = fit;
 exports.renderMasterCard = renderMasterCard;
 const fs_1 = __importDefault(require("fs"));
 const sharp_1 = __importDefault(require("sharp"));
@@ -33,10 +34,12 @@ const SCALE_DEFAULT = 2;
 const TOP_MIN = 20;
 const round = (n) => Math.round(n * 100) / 100;
 const escapeXml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+exports.escapeXml = escapeXml;
 // eslint-disable-next-line no-control-regex
 const clean = (t) => (t || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
-/** Wraps `text` to the content width in at most `maxLines` lines, shrinking from `size` to `minSize` first; ends in "…" only as a last resort. */
-async function fit(text, family, weight, size, minSize, maxLines) {
+exports.clean = clean;
+/** Wraps `text` to `width` in at most `maxLines` lines, shrinking from `size` to `minSize` first; ends in "…" only as a last resort. */
+async function fit(text, family, weight, size, minSize, maxLines, width = CONTENT_WIDTH) {
     const words = text.split(' ').filter(Boolean);
     const widthAt = (t, s) => (0, fonts_1.measureText)(t, family, weight, s);
     const wrapAt = async (s) => {
@@ -44,7 +47,7 @@ async function fit(text, family, weight, size, minSize, maxLines) {
         let current = '';
         for (const w of words) {
             const next = current ? `${current} ${w}` : w;
-            if (!current || (await widthAt(next, s)) <= CONTENT_WIDTH)
+            if (!current || (await widthAt(next, s)) <= width)
                 current = next;
             else {
                 lines.push(current);
@@ -55,7 +58,7 @@ async function fit(text, family, weight, size, minSize, maxLines) {
             lines.push(current);
         return lines;
     };
-    const fits = async (lines, s) => lines.length <= maxLines && (await Promise.all(lines.map((l) => widthAt(l, s)))).every((w) => w <= CONTENT_WIDTH + 0.5);
+    const fits = async (lines, s) => lines.length <= maxLines && (await Promise.all(lines.map((l) => widthAt(l, s)))).every((w) => w <= width + 0.5);
     let s = size;
     let lines = await wrapAt(s);
     while (!(await fits(lines, s)) && s - 0.5 >= minSize) {
@@ -66,14 +69,14 @@ async function fit(text, family, weight, size, minSize, maxLines) {
         // last resort: keep the first lines and shorten the final one with an ellipsis
         lines = lines.slice(0, maxLines);
         let last = lines[lines.length - 1] || '';
-        while (last.length > 1 && (await widthAt(`${last}…`, s)) > CONTENT_WIDTH)
+        while (last.length > 1 && (await widthAt(`${last}…`, s)) > width)
             last = last.slice(0, -1).trimEnd();
         lines[lines.length - 1] = `${last}…`;
     }
     return { lines, size: s };
 }
 const heightOf = (w) => w.lines.length * w.size * LINE_HEIGHT;
-const textSvg = (w, top, weight, color, s) => w.lines.map((line, i) => `<text x="${round((exports.MASTER_WIDTH / 2) * s)}" y="${round((top + i * w.size * LINE_HEIGHT + w.size * ASCENT) * s)}" text-anchor="middle" font-family="${(0, fonts_1.fontStack)('Inter')}" font-weight="${weight}" font-size="${round(w.size * s)}" fill="${color}">${escapeXml(line)}</text>`).join('');
+const textSvg = (w, top, weight, color, s) => w.lines.map((line, i) => `<text x="${round((exports.MASTER_WIDTH / 2) * s)}" y="${round((top + i * w.size * LINE_HEIGHT + w.size * ASCENT) * s)}" text-anchor="middle" font-family="${(0, fonts_1.fontStack)('Inter')}" font-weight="${weight}" font-size="${round(w.size * s)}" fill="${color}">${(0, exports.escapeXml)(line)}</text>`).join('');
 let backgroundCache = null;
 const background = () => (backgroundCache ??= fs_1.default.readFileSync((0, assetPath_1.assetPath)('cardTemplates', 'master', 'background.png')));
 let sampleLogoCache = null;
@@ -92,11 +95,11 @@ async function renderMasterCard(input) {
     const s = input.scale && input.scale > 0 ? input.scale : SCALE_DEFAULT;
     const width = Math.round(exports.MASTER_WIDTH * s);
     const height = Math.round(exports.MASTER_HEIGHT * s);
-    const title = clean(input.title);
-    const primary = clean(input.primary);
-    const secondary = clean(input.secondary);
-    const when = clean(input.dateTime);
-    const where = clean(input.location);
+    const title = (0, exports.clean)(input.title);
+    const primary = (0, exports.clean)(input.primary);
+    const secondary = (0, exports.clean)(input.secondary);
+    const when = (0, exports.clean)(input.dateTime);
+    const where = (0, exports.clean)(input.location);
     const logo = input.logo || (input.useSampleLogo ? sampleLogo() : null);
     const qr = input.qr || null;
     const blocks = [];
@@ -131,7 +134,7 @@ async function renderMasterCard(input) {
     const qrBlock = async (box) => {
         const inner = Math.round((box - 16) * s);
         const png = await (0, sharp_1.default)(qr, { failOn: 'none' }).resize(inner, inner, { fit: 'contain', background: '#ffffff' }).png().toBuffer();
-        const scan = await fit(clean(input.scanLabel) || 'Scan QR Code', 'Inter', 500, 14, 10, 1);
+        const scan = await fit((0, exports.clean)(input.scanLabel) || 'Scan QR Code', 'Inter', 500, 14, 10, 1);
         return {
             height: box + 8 + heightOf(scan),
             draw: (top, svg, layers) => {

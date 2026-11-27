@@ -1,5 +1,6 @@
 import { CARD_DESIGNS, CardDesign } from '../../models/Template';
 import { masterCardOnly } from '../../constants/masterCard';
+import { isSharedDesign } from './themes';
 
 // Which invitation design an event gets. An organizer's explicit template choice always wins. Without one, the design
 // follows the event type (its category, subcategory and, as a last resort, its title), so every event gets a card
@@ -27,9 +28,9 @@ function match(text: string): CardDesign | null {
 }
 
 export function resolveCardDesign(options: EventTypeInfo & { templateDesign?: string | null }): CardDesign {
-  // every event gets the master card while it is the only design
-  if (masterCardOnly()) return 'MASTER';
   const chosen = options.templateDesign;
+  // in master-card-only mode: the shared design that was chosen, else the master card
+  if (masterCardOnly()) return chosen && isSharedDesign(chosen) ? (chosen as CardDesign) : 'MASTER';
   if (chosen && (CARD_DESIGNS as readonly string[]).includes(chosen)) return chosen as CardDesign;
   // The specific type (subcategory, then category) is a stronger signal than words that happen to be in a title
   return match(options.subcategoryName || '') || match(options.categoryName || '') || match(options.title || '') || DEFAULT_CARD_DESIGN;

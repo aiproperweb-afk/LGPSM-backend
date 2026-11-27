@@ -4,6 +4,7 @@ exports.DEFAULT_CARD_DESIGN = void 0;
 exports.resolveCardDesign = resolveCardDesign;
 const Template_1 = require("../../models/Template");
 const masterCard_1 = require("../../constants/masterCard");
+const themes_1 = require("./themes");
 const RULES = [
     { design: 'BIRTHDAY', test: /\b(birthday|bday|b['’]day|janmadin|jonmodin)\b/i },
     { design: 'RICE_CEREMONY', test: /(rice\s*ceremony|annaprasan|annaprashan|mukhe\s*bhaat|mukhebhat|first\s*rice)/i },
@@ -20,10 +21,10 @@ function match(text) {
     return null;
 }
 function resolveCardDesign(options) {
-    // every event gets the master card while it is the only design
-    if ((0, masterCard_1.masterCardOnly)())
-        return 'MASTER';
     const chosen = options.templateDesign;
+    // in master-card-only mode: the shared design that was chosen, else the master card
+    if ((0, masterCard_1.masterCardOnly)())
+        return chosen && (0, themes_1.isSharedDesign)(chosen) ? chosen : 'MASTER';
     if (chosen && Template_1.CARD_DESIGNS.includes(chosen))
         return chosen;
     // The specific type (subcategory, then category) is a stronger signal than words that happen to be in a title

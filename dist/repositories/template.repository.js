@@ -8,14 +8,15 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const Template_1 = require("../models/Template");
 const User_1 = require("../models/User");
 const masterCard_1 = require("../constants/masterCard");
+const themes_1 = require("../services/cardTemplates/themes");
 // A template only needs its category's name. The subcategory list is left out: it can hold other organizers' private subcategories.
 const CATEGORY_FIELDS = 'name description isActive';
 function listQuery(categoryId, viewer, options, adminIds) {
     const query = { isActive: true };
     const own = viewer.userId && mongoose_1.default.Types.ObjectId.isValid(viewer.userId) ? { ownerId: new mongoose_1.default.Types.ObjectId(viewer.userId) } : null;
-    // while the master card is the only shared design, it is the only shared template listed; a person's own uploaded templates still are
+    // in master-card-only mode only the current shared designs are listed (not the older ones); a person's own uploaded templates still are
     if ((0, masterCard_1.masterCardOnly)())
-        query.$and = [{ $or: [{ cardDesign: 'MASTER' }, ...(own ? [{ cardDesign: 'CUSTOM', ...own }] : [])] }];
+        query.$and = [{ $or: [{ cardDesign: { $in: themes_1.SHARED_DESIGNS } }, ...(own ? [{ cardDesign: 'CUSTOM', ...own }] : [])] }];
     if (categoryId)
         query.categoryId = categoryId;
     if (options.kind)

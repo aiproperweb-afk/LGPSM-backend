@@ -1,8 +1,8 @@
 /**
- * For now the master card is the only invitation design (decision for the testing round): it is the only template listed, and every
- * event's card is drawn from it, whatever template the event was made with. Nothing was deleted: set MASTER_CARD_ONLY=false in the
- * environment to bring the other templates and designs back. (The automated tests keep the full set of designs unless a test turns the
- * mode on with MASTER_CARD_ONLY=true.)
+ * "Master card only" mode: the shared designs are the master card and the cards made since for particular event types
+ * (services/cardTemplates/themes.ts). The designs from before the master card are not listed or drawn: an event made with one gets the
+ * master card. Nothing was deleted: set MASTER_CARD_ONLY=false in the environment to bring them back. (The automated tests keep the full
+ * set of designs unless a test turns the mode on with MASTER_CARD_ONLY=true.)
  */
 export function masterCardOnly(): boolean {
   const v = process.env.MASTER_CARD_ONLY;
