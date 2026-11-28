@@ -27,7 +27,8 @@ const METRICS = {
     'Cinzel Decorative': [0.976, 0.372], 'IM Fell Great Primer': [0.948, 0.274],
     'Inria Serif': [0.976, 0.223], 'Inknut Antiqua': [1.703, 0.876], 'Bebas Neue': [0.9, 0.3], Kalnia: [1.045, 0.3], 'Kantumruy Pro': [0.92, 0.26],
     Tomorrow: [1.0, 0.2], 'Tomorrow Medium': [1.0, 0.2], 'BBH Hegarty': [0.95, 0.25], 'BBH Bogle': [0.95, 0.25], 'BBH Bartle': [0.95, 0.25],
-    Koulen: [1.221, 0.586], 'Kode Mono': [0.98, 0.3], 'Iosevka Charon Mono': [1.015, 0.265]
+    Koulen: [1.221, 0.586], 'Kode Mono': [0.98, 0.3], 'Iosevka Charon Mono': [1.015, 0.265],
+    Anton: [1.176, 0.329], Rubik: [0.935, 0.25], 'Libre Caslon Display': [0.97, 0.266]
 };
 const round = (n) => Math.round(n * 100) / 100;
 const sum = (xs) => xs.reduce((a, b) => a + b, 0);
@@ -48,6 +49,8 @@ async function fitted(raw, style) {
     const wrap = (width, size = style.size, min = style.min) => (0, masterCard_1.fit)(value, style.family, style.weight, size, min, style.lines, width, style.tracking);
     const full = style.width ?? 345;
     let w = await wrap(full);
+    if (style.longSize && w.lines.length > 2)
+        w = await wrap(full, style.longSize, Math.min(style.min, style.longSize));
     // the narrowest width that still takes as many lines, at the size just found
     for (let width = full - 10; style.balance && w.lines.length > 1 && width > full / 2; width -= 10) {
         const next = await wrap(width, w.size, w.size);
@@ -311,6 +314,11 @@ async function renderThemedCard(design, input) {
     const used = sum(blocks.map((b) => b.height)) + sum(gaps) * squeeze;
     const region = !qr && theme.regionNoQr ? theme.regionNoQr : theme.region;
     let y = Math.max(theme.safe[0], Math.min((region[0] + region[1] - used) / 2, theme.safe[1] - used));
+    const code = blocks.findIndex((b) => b.key === 'qr');
+    if (theme.qrFloor !== undefined && code >= 0) {
+        const above = sum(blocks.slice(0, code).map((b) => b.height)) + sum(gaps.slice(0, code + 1)) * squeeze;
+        y = Math.max(y, Math.min(theme.qrFloor - above, theme.safe[1] - used));
+    }
     const svg = [];
     const layers = [];
     blocks.forEach((block, i) => {

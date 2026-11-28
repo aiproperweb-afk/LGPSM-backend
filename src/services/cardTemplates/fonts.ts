@@ -72,6 +72,10 @@ const FONT_FILES: Record<string, string> = {
   'Koulen:400': 'Koulen-Regular.ttf',
   'Kode Mono:500': 'KodeMono-Medium.ttf',
   'Iosevka Charon Mono:700': 'IosevkaCharonMono-Bold.ttf',
+  'Anton:400': 'Anton-Regular.ttf',
+  'Rubik:700': 'Rubik-Bold.ttf',
+  'Inter:800': 'Inter-ExtraBold.ttf',
+  'Libre Caslon Display:400': 'LibreCaslonDisplay-Regular.ttf',
 };
 
 /** Families tried, in order, when a glyph is missing (Bengali and Devanagari names, for example). */

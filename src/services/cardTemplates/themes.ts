@@ -2,7 +2,7 @@ import type { CardDesign } from '../../models/Template';
 
 /**
  * The cards designed for one event type each (Figma "Event Management Invitation Card": Business & Corporate, Festivals & Culture,
- * Personal & Family, Education & Campus, Sports & Fitness).
+ * Personal & Family, Education & Campus, Sports & Fitness, Entertainment & Social).
  * Every one is a fixed background with the same details as the master card laid out as a column, so only the styling and the order
  * differ: they are described here and drawn by themedCard.ts. All sizes are Figma pixels on the 393 x 682 card.
  */
@@ -12,7 +12,8 @@ export const THEMED_DESIGNS = [
   'BIRTHDAY_GOLD', 'BIRTHDAY_LILAC', 'BIRTHDAY_BLUSH', 'BIRTHDAY_RAINBOW',
   'BABY_SHOWER', 'ANNAPRASAN', 'GRIHA_PRAVESH', 'ANNIVERSARY', 'ENGAGEMENT', 'HALDI', 'MEHENDI', 'SANGEET', 'WEDDING_RECEPTION',
   'CONVOCATION', 'FRESHERS_WELCOME', 'FAREWELL', 'COLLEGE_FEST',
-  'CRICKET_TOURNAMENT', 'FOOTBALL_TOURNAMENT', 'MARATHON', 'FITNESS_EVENT'
+  'CRICKET_TOURNAMENT', 'FOOTBALL_TOURNAMENT', 'MARATHON', 'FITNESS_EVENT',
+  'LIVE_CONCERT', 'COMEDY_SHOW', 'DJ_NIGHT', 'FOOD_FESTIVAL', 'EXHIBITION'
 ] as const;
 export type ThemedDesign = (typeof THEMED_DESIGNS)[number];
 
@@ -38,6 +39,8 @@ export interface TextStyle {
   outline?: { color: string; width: number };
   /** wrapped lines are made about equal in length, so a wide line allowance does not leave one word by itself */
   balance?: boolean;
+  /** the size used once the words need a third line, to keep a long block clear of artwork beside it */
+  longSize?: number;
 }
 
 /** `details` is the date and the location with the line between them */
@@ -89,6 +92,8 @@ export interface CardTheme {
   whenBelowRule?: { color: string; width: number; offset: number; gap: number };
   /** the style of a `when` that runs into another day, where the design's large one would break a date apart */
   whenRange?: TextStyle;
+  /** the QR code sits no higher than this while there is room below, so what follows it stays clear of the artwork */
+  qrFloor?: number;
   /** blocks that stay on a part of the artwork (a ribbon, the foot of the card) instead of moving with the column */
   anchor?: Partial<Record<ThemeBlock, { top: number } | { middle: number }>>;
   where: TextStyle;
@@ -109,6 +114,20 @@ const BUSINESS = 'Business & Corporate';
 const FESTIVALS = 'Festivals & Culture';
 const EDUCATION = 'Education & Campus';
 const SPORTS = 'Sports & Fitness';
+const ENTERTAINMENT = 'Entertainment & Social';
+const ENTERTAINMENT_SAMPLE = { primary: 'Primary Information', secondary: 'Secondary Information', dateTime: 'Thu 31 Dec 2026 2:00 PM – Fri 1 Jan 2027 4:00 PM', location: 'Grand Ballroom, 25 Park Street, Kolkata, WB, India' };
+/** The layout four of the entertainment designs share: logo, title, details, QR code, then the date over a line and the location */
+const stage = (o: { ink: string; accent?: string; border?: string; radius?: number; line: string }): Pick<CardTheme, 'order' | 'region' | 'safe' | 'logo' | 'primary' | 'secondary' | 'infoGap' | 'qr' | 'when' | 'where' | 'rule'> => ({
+  order: ['logo', 'title', 'info', 'qr', 'details'], region: [32, 651], safe: [22, 660],
+  logo: { size: 90 },
+  primary: text('Inter', 700, 22, o.ink, 27, { width: 345 }),
+  secondary: text('Inter', 500, 18, o.accent ?? o.ink, 22, { width: 345 }),
+  infoGap: 8,
+  qr: qrBox(o.border ?? '#FFFFFF', text('Inter', 500, 14, o.accent ?? o.ink, 17), { borderWidth: o.border ? 1.746 : 0, radius: o.radius ?? 0, labelText: 'Scan QR Code' }),
+  when: text('Inter', 700, 18, o.ink, 22, { lines: 2, width: 345 }),
+  where: text('Inter', 400, 18, o.ink, 22, { lines: 3, width: 345 }),
+  rule: { color: o.line, opacity: 0.5, width: 345, gapBefore: 10, gapAfter: 10 }
+});
 const BUSINESS_SAMPLE = {
   title: 'Annual Business Leadership and Innovation Summit 26',
   primary: 'Primary Additional Info',
@@ -586,5 +605,54 @@ export const THEMES: Record<ThemedDesign, CardTheme> = {
     qr: qrBox('#831D02', text('Poppins', 700, 12, '#FFFFFF', 18, { upper: true }), { size: 139, borderWidth: 1.7, radius: 4.3, labelGap: 6 }),
     when: text('Inter', 700, 18, '#FFFFFF', 22, { lines: 2, width: 345 }),
     where: text('Poppins', 600, 14, '#FFFFFF', 21, { lines: 3, width: 302 })
+  },
+  LIVE_CONCERT: {
+    key: 'live-concert', name: 'Live Concert Vinyl', category: ENTERTAINMENT, subcategory: 'Live Concert',
+    palette: { background: '#F7F7F7', primary: '#E61D2B', accent: '#794807', ink: '#1E1C1C', heading: 'sans' },
+    sample: { ...ENTERTAINMENT_SAMPLE, title: 'Coke Studio Music Concert with Maestro', dateTime: 'Thu 31 Dec 2026 7:00 PM – 10:00 PM', location: 'Sarat Sadhan Ruby Crossing, Kol-700107' },
+    // (the design shows no date; an invitation needs one, so it sits above the location)
+    order: ['logo', 'title', 'info', 'qr', 'when', 'where'], gaps: { title: 24, info: 22, qr: 28, when: 14, where: 6 }, region: [48, 660], safe: [22, 668], qrFloor: 370,
+    logo: { size: 96 },
+    title: text('Inter', 700, 30, '#222222', 39, { lines: 3, width: 322, longSize: 26 }),
+    primary: text('Inter', 600, 30, '#E61D2B', 34, { lines: 2, width: 340 }),
+    secondary: text('Inter', 500, 20, '#1E1C1C', 25, { width: 340 }),
+    infoGap: 6,
+    qr: qrBox('#794807', text('Alexandria', 400, 14, '#323232', 17, { upper: true, tracking: 1.68 }), { size: 150, inset: 12, borderWidth: 2, radius: 16, labelGap: 12 }),
+    when: text('Inter', 500, 16, '#1E1C1C', 22, { lines: 2, width: 305 }),
+    where: text('Inter', 600, 20, '#1E1C1C', 25, { lines: 3, width: 270 })
+  },
+  COMEDY_SHOW: {
+    key: 'comedy-show', name: 'Comedy Show Curtain', category: ENTERTAINMENT, subcategory: 'Comedy Show',
+    palette: { background: '#0B0002', primary: '#7A0A14', accent: '#C3182B', ink: '#2A0509', heading: 'sans' },
+    sample: { ...ENTERTAINMENT_SAMPLE, title: 'Stand Up Comedy Show Final 2026' },
+    ...stage({ ink: '#FFFFFF', radius: 6, line: '#FFFFFF' }),
+    gaps: { title: 14, info: 17, qr: 32, details: 20 },
+    title: text('Anton', 400, 32, '#FFFFFF', 48, { upper: true, lines: 3, width: 345 })
+  },
+  DJ_NIGHT: {
+    key: 'dj-night', name: 'DJ Night Party', category: ENTERTAINMENT, subcategory: 'DJ Night',
+    palette: { background: '#17020F', primary: '#6E1157', accent: '#B23A8C', ink: '#2A0720', heading: 'sans' },
+    sample: { ...ENTERTAINMENT_SAMPLE, title: 'Please Join Us to Celebrate Night Party' },
+    ...stage({ ink: '#FFFFFF', radius: 6, line: '#004387' }),
+    gaps: { title: 14, info: 12, qr: 34, details: 20 },
+    title: text('Rubik', 700, 28, '#FFFFFF', 33, { upper: true, lines: 3, width: 345 })
+  },
+  FOOD_FESTIVAL: {
+    key: 'food-festival', name: 'Food Festival Stalls', category: ENTERTAINMENT, subcategory: 'Food Festival',
+    palette: { background: '#F7EED1', primary: '#54742E', accent: '#793939', ink: '#4A2323', heading: 'sans' },
+    sample: { ...ENTERTAINMENT_SAMPLE, title: 'Street Food Festival 2026' },
+    ...stage({ ink: '#793939', accent: '#54742E', border: '#54742E', radius: 7, line: '#B86666' }),
+    gaps: { title: 14, info: 31, qr: 32, details: 20 },
+    title: text('Inter', 800, 34, '#54742E', 41, { upper: true, lines: 3, width: 345 }),
+    when: text('Inter', 700, 20, '#793939', 24, { lines: 2, width: 345 }),
+    where: text('Inter', 500, 16, '#793939', 20, { lines: 3, width: 345 })
+  },
+  EXHIBITION: {
+    key: 'exhibition', name: 'Exhibition Art Waves', category: ENTERTAINMENT, subcategory: 'Exhibition',
+    palette: { background: '#F8F7E8', primary: '#744C42', accent: '#C29A3C', ink: '#3E2721', heading: 'serif' },
+    sample: { ...ENTERTAINMENT_SAMPLE, title: 'A Journey Through Art and Creativity' },
+    ...stage({ ink: '#744C42', border: '#744C42', line: '#744C42' }),
+    gaps: { title: 19, info: 25, qr: 32, details: 20 },
+    title: text('Libre Caslon Display', 400, 32, '#744C42', 40, { upper: true, lines: 3, width: 345 })
   }
 };
