@@ -60,7 +60,7 @@ export const cmsPageController = {
       res.set('Cache-Control', 'no-store');
       const page = await cmsPageService.getPublishedPage(req.params.slug as string);
       if (page.slug === 'contact') res.set('X-Contact-CMS-Schema', '2');
-      if (page.slug === 'home') res.set({ 'X-Visual-CMS-Schema': '2', 'X-Visual-CMS-Elements': 'element-inspector' });
+      if (page.slug === 'home') res.set({ 'X-Visual-CMS-Schema': '2', 'X-Visual-CMS-Elements': 'stat-cards' });
       return res.status(200).json({
         success: true,
         data: {

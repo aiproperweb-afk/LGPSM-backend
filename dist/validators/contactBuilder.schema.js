@@ -374,7 +374,7 @@ exports.CARD_TYPES = ["Card", "ContactInfoCard", "AddressCard", "EmailCard", "Ph
 exports.FIELD_TYPES = ["TextInput", "EmailInput", "PhoneInput", "NumberInput", "Dropdown", "RadioGroup", "CheckboxField", "TextArea"];
 /** What ordinary containers accept: everything except the parts that only make sense inside a form or a column set. */
 exports.GENERAL_CHILDREN = [
-    ...exports.LAYOUT_TYPES, ...TYPOGRAPHY_TYPES, ...MEDIA_TYPES, ...INTERACTIVE_TYPES, ...exports.CARD_TYPES, "ExistingSection", "ContactForm", "FormHeading", "BusinessHours",
+    ...exports.LAYOUT_TYPES, ...TYPOGRAPHY_TYPES, ...MEDIA_TYPES, ...INTERACTIVE_TYPES, ...exports.CARD_TYPES, "StatCard", "ExistingSection", "ContactForm", "FormHeading", "BusinessHours",
 ];
 exports.FORM_CHILDREN = [
     ...exports.FIELD_TYPES, "SubmitButton", "FormGroup", "FormHeading", "Heading", "Subheading", "Paragraph", "RichText", "Link", "Highlight", "Spacer", "Divider", "Icon", "Image",
@@ -412,7 +412,8 @@ exports.COMPONENTS = {
     ExistingSection: { label: "Existing section", category: "layout", props: { source: { kind: "text" }, visualHero: { kind: "bool" }, elements: { kind: "array", max: 900, item: {
                     key: { kind: "anchor" }, rank: { kind: "number", min: 0, max: 899 }, text: { kind: "text", max: 4000, multiline: true }, src: { kind: "image" },
                     alt: { kind: "text", max: 300 }, placeholder: { kind: "text", max: 300 }, href: { kind: "link" }, style: { kind: "style" }
-                } }, hero: slot(exports.GENERAL_CHILDREN.filter(type => !["ExistingSection", "ContactForm"].includes(type))) } },
+                } }, hero: slot(exports.GENERAL_CHILDREN.filter(type => !["ExistingSection", "ContactForm"].includes(type))), visualStats: { kind: "bool" }, statCards: slot(["StatCard"]) } },
+    StatCard: { label: "Statistic", category: "cards", props: { value: { kind: "text", max: 80 }, label: { kind: "text", max: 300 }, valueStyle: style, labelStyle: style } },
     Section: container("Section", "layout"),
     Container: container("Container", "layout"),
     Row: container("Row", "layout"),
@@ -654,6 +655,8 @@ function cleanNodes(value, allow, path, walk, depth) {
         const spec = exports.COMPONENTS[type];
         const result = { id: id };
         if (type === "ExistingSection") {
+            if (props.source !== "StatsClients" && (props.visualStats === true || (Array.isArray(props.statCards) && props.statCards.length)))
+                fail(at + ".statCards", "statistics belong to the Homepage stats section");
             if (Array.isArray(props.elements)) {
                 const keys = new Set();
                 for (const element of props.elements) {

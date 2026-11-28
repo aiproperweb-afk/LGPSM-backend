@@ -338,6 +338,25 @@ describe('CMS pages', () => {
     expect(live.body.data.content).toEqual(data);
   });
 
+  it('publishes five independent Homepage stats with a saved size and order', async () => {
+    await cmsPageService.seedPages(homepageSeed);
+    const home = await Page.findOne({ slug: 'home' });
+    const stats = homepageSeed[0].data.content.find(section => section.type === 'StatsClients')!;
+    const cards = [4, 1, 2, 3, 5].map(number => ({
+      type: 'StatCard',
+      props: { id: 'stat-' + number, value: String(number), label: 'Statistic ' + number, style: { desktop: { width: '170px' } } },
+    }));
+    const data = {
+      root: { props: { builder: 'visual', schemaVersion: 2 } },
+      content: [{ type: 'ExistingSection', props: { id: 'stats', source: stats.props.id, copy: stats.props, visualStats: true, statCards: cards } }],
+    };
+    const response = await request(app).post('/api/v1/admin/pages/' + home?.id + '/publish')
+      .set({ ...adminHeaders, 'If-Match': '0' }).send({ data });
+    expect(response.status).toBe(200);
+    const live = await request(app).get('/api/v1/public/pages/home');
+    expect(live.body.data.content.content[0].props.statCards).toEqual(cards);
+  });
+
   it('keeps visual Contact drafts separate and requires a working Contact form to publish', async () => {
     await cmsPageService.seedPages(homepageSeed);
     const contact = await Page.findOne({ slug: 'contact' });
