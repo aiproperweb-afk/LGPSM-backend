@@ -251,6 +251,33 @@
                     }
                 },
                 {
+                    "type": "Testimonials",
+                    "props": {
+                        "heading": "Hosts and planners who stopped worrying about the door",
+                        "quotes": [
+                            {
+                                "name": "Wedding host",
+                                "quote": "We invited 480 guests to our reception and knew who had arrived without a single printed list.",
+                                "role": "",
+                                "initials": "AB"
+                            },
+                            {
+                                "name": "Event agency founder",
+                                "quote": "I run a dozen events a month. Assigning my crew and sending clients a report takes minutes.",
+                                "role": "",
+                                "initials": "EF"
+                            },
+                            {
+                                "name": "Corporate event manager",
+                                "quote": "Separate sessions for keynote, lunch and the evening dinner used to need three teams. Now it's one dashboard.",
+                                "role": "",
+                                "initials": "CD"
+                            }
+                        ],
+                        "id": "Testimonials"
+                    }
+                },
+                {
                     "type": "FaqLanding",
                     "props": {
                         "heading": "Questions, answered",
@@ -324,6 +351,2472 @@
                         "introduction": "Have questions or need more information? Get in touch with our team.",
                         "submitLabel": "Submit",
                         "id": "ContactContent"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "Navbar",
+        "slug": "navbar",
+        "route": "/#navbar",
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "SiteChromeCopy",
+                    "props": {
+                        "id": "navbar",
+                        "labels": {
+                            "link_features": "Features",
+                            "link_how-it-works": "How it works",
+                            "link_clients": "Clients",
+                            "link_contact": "Contact",
+                            "client_business-corporate_name": "Business & Corporate",
+                            "client_business-corporate_description": "Business Conference, Product Launch, Networking Event & Corporate Meet.",
+                            "client_wedding-pre-wedding_name": "Wedding & Pre-Wedding",
+                            "client_wedding-pre-wedding_description": "Engagement, Haldi, Mehendi, Sangeet & Wedding Reception.",
+                            "client_education-campus_name": "Education & Campus",
+                            "client_education-campus_description": "Convocation, Freshers, Welcome, Farewell & College Fest.",
+                            "client_personal-family_name": "Personal & Family",
+                            "client_personal-family_description": "Birthday, Baby Shower, Annaprasan, Griha Pravesh & Anniversary.",
+                            "client_festivals-culture_name": "Festivals & Culture",
+                            "client_festivals-culture_description": "Festival Celebration, Puja Gathering, Cultural Program & Community Fair.",
+                            "client_sports-fitness_name": "Sports & Fitness",
+                            "client_sports-fitness_description": "Cricket Tournament, Football Tournament, Marathon, Farewell & College Fest.",
+                            "client_entertainment-social_name": "Entertainment & Social",
+                            "client_entertainment-social_description": "Live Concert, Comedy Show, DJ Night, Food Festival & Exhibition.",
+                            "desktopSignIn": "Log in",
+                            "organizerSignIn": "Organizer log in",
+                            "adminSignIn": "Super Admin log in",
+                            "createEvent": "Start your first event",
+                            "clientMenuPrompt": "Not sure which fits your event?",
+                            "scheduleMeeting": "Schedule a meeting",
+                            "logoLinkLabel": "EventQRapp home",
+                            "navigationLabel": "Main",
+                            "toggleMenuLabel": "Toggle navigation menu"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "Footer",
+        "slug": "footer",
+        "route": "/#footer",
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "SiteChromeCopy",
+                    "props": {
+                        "id": "footer",
+                        "labels": {
+                            "description": "EventQRApp helps you create elegant digital invitations with QR codes, RSVP tracking, guest management, and instant sharing. Perfect for weddings, birthdays, corporate events, and special occasions.",
+                            "logoLinkLabel": "EventQRapp home",
+                            "copyright": "EventQRapp. All rights reserved.",
+                            "legalHeading": "Legal",
+                            "homeTerms": "Terms & condition",
+                            "homePrivacy": "Privacy policy",
+                            "bookDemo": "Book a demo",
+                            "product_heading": "Product",
+                            "product_link_1": "Features",
+                            "product_link_2": "How it works",
+                            "product_link_3": "Pricing",
+                            "product_link_4": "Templates",
+                            "product_link_5": "Custom card design",
+                            "use_cases_heading": "Use cases",
+                            "use_cases_link_1": "Weddings",
+                            "use_cases_link_2": "Birthdays",
+                            "use_cases_link_3": "Corporate events",
+                            "use_cases_link_4": "Conferences",
+                            "use_cases_link_5": "Expos and fests",
+                            "use_cases_link_6": "Agencies",
+                            "resources_heading": "Resources",
+                            "resources_link_1": "Help centre",
+                            "resources_link_2": "Sample Excel guest list",
+                            "resources_link_3": "FAQ",
+                            "resources_link_4": "Blog",
+                            "company_heading": "Company",
+                            "company_link_1": "About",
+                            "company_link_2": "Contact",
+                            "company_link_3": "Careers",
+                            "legal_link_1": "Terms and conditions",
+                            "legal_link_2": "Privacy policy",
+                            "legal_link_3": "Refund policy",
+                            "home_cta_title": "Your next event deserves a better guest list",
+                            "home_cta_body": "Design your invitation, upload your guests and send in minutes. You only pay when you hit send.",
+                            "home_cta_primary": "Create your first event",
+                            "home_cta_note": "No credit card needed to set up. Pay per invitee, with no subscription.",
+                            "clients_cta_title": "Join the organisers who never stress about the guest list",
+                            "clients_cta_body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "clients_cta_primary": "Create your first event",
+                            "clients_cta_note": "No credit card needed to start · No subscription",
+                            "features_cta_title": "Ready to run your smoothest guest list yet?",
+                            "features_cta_body": "Set up your event, design your QR invitation and send it to every guest in minutes. You only pay for the people you invite.",
+                            "features_cta_primary": "Create your first event",
+                            "features_cta_note": "No credit card needed to start · No subscription",
+                            "tutorial_cta_title": "Ready to create your first event?",
+                            "tutorial_cta_body": "Set up your event, upload your guests and send QR invitations in minutes. You only pay for the guests you invite.",
+                            "tutorial_cta_primary": "Create Your First Event",
+                            "tutorial_cta_note": "No credit card needed to start · No subscription",
+                            "contact_cta_title": "Prefer to try it yourself first?",
+                            "contact_cta_body": "Set up your event, upload your guests and send QR invitations in minutes. You only pay for the guests you invite.",
+                            "contact_cta_primary": "Create your first event",
+                            "contact_cta_note": "No credit card needed to start · No subscription"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "Features",
+        "slug": "features",
+        "route": "/features",
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "FeaturesContent",
+                    "props": {
+                        "heroBadge": "Features",
+                        "heading": "Every tool you need to run the guest list, from first invite to final exit",
+                        "introduction": "EventQRapp brings QR code invitations, RSVP management, session-wise entry rules and live check-in into one simple dashboard. No spreadsheets passed around, no guesswork at the gate.",
+                        "signupLabel": "Create your first event",
+                        "overviewHeading": "One platform, four stages of your event",
+                        "overviewIntroduction": "Jump to the part of your event you're planning right now.",
+                        "securityHeading": "Built to keep gate-crashers out",
+                        "securityIntroduction": "Every safeguard works quietly in the background, so you can focus on your guests.",
+                        "pricingHeading": "Every feature, one simple price",
+                        "pricingIntroduction": "No plans to compare, no locked features. Every event gets the full platform for a simple per-invitee price + GST, with no subscription, seat fees or setup costs.",
+                        "pricingLabel": "View pricing",
+                        "footer": {
+                            "title": "Ready to run your smoothest guest list yet?",
+                            "body": "Set up your event, design your QR invitation and send it to every guest in minutes. You only pay for the people you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "overview": [
+                            {
+                                "title": "Invite",
+                                "text": "Design your card and send unique QR invitations."
+                            },
+                            {
+                                "title": "Manage",
+                                "text": "Track RSVPs, preferences and guest lists in real time."
+                            },
+                            {
+                                "title": "Control",
+                                "text": "Set sessions, entry rules and attendee limits."
+                            },
+                            {
+                                "title": "Check in and report",
+                                "text": "Scan guests in, watch attendance live, and download the full report."
+                            },
+                            {
+                                "title": "Mobile access",
+                                "text": "Create, manage and track every event right from your mobile phone."
+                            }
+                        ],
+                        "stages": [
+                            {
+                                "rows": [
+                                    {
+                                        "eyebrow": "Invitation designer",
+                                        "title": "Digital invitations that look as good as the event",
+                                        "text": "Start from a ready-made template or upload your own design. Every card gets the guest's unique QR code, so it's beautiful and it works as an entry pass.",
+                                        "items": [
+                                            {
+                                                "title": "Templates for every occasion",
+                                                "text": "Browse designs sorted by category: Personal, Corporate, Social, Sports and Entertainment. Pick one and make it yours in minutes."
+                                            },
+                                            {
+                                                "title": "Upload your own card",
+                                                "text": "Already have a design? Upload it as a JPG, PNG or WEBP file (9:16 ratio, up to 5 MB) and we'll place the QR code on it."
+                                            },
+                                            {
+                                                "title": "Live phone preview",
+                                                "text": "See exactly how the invitation will look on a guest's phone before anything is sent."
+                                            },
+                                            {
+                                                "title": "Your logo, your brand",
+                                                "text": "Add a company or family logo so every invite feels personal and on-brand."
+                                            },
+                                            {
+                                                "title": "Custom design on request",
+                                                "text": "Want something one-of-a-kind? Ask our team to design a card for you."
+                                            }
+                                        ],
+                                        "image": "/images/features-page/f1-designer.png",
+                                        "buttonLabel": ""
+                                    },
+                                    {
+                                        "eyebrow": "Sending and delivery",
+                                        "title": "Send QR invitations by email and WhatsApp in one click",
+                                        "text": "Reach every guest where they actually read their messages. Send to your whole list or to one session at a time, then see exactly what happened to each invite.",
+                                        "items": [
+                                            {
+                                                "title": "Bulk send on two channels",
+                                                "text": "Deliver invitations by email and WhatsApp together, to hundreds of guests at once."
+                                            },
+                                            {
+                                                "title": "Send by session",
+                                                "text": "Invite only the guests for a specific function, like the VIP dinner or the after-party."
+                                            },
+                                            {
+                                                "title": "Per-guest delivery status",
+                                                "text": "Every invite shows as Sent, Received or Failed, so nothing goes out blind."
+                                            },
+                                            {
+                                                "title": "One-click resend",
+                                                "text": "Fix a number or email and resend failed invites instantly."
+                                            },
+                                            {
+                                                "title": "Pre-send check",
+                                                "text": "A clear warning before you send helps you catch mistakes, because event details lock once invites go out."
+                                            }
+                                        ],
+                                        "image": "/images/features-page/f2-sending.png",
+                                        "buttonLabel": ""
+                                    },
+                                    {
+                                        "eyebrow": "Download & Print Invitations",
+                                        "title": "Download and print personalized QR invitation cards with ease",
+                                        "text": "Give your guests a traditional invitation experience with the convenience of QR technology. Download personalized, print-ready invitation cards for your guests and print them whenever needed. Printing is completely optional.",
+                                        "items": [
+                                            {
+                                                "title": "Print-ready PDF invitations",
+                                                "text": "Download high-quality PDF invitation cards with each guest's unique QR code, ready for printing."
+                                            },
+                                            {
+                                                "title": "Personalized cards for every guest",
+                                                "text": "Each invitation includes the guest's details and a unique QR code for secure event entry."
+                                            },
+                                            {
+                                                "title": "Bulk invitation downloads",
+                                                "text": "Download multiple invitation cards in organized ZIP folders, with up to 100 PDFs per batch."
+                                            },
+                                            {
+                                                "title": "Print only when needed",
+                                                "text": "Choose which invitation cards to print based on your event requirements and guest preferences."
+                                            }
+                                        ],
+                                        "image": "/images/features-page/f3-print.png",
+                                        "buttonLabel": ""
+                                    }
+                                ]
+                            },
+                            {
+                                "rows": [
+                                    {
+                                        "eyebrow": "RSVP and preferences",
+                                        "title": "Know who's coming, and what they'd like, before the day",
+                                        "text": "Online RSVP management that gives you a reliable headcount for catering, seating and planning.",
+                                        "items": [
+                                            {
+                                                "title": "RSVP deadlines",
+                                                "text": "Set a reply-by date so you get final numbers on time."
+                                            },
+                                            {
+                                                "title": "Custom preference questions",
+                                                "text": "Ask about meal choice, dietary needs, plus-ones or anything else you need to plan."
+                                            },
+                                            {
+                                                "title": "Live response status",
+                                                "text": "See every guest as Accepted, Pending or Declined at a glance."
+                                            },
+                                            {
+                                                "title": "Automatic reminders",
+                                                "text": "Nudge guests who haven't replied without chasing them one by one."
+                                            }
+                                        ],
+                                        "image": "/images/features-page/f4-rsvp.png",
+                                        "buttonLabel": ""
+                                    },
+                                    {
+                                        "eyebrow": "Guest lists",
+                                        "title": "Upload your guest list from Excel in minutes",
+                                        "text": "Keep using the spreadsheet you already have. EventQRapp checks it, flags problems and turns it into a clean, organised guest list.",
+                                        "items": [
+                                            {
+                                                "title": "Sample Excel template",
+                                                "text": "Download our ready format so your upload works the first time."
+                                            },
+                                            {
+                                                "title": "Session access in one column",
+                                                "text": "Mark Y or N for each session to decide who gets into what."
+                                            },
+                                            {
+                                                "title": "Preview and edit before saving",
+                                                "text": "Review every row and fix errors before the list goes live."
+                                            },
+                                            {
+                                                "title": "Clear upload summary",
+                                                "text": "See how many rows were accepted or rejected, and why."
+                                            },
+                                            {
+                                                "title": "Add guests later",
+                                                "text": "Last-minute additions? Add them any time before you send."
+                                            }
+                                        ],
+                                        "image": "/images/features-page/f5-guests.png",
+                                        "buttonLabel": ""
+                                    }
+                                ]
+                            },
+                            {
+                                "rows": [
+                                    {
+                                        "eyebrow": "Sessions and access rules",
+                                        "title": "Session-wise entry for events with more than one moment",
+                                        "text": "Weddings, conferences and multi-day festivals rarely happen in one go. Create separate sessions, each with its own time, guest list and entry rules, all within one event.",
+                                        "items": [
+                                            {
+                                                "title": "Multiple timed sessions",
+                                                "text": "Set up the ceremony, lunch, keynote or gala dinner as separate sessions."
+                                            },
+                                            {
+                                                "title": "Only Once or No Restrictions",
+                                                "text": "Allow a single entry per guest, or let guests come and go freely."
+                                            },
+                                            {
+                                                "title": "Reusable guest lists",
+                                                "text": "Apply the same list to several sessions without uploading it again."
+                                            },
+                                            {
+                                                "title": "Entry-session requirement",
+                                                "text": "Make guests check in at the main entry before they can access other sessions."
+                                            },
+                                            {
+                                                "title": "Overall attendee limit",
+                                                "text": "Cap total attendance to match venue capacity."
+                                            },
+                                            {
+                                                "title": "RSVP-based entry",
+                                                "text": "Decide whether guests who declined or didn't reply can still be admitted."
+                                            }
+                                        ],
+                                        "image": "/images/features-page/f6-sessions.png",
+                                        "buttonLabel": ""
+                                    },
+                                    {
+                                        "eyebrow": "Team and staff",
+                                        "title": "Give your team members exactly the access they need",
+                                        "text": "Add the people who'll be scanning on the day and put each one where you need them.",
+                                        "items": [
+                                            {
+                                                "title": "Add staff accounts",
+                                                "text": "Invite team members as staff users, with no limit on seats and no extra fee."
+                                            },
+                                            {
+                                                "title": "Assign by event and session",
+                                                "text": "Put the right people at the right gate for the right session."
+                                            },
+                                            {
+                                                "title": "See every assignment",
+                                                "text": "View who's working where in one list."
+                                            },
+                                            {
+                                                "title": "Reassign in seconds",
+                                                "text": "Move staff between sessions or gates as plans change."
+                                            }
+                                        ],
+                                        "image": "/images/features-page/f7-team.png",
+                                        "buttonLabel": ""
+                                    }
+                                ]
+                            },
+                            {
+                                "rows": [
+                                    {
+                                        "eyebrow": "QR code check-in",
+                                        "title": "Guest check-in in about 5 seconds",
+                                        "text": "Guests show the QR code on their phone. Your staff scan it with the EventQRapp mobile app. Entry rules are checked instantly, so the line keeps moving and only invited guests get in.",
+                                        "items": [
+                                            {
+                                                "title": "No app for guests",
+                                                "text": "Guests simply show the invite they received on email or WhatsApp."
+                                            },
+                                            {
+                                                "title": "Staff mobile app",
+                                                "text": "Your team scans with their phones, with no extra hardware to buy."
+                                            },
+                                            {
+                                                "title": "Multi-gate support",
+                                                "text": "Run Main, VIP and other gates at the same time."
+                                            },
+                                            {
+                                                "title": "Rules applied at every scan",
+                                                "text": "Session access, entry limits and RSVP rules are enforced automatically."
+                                            }
+                                        ],
+                                        "image": "/images/features-page/f8-checkin.png",
+                                        "buttonLabel": ""
+                                    },
+                                    {
+                                        "eyebrow": "Live event dashboard",
+                                        "title": "Watch attendance as it happens",
+                                        "text": "A real-time view of every session, gate and team member, so you can make decisions on the day, not after it.",
+                                        "items": [
+                                            {
+                                                "title": "Session health rings",
+                                                "text": "Track logged-in guests, check-ins and occupancy for each session."
+                                            },
+                                            {
+                                                "title": "Entry and exit logs",
+                                                "text": "See who came in, who left and through which gate."
+                                            },
+                                            {
+                                                "title": "Team activity trail",
+                                                "text": "Know which staff member did what, and when."
+                                            }
+                                        ],
+                                        "image": "/images/features-page/f9-dashboard.png",
+                                        "buttonLabel": "See the live dashboard"
+                                    },
+                                    {
+                                        "eyebrow": "Mobile access",
+                                        "title": "Your whole event, right from your phone",
+                                        "text": "No desktop or laptop needed. Open EventQRapp on your phone and do everything you'd do on a computer, wherever you are.",
+                                        "items": [
+                                            {
+                                                "title": "Create events on the go",
+                                                "text": "Add event details, pick a card and set rules in minutes."
+                                            },
+                                            {
+                                                "title": "Upload and edit guest lists",
+                                                "text": "Add guests, fix details and manage sessions from your phone."
+                                            },
+                                            {
+                                                "title": "Send and track invitations",
+                                                "text": "Send by email and WhatsApp, and resend failed invites instantly."
+                                            },
+                                            {
+                                                "title": "Watch attendance live and reports and billing",
+                                                "text": "Follow check-ins and session occupancy as guests arrive. View reports, download logs and find invoices anytime."
+                                            }
+                                        ],
+                                        "image": "/images/features-page/f10-mobile.png",
+                                        "buttonLabel": "Try it on your phone"
+                                    }
+                                ]
+                            }
+                        ],
+                        "security": [
+                            {
+                                "title": "One unique QR per guest",
+                                "text": "Forwarded or copied invitations can't let extra people in."
+                            },
+                            {
+                                "title": "Rules enforced at the gate",
+                                "text": "Access rules, attendee caps and RSVP settings are checked on every scan."
+                            },
+                            {
+                                "title": "Locked after sending",
+                                "text": "Event details lock once invites go out, preventing accidental changes."
+                            },
+                            {
+                                "title": "Secure payments",
+                                "text": "Pay safely and receive your invoice by email instantly."
+                            },
+                            {
+                                "title": "Full audit trail",
+                                "text": "Every action by every team member is recorded with a time stamp."
+                            }
+                        ],
+                        "included": [
+                            "Unique QR invitations",
+                            "Email and WhatsApp delivery",
+                            "Templates and custom card uploads",
+                            "RSVP and preference questions",
+                            "Sessions and entry rules",
+                            "Unlimited staff accounts",
+                            "Live check-in and dashboard",
+                            "Full event reports",
+                            "GST invoices"
+                        ],
+                        "id": "FeaturesContent"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "How it works",
+        "slug": "how-it-works",
+        "route": "/how-it-works",
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "HowItWorksContent",
+                    "props": {
+                        "heroBadge": "HOW EVENTQRAPP WORKS",
+                        "heading": "How to Create an Event, Send QR Invitations, and Manage Guest Entry",
+                        "introduction": "Learn how to use EventQRapp, from setting up your account and creating your first event to inviting guests, scanning QR codes, and tracking attendance. Follow each step with simple instructions and short video tutorials.",
+                        "signupLabel": "Create Your First Event",
+                        "tutorialLabel": "Watch Full Tutorial",
+                        "tutorialImage": "/images/how-it-works/poster.jpg",
+                        "tutorialUnavailable": "Tutorial video coming soon",
+                        "tutorialHeading": "See How EventQRapp Works in Just 2 Minutes",
+                        "tutorialIntroduction": "New to EventQRapp? Watch this quick walkthrough to understand how to set up an event, prepare your guest list, send invitations, and manage entry on event day.",
+                        "guideLabel": "Step-by-step guide",
+                        "guideHeading": "Everything you need to know, one step at a time",
+                        "guideIntroduction": "Follow these short tutorials in order to set up and run your event. Each step explains what to do and includes a picture to help you follow along.",
+                        "footer": {
+                            "title": "Ready to create your first event?",
+                            "body": "Set up your event, upload your guests and send QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create Your First Event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "steps": [
+                            {
+                                "chip": "Register or log in",
+                                "title": "How to register or log in to EventQRapp?",
+                                "intro": "Start by creating your organizer account or signing in to your existing account.",
+                                "points": [
+                                    {
+                                        "title": "Open EventQRapp and get started",
+                                        "text": "Visit the EventQRapp website and select the option to create an account or sign in."
+                                    },
+                                    {
+                                        "title": "Sign in with Google in one click",
+                                        "text": "No new password to remember. Use your Google account to sign up or log in to EventQRapp instantly and start creating your event."
+                                    },
+                                    {
+                                        "title": "Access your organizer dashboard",
+                                        "text": "After signing in, you'll reach your dashboard, where you can start creating and managing events."
+                                    }
+                                ],
+                                "image": "/images/how-it-works/step-01.png"
+                            },
+                            {
+                                "chip": "Create your event",
+                                "title": "How to create your first event?",
+                                "intro": "Set up your event by adding the essential information your guests need to know.",
+                                "points": [
+                                    {
+                                        "title": "Start a new event",
+                                        "text": "Open your organizer dashboard and select the option to create a new event."
+                                    },
+                                    {
+                                        "title": "Enter your event details",
+                                        "text": "Add the event name, category, description, date, time, and other required information."
+                                    },
+                                    {
+                                        "title": "Set your event location",
+                                        "text": "Enter the venue address and verify its location on the map to help guests find your event."
+                                    }
+                                ],
+                                "image": "/images/how-it-works/step-02.png"
+                            },
+                            {
+                                "chip": "Choose a template",
+                                "title": "How to choose or upload an invitation template?",
+                                "intro": "Select an invitation design that matches your event or upload your own custom artwork.",
+                                "points": [
+                                    {
+                                        "title": "Browse invitation templates",
+                                        "text": "Explore available designs organized by event categories and choose one that suits your occasion."
+                                    },
+                                    {
+                                        "title": "Upload your own design",
+                                        "text": "Already have an invitation card? Upload your custom design in a supported format and use it for your event."
+                                    },
+                                    {
+                                        "title": "Preview your invitation",
+                                        "text": "Check how your selected design looks on a mobile screen before moving to the next step."
+                                    }
+                                ],
+                                "image": "/images/how-it-works/step-03.png"
+                            },
+                            {
+                                "chip": "RSVP and food",
+                                "title": "How to set RSVP and food preferences?",
+                                "intro": "Collect guest responses and meal preferences before the event begins.",
+                                "points": [
+                                    {
+                                        "title": "Enable RSVP collection",
+                                        "text": "Allow invited guests to confirm their attendance and specify a deadline for receiving responses."
+                                    },
+                                    {
+                                        "title": "Add food preference options",
+                                        "text": "Include meal choices, such as vegetarian or non-vegetarian, so guests can select their preferred option."
+                                    },
+                                    {
+                                        "title": "Save your preferences",
+                                        "text": "Review the RSVP and food preference settings before continuing with your event setup."
+                                    }
+                                ],
+                                "image": "/images/how-it-works/step-05.png"
+                            },
+                            {
+                                "chip": "Entry rules",
+                                "title": "How to set attendee limits and entry rules?",
+                                "intro": "Configure attendance restrictions and entry permissions to manage your event smoothly.",
+                                "points": [
+                                    {
+                                        "title": "Set attendee limits",
+                                        "text": "Specify the maximum number of attendees allowed to enter your event based on your venue capacity."
+                                    },
+                                    {
+                                        "title": "Configure entry permissions",
+                                        "text": "Choose the entry conditions for guests based on their invitation and RSVP status."
+                                    },
+                                    {
+                                        "title": "Review your event rules",
+                                        "text": "Check your attendance limits and access settings to ensure everything matches your event requirements."
+                                    }
+                                ],
+                                "image": "/images/how-it-works/step-04.png"
+                            },
+                            {
+                                "chip": "Sessions",
+                                "title": "How to add and manage event sessions?",
+                                "intro": "Organize multiple functions within one event and manage guest access separately.",
+                                "points": [
+                                    {
+                                        "title": "Add a new session",
+                                        "text": "Create sessions for different functions, such as the main ceremony, dinner, or reception."
+                                    },
+                                    {
+                                        "title": "Configure session details",
+                                        "text": "Enter each session's name, schedule, and relevant entry permissions."
+                                    },
+                                    {
+                                        "title": "Manage multiple sessions",
+                                        "text": "Add additional sessions as required and configure their access rules independently."
+                                    }
+                                ],
+                                "image": "/images/how-it-works/step-06.png"
+                            },
+                            {
+                                "chip": "Upload guests",
+                                "title": "How to download the sample Excel sheet and upload guests?",
+                                "intro": "Prepare and upload your guest information using the provided Excel template.",
+                                "points": [
+                                    {
+                                        "title": "Download the sample Excel sheet",
+                                        "text": "Get the sample guest list template to understand the required columns and information format."
+                                    },
+                                    {
+                                        "title": "Enter guest information",
+                                        "text": "Fill in guest names, email addresses, mobile numbers, and applicable session access details."
+                                    },
+                                    {
+                                        "title": "Upload your completed guest list",
+                                        "text": "Upload the Excel file to EventQRapp to import guest information into your event."
+                                    }
+                                ],
+                                "image": "/images/how-it-works/step-07.png"
+                            },
+                            {
+                                "chip": "Review guest list",
+                                "title": "How to preview and correct your guest list?",
+                                "intro": "Review your uploaded guest information and make corrections before finalizing your event.",
+                                "points": [
+                                    {
+                                        "title": "Preview uploaded guests",
+                                        "text": "Check the imported guest list to verify names, contact details, and session assignments."
+                                    },
+                                    {
+                                        "title": "Edit incorrect information",
+                                        "text": "Correct guest names, email addresses, mobile numbers, or other details that need updating."
+                                    },
+                                    {
+                                        "title": "Remove unwanted entries",
+                                        "text": "Delete duplicate or unnecessary guest records, where supported, before completing the event setup."
+                                    }
+                                ],
+                                "image": "/images/how-it-works/step-08.png"
+                            },
+                            {
+                                "chip": "Pay",
+                                "title": "How to review event costs and complete payment?",
+                                "intro": "Verify your event details and complete the required payment before sending invitations.",
+                                "points": [
+                                    {
+                                        "title": "Review your event summary",
+                                        "text": "Check the event information, guest count, sessions, and invitation settings before proceeding."
+                                    },
+                                    {
+                                        "title": "Check invitation charges",
+                                        "text": "Review the total invitation cost, including applicable taxes, based on your event requirements."
+                                    },
+                                    {
+                                        "title": "Complete your payment",
+                                        "text": "Proceed to the secure payment process to complete the required payment before sending invitations."
+                                    }
+                                ],
+                                "image": "/images/how-it-works/step-09.png"
+                            },
+                            {
+                                "chip": "Send invitations",
+                                "title": "How to send QR invitations to your guests?",
+                                "intro": "Distribute personalized QR code invitations and monitor their delivery status.",
+                                "points": [
+                                    {
+                                        "title": "Review invitations before sending",
+                                        "text": "Verify guest information and invitation settings to avoid sending incorrect details."
+                                    },
+                                    {
+                                        "title": "Send invitations to guests",
+                                        "text": "Send personalized QR code invitations through email and WhatsApp to your selected guest list."
+                                    },
+                                    {
+                                        "title": "Track invitation delivery",
+                                        "text": "Check invitation statuses and resend failed invitations when necessary."
+                                    }
+                                ],
+                                "image": "/images/how-it-works/step-10.png"
+                            },
+                            {
+                                "chip": "Assign staff",
+                                "title": "How to add and assign event staff?",
+                                "intro": "Prepare your event entry team by assigning staff members to the relevant sessions.",
+                                "points": [
+                                    {
+                                        "title": "Add event staff members",
+                                        "text": "Enter the required staff information to create accounts for your event entry team."
+                                    },
+                                    {
+                                        "title": "Assign events and sessions",
+                                        "text": "Select which events and sessions each staff member is responsible for managing."
+                                    },
+                                    {
+                                        "title": "Prepare staff for guest check-in",
+                                        "text": "Ensure assigned staff members can access the appropriate scanning tools before the event begins."
+                                    }
+                                ],
+                                "image": "/images/how-it-works/step-11.png"
+                            },
+                            {
+                                "chip": "Reports",
+                                "title": "How to track attendance and download event reports?",
+                                "intro": "Monitor guest attendance and review important event information from your dashboard.",
+                                "points": [
+                                    {
+                                        "title": "View event attendance",
+                                        "text": "Open the event dashboard to check how many invited guests have attended."
+                                    },
+                                    {
+                                        "title": "Monitor session check-ins",
+                                        "text": "Review attendance information for individual sessions to understand guest participation."
+                                    },
+                                    {
+                                        "title": "Download event reports",
+                                        "text": "Access the available event reports and download attendance records for future reference."
+                                    }
+                                ],
+                                "image": "/images/how-it-works/step-13.png"
+                            }
+                        ],
+                        "id": "HowItWorksContent"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "Clients - Business & Corporate",
+        "slug": "clients-business-corporate",
+        "route": "/clients/business-corporate",
+        "editable": false,
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "CONFERENCES · LAUNCHES · NETWORKING · CORPORATE MEETS",
+                        "tagline": "Built for business events of every size",
+                        "heading": "Corporate events, sorted at the door",
+                        "sub": "Send branded QR invitations, separate delegates from VIPs, check guests in within seconds, and share an attendance report before the venue clears.",
+                        "servicesTitle": "One platform for every guest touchpoint",
+                        "servicesSub": "From the first invite to the final report, your corporate guest list lives in one place, not in five spreadsheets.",
+                        "services": [
+                            {
+                                "label": "Branded invitations:",
+                                "text": "Your logo and event design on every card, sent by email and WhatsApp."
+                            },
+                            {
+                                "label": "Delegate and VIP access:",
+                                "text": "Separate guest lists and entry rules for delegates, speakers and VIPs."
+                            },
+                            {
+                                "label": "Session-wise entry:",
+                                "text": "Keynotes, breakouts, lunch and the evening dinner, each with its own list."
+                            },
+                            {
+                                "label": "RSVP and preferences:",
+                                "text": "Confirmed headcount and meal choices before you brief the caterer."
+                            },
+                            {
+                                "label": "Fast gate check-in:",
+                                "text": "Staff scan QR codes on their phones, so registration desks stay clear."
+                            },
+                            {
+                                "label": "Attendance reports:",
+                                "text": "Invited versus attended, by session, ready for stakeholders and sponsors."
+                            }
+                        ],
+                        "servicesImage": "/images/clients/services-photo.png",
+                        "typesTitle": "Built for every business event",
+                        "types": [
+                            {
+                                "title": "Business conference",
+                                "text": "Multi-session conferences with hundreds of delegates, speakers and partners.",
+                                "image": "/images/clients/type-1.png"
+                            },
+                            {
+                                "title": "Product launch",
+                                "text": "High-profile launches where the guest list, the timing and the first impression all matter.",
+                                "image": "/images/clients/type-2.png"
+                            },
+                            {
+                                "title": "Networking event",
+                                "text": "Mixers, industry meets and member evenings where guests arrive throughout the night.",
+                                "image": "/images/clients/type-3.png"
+                            },
+                            {
+                                "title": "Corporate meet",
+                                "text": "AGMs, town halls, offsites and annual days for employees and shareholders.",
+                                "image": "/images/clients/type-4.png"
+                            }
+                        ],
+                        "statementTitle": "One code, every session",
+                        "statementText": "Each delegate gets one unique QR code that works across your whole event. It opens the doors they're invited to, and only those, from the morning keynote to the closing dinner.",
+                        "whyTitle": "Why corporate teams choose EventQRapp",
+                        "whySub": "Less admin before the event, fewer surprises on the day.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning your next conference or launch? Let's make entry effortless.",
+                        "toolsHeading": "Channels and tools that work for business",
+                        "essentialsDescription": "The essentials for any business event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next business event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-business-corporate"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "Clients - Wedding & Pre-Wedding",
+        "slug": "clients-wedding-pre-wedding",
+        "route": "/clients/wedding-pre-wedding",
+        "editable": false,
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "ENGAGEMENT · HALDI · MEHENDI · SANGEET · RECEPTION",
+                        "tagline": "Built for every function of the wedding",
+                        "heading": "Wedding celebrations, welcomed with ease",
+                        "sub": "Send beautiful QR invitations for every function, keep each ceremony's guest list separate, and let your family enjoy the day while the gate takes care of itself.",
+                        "servicesTitle": "One invitation for the whole celebration",
+                        "servicesSub": "From the engagement to the reception, every function and every guest list lives in one place.",
+                        "services": [
+                            {
+                                "label": "Beautiful invitations:",
+                                "text": "Pick a ready template or upload your own design, sent by email and WhatsApp."
+                            },
+                            {
+                                "label": "Function-wise entry:",
+                                "text": "Haldi, Mehendi, Sangeet, wedding and reception, each with its own guest list."
+                            },
+                            {
+                                "label": "Family and VIP lists:",
+                                "text": "Keep close family, friends and special guests on the right lists and gates."
+                            },
+                            {
+                                "label": "RSVP and preferences:",
+                                "text": "Know who is coming and what they would like to eat before you brief the caterer."
+                            },
+                            {
+                                "label": "Smooth gate entry:",
+                                "text": "Helpers scan QR codes on their phones, so nobody queues at the venue door."
+                            },
+                            {
+                                "label": "Print cards too:",
+                                "text": "Download print-ready cards for the guests you would rather invite by hand."
+                            }
+                        ],
+                        "servicesImage": "/images/landing/dashboard-hero.jpg",
+                        "typesTitle": "Built for every wedding function",
+                        "types": [
+                            {
+                                "title": "Engagement",
+                                "text": "A close, carefully invited circle of family and friends.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Haldi and Mehendi",
+                                "text": "Lively, informal functions where guests arrive and leave through the day.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Sangeet",
+                                "text": "Big evening celebrations with music, dinner and a long guest list.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Wedding reception",
+                                "text": "The largest gathering, where the right guests need to reach the right gate.",
+                                "image": ""
+                            }
+                        ],
+                        "statementTitle": "One code, every function",
+                        "statementText": "Each guest gets one unique QR code for the whole celebration. It opens the functions they are invited to, and only those, from the Haldi to the reception.",
+                        "whyTitle": "Why families choose EventQRapp",
+                        "whySub": "Less running around before the wedding, more time to enjoy it.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning a wedding? Let's make every entry effortless.",
+                        "toolsHeading": "Channels and tools that work for your event",
+                        "essentialsDescription": "The essentials for any event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-wedding-pre-wedding"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "Clients - Education & Campus",
+        "slug": "clients-education-campus",
+        "route": "/clients/education-campus",
+        "editable": false,
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "CONVOCATION · FRESHERS · FAREWELL · COLLEGE FEST",
+                        "tagline": "Built for schools, colleges and universities",
+                        "heading": "Campus events, organised from the first invite",
+                        "sub": "Invite students, parents and guests with QR codes, keep every gathering to its guest list, and check people in at the gate without a paper register.",
+                        "servicesTitle": "One platform for every campus gathering",
+                        "servicesSub": "From the freshers' welcome to the farewell, your guest lists stay in one place.",
+                        "services": [
+                            {
+                                "label": "Invitations that reach everyone:",
+                                "text": "Send by email and WhatsApp, or download print-ready cards for notice boards and parents."
+                            },
+                            {
+                                "label": "Student and guest lists:",
+                                "text": "Upload an Excel list of students, parents and chief guests in one go."
+                            },
+                            {
+                                "label": "Event-wise entry:",
+                                "text": "Separate sessions for ceremonies, performances and dinners, each with its own list."
+                            },
+                            {
+                                "label": "Fast gate check-in:",
+                                "text": "Volunteers scan QR codes on their phones, so the entrance never backs up."
+                            },
+                            {
+                                "label": "Entry-once codes:",
+                                "text": "Set a code to work a single time so a pass cannot be handed on."
+                            },
+                            {
+                                "label": "Attendance reports:",
+                                "text": "Invited versus attended, ready for the department and the management."
+                            }
+                        ],
+                        "servicesImage": "/images/landing/dashboard-hero.jpg",
+                        "typesTitle": "Built for every campus event",
+                        "types": [
+                            {
+                                "title": "Convocation",
+                                "text": "Graduates and their families, each admitted to the right seating.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Freshers and welcome",
+                                "text": "A new batch arriving together, checked in quickly.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Farewell",
+                                "text": "A final-year send-off for students, faculty and guests.",
+                                "image": ""
+                            },
+                            {
+                                "title": "College fest",
+                                "text": "Multi-day fests with several shows and a changing crowd.",
+                                "image": ""
+                            }
+                        ],
+                        "statementTitle": "One code, every event",
+                        "statementText": "Each student and guest gets one unique QR code. It opens the events they are invited to, and only those, across the whole day.",
+                        "whyTitle": "Why campuses choose EventQRapp",
+                        "whySub": "Less paperwork for organisers, a smoother entrance for everyone.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning your next campus event? Let's make entry effortless.",
+                        "toolsHeading": "Channels and tools that work for your event",
+                        "essentialsDescription": "The essentials for any event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-education-campus"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "Clients - Personal & Family",
+        "slug": "clients-personal-family",
+        "route": "/clients/personal-family",
+        "editable": false,
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "BIRTHDAY · BABY SHOWER · ANNAPRASAN · GRIHA PRAVESH",
+                        "tagline": "Built for the moments that matter at home",
+                        "heading": "Family celebrations, invited with care",
+                        "sub": "Design a lovely invitation, send it to everyone on WhatsApp and email in minutes, and know exactly who is coming before the day.",
+                        "servicesTitle": "Everything a family celebration needs",
+                        "servicesSub": "No group chats to chase, no lists on paper, just one guest list that stays up to date.",
+                        "services": [
+                            {
+                                "label": "Your own invitation:",
+                                "text": "Pick a ready template or upload your own design, with a live preview before sending."
+                            },
+                            {
+                                "label": "Send in minutes:",
+                                "text": "Upload your guest list or add guests one by one, then send by email and WhatsApp."
+                            },
+                            {
+                                "label": "RSVP answers:",
+                                "text": "Guests reply accept or decline, so you can plan the food and the seating."
+                            },
+                            {
+                                "label": "Venue on the map:",
+                                "text": "Guests get a verified location so everyone finds the door."
+                            },
+                            {
+                                "label": "Easy entry:",
+                                "text": "A helper scans the QR code at the door, with no register to fill."
+                            },
+                            {
+                                "label": "Print cards too:",
+                                "text": "Download print-ready cards for elders who prefer a card in hand."
+                            }
+                        ],
+                        "servicesImage": "/images/landing/dashboard-hero.jpg",
+                        "typesTitle": "Built for every family occasion",
+                        "types": [
+                            {
+                                "title": "Birthday and baby shower",
+                                "text": "Parties where you want to know the headcount early.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Annaprasan",
+                                "text": "A first-rice ceremony shared with close family and friends.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Griha Pravesh",
+                                "text": "A housewarming where relatives and neighbours come and go.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Anniversary",
+                                "text": "A milestone celebration with a guest list worth getting right.",
+                                "image": ""
+                            }
+                        ],
+                        "statementTitle": "One code for every guest",
+                        "statementText": "Each guest receives one unique QR code on their phone. They show it at the door and walk straight in.",
+                        "whyTitle": "Why families choose EventQRapp",
+                        "whySub": "Simple enough for a birthday, strong enough for a big family function.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning a family celebration? Let's make it effortless.",
+                        "toolsHeading": "Channels and tools that work for your event",
+                        "essentialsDescription": "The essentials for any event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-personal-family"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "Clients - Festivals & Culture",
+        "slug": "clients-festivals-culture",
+        "route": "/clients/festivals-culture",
+        "editable": false,
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "FESTIVALS · PUJA · CULTURAL PROGRAMS · COMMUNITY FAIRS",
+                        "tagline": "Built for communities and committees",
+                        "heading": "Festivals and community events, welcomed in order",
+                        "sub": "Invite members, patrons and guests with QR codes, manage entry across programs and days, and share an attendance report with your committee.",
+                        "servicesTitle": "One place for every community gathering",
+                        "servicesSub": "Committees, volunteers and guest lists, working from the same dashboard.",
+                        "services": [
+                            {
+                                "label": "Invitations for the community:",
+                                "text": "Send by email and WhatsApp, or download print-ready cards for notice boards."
+                            },
+                            {
+                                "label": "Program-wise entry:",
+                                "text": "Set sessions for each day or performance, with their own guest lists."
+                            },
+                            {
+                                "label": "Patrons and special guests:",
+                                "text": "Keep chief guests, donors and members on the right lists."
+                            },
+                            {
+                                "label": "Volunteer scanning:",
+                                "text": "Committee volunteers scan QR codes on their own phones at the gate."
+                            },
+                            {
+                                "label": "Multi-gate entry:",
+                                "text": "Main and special gates, each admitting the right people."
+                            },
+                            {
+                                "label": "Attendance reports:",
+                                "text": "Invited versus attended for each program, ready for the committee."
+                            }
+                        ],
+                        "servicesImage": "/images/landing/dashboard-hero.jpg",
+                        "typesTitle": "Built for every festival and gathering",
+                        "types": [
+                            {
+                                "title": "Festival celebration",
+                                "text": "Large celebrations where guests arrive across the day.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Puja gathering",
+                                "text": "Community pujas with members, patrons and invited guests.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Cultural program",
+                                "text": "Dance, music and drama evenings with a seated audience.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Community fair",
+                                "text": "Open fairs and stalls where entry still needs order.",
+                                "image": ""
+                            }
+                        ],
+                        "statementTitle": "One code, every program",
+                        "statementText": "Each guest gets one unique QR code that works across the days and programs they are invited to, and only those.",
+                        "whyTitle": "Why committees choose EventQRapp",
+                        "whySub": "Less crowding at the gate, a clear record for the committee.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning your next festival or cultural program? Let's make entry effortless.",
+                        "toolsHeading": "Channels and tools that work for your event",
+                        "essentialsDescription": "The essentials for any event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-festivals-culture"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "Clients - Sports & Fitness",
+        "slug": "clients-sports-fitness",
+        "route": "/clients/sports-fitness",
+        "editable": false,
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "TOURNAMENTS · MARATHONS · CLUB EVENTS · SPORTS MEETS",
+                        "tagline": "Built for tournaments and fitness events",
+                        "heading": "Sports events, checked in before the first whistle",
+                        "sub": "Register players, officials and spectators with QR passes, keep each match day to its list, and see attendance live from the gate.",
+                        "servicesTitle": "One platform from registration to the final",
+                        "servicesSub": "Players, teams, officials and spectators, each with the right pass.",
+                        "services": [
+                            {
+                                "label": "Branded passes:",
+                                "text": "Your club or tournament design on every pass, sent by email and WhatsApp."
+                            },
+                            {
+                                "label": "Players, officials and guests:",
+                                "text": "Separate lists and entry rules for each group."
+                            },
+                            {
+                                "label": "Match-day sessions:",
+                                "text": "Each match or race day with its own guest list and entry rule."
+                            },
+                            {
+                                "label": "Quick gate check-in:",
+                                "text": "Volunteers scan QR codes on their phones, so queues move."
+                            },
+                            {
+                                "label": "Live attendance:",
+                                "text": "See how many have entered while the event is on."
+                            },
+                            {
+                                "label": "Reports for sponsors:",
+                                "text": "Invited versus attended, ready to share after the event."
+                            }
+                        ],
+                        "servicesImage": "/images/landing/dashboard-hero.jpg",
+                        "typesTitle": "Built for every sports event",
+                        "types": [
+                            {
+                                "title": "Cricket tournament",
+                                "text": "Teams, officials and spectators across several match days.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Football tournament",
+                                "text": "Fixtures, finals and fan entry managed from one list.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Marathon",
+                                "text": "Runners and volunteers checked in at the start line.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Club and college sports meet",
+                                "text": "Annual meets with students, families and guests.",
+                                "image": ""
+                            }
+                        ],
+                        "statementTitle": "One pass, every match day",
+                        "statementText": "Each player and guest gets one unique QR code that works for the match days and areas they are cleared for, and only those.",
+                        "whyTitle": "Why organisers choose EventQRapp",
+                        "whySub": "Less queueing, more time on the field.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning your next tournament or run? Let's make entry effortless.",
+                        "toolsHeading": "Channels and tools that work for your event",
+                        "essentialsDescription": "The essentials for any event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-sports-fitness"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "Clients - Entertainment & Social",
+        "slug": "clients-entertainment-social",
+        "route": "/clients/entertainment-social",
+        "editable": false,
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "CONCERTS · COMEDY · DJ NIGHTS · FOOD FESTIVALS · EXHIBITIONS",
+                        "tagline": "Built for shows, nights out and exhibitions",
+                        "heading": "Shows and social nights, let in without the queue",
+                        "sub": "Send QR invitations to your guest list, keep VIP and general entry apart, and let crowds in quickly while staying in control of who enters.",
+                        "servicesTitle": "One platform from guest list to last entry",
+                        "servicesSub": "Invitations, gates and attendance in one dashboard, so the door never slows the night down.",
+                        "services": [
+                            {
+                                "label": "Branded invitations:",
+                                "text": "Your show or venue design on every pass, sent by email and WhatsApp."
+                            },
+                            {
+                                "label": "VIP and general entry:",
+                                "text": "Separate guest lists and gates for VIP, guests and the press."
+                            },
+                            {
+                                "label": "Show-wise sessions:",
+                                "text": "Set a list and an entry rule for each show, stall area or night."
+                            },
+                            {
+                                "label": "Codes that cannot be shared:",
+                                "text": "Use Only Once access so one pass lets in one person."
+                            },
+                            {
+                                "label": "Fast gate check-in:",
+                                "text": "Door staff scan QR codes on their phones, so the line keeps moving."
+                            },
+                            {
+                                "label": "Attendance reports:",
+                                "text": "Invited versus attended, ready for sponsors and partners."
+                            }
+                        ],
+                        "servicesImage": "/images/landing/dashboard-hero.jpg",
+                        "typesTitle": "Built for every show and social event",
+                        "types": [
+                            {
+                                "title": "Live concert",
+                                "text": "Large crowds, several gates and a guest list that must be right.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Comedy show",
+                                "text": "Seated audiences admitted show by show.",
+                                "image": ""
+                            },
+                            {
+                                "title": "DJ night",
+                                "text": "Late-night entry with guest lists and VIP areas.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Food festival and exhibition",
+                                "text": "Open events where invited guests and trade visitors need separate entry.",
+                                "image": ""
+                            }
+                        ],
+                        "statementTitle": "One code, one entry",
+                        "statementText": "Each guest gets one unique QR code. Set it to work once, and it cannot be passed on to sneak extra people in.",
+                        "whyTitle": "Why organisers choose EventQRapp",
+                        "whySub": "A faster door and a clear count for every show.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning your next show or social night? Let's make entry effortless.",
+                        "toolsHeading": "Channels and tools that work for your event",
+                        "essentialsDescription": "The essentials for any event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-entertainment-social"
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "name": "Clients",
+        "slug": "clients",
+        "route": "/clients",
+        "schemaVersion": 1,
+        "componentStructureLocked": true,
+        "data": {
+            "root": {
+                "props": {}
+            },
+            "content": [
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "CONFERENCES · LAUNCHES · NETWORKING · CORPORATE MEETS",
+                        "tagline": "Built for business events of every size",
+                        "heading": "Corporate events, sorted at the door",
+                        "sub": "Send branded QR invitations, separate delegates from VIPs, check guests in within seconds, and share an attendance report before the venue clears.",
+                        "servicesTitle": "One platform for every guest touchpoint",
+                        "servicesSub": "From the first invite to the final report, your corporate guest list lives in one place, not in five spreadsheets.",
+                        "services": [
+                            {
+                                "label": "Branded invitations:",
+                                "text": "Your logo and event design on every card, sent by email and WhatsApp."
+                            },
+                            {
+                                "label": "Delegate and VIP access:",
+                                "text": "Separate guest lists and entry rules for delegates, speakers and VIPs."
+                            },
+                            {
+                                "label": "Session-wise entry:",
+                                "text": "Keynotes, breakouts, lunch and the evening dinner, each with its own list."
+                            },
+                            {
+                                "label": "RSVP and preferences:",
+                                "text": "Confirmed headcount and meal choices before you brief the caterer."
+                            },
+                            {
+                                "label": "Fast gate check-in:",
+                                "text": "Staff scan QR codes on their phones, so registration desks stay clear."
+                            },
+                            {
+                                "label": "Attendance reports:",
+                                "text": "Invited versus attended, by session, ready for stakeholders and sponsors."
+                            }
+                        ],
+                        "servicesImage": "/images/clients/services-photo.png",
+                        "typesTitle": "Built for every business event",
+                        "types": [
+                            {
+                                "title": "Business conference",
+                                "text": "Multi-session conferences with hundreds of delegates, speakers and partners.",
+                                "image": "/images/clients/type-1.png"
+                            },
+                            {
+                                "title": "Product launch",
+                                "text": "High-profile launches where the guest list, the timing and the first impression all matter.",
+                                "image": "/images/clients/type-2.png"
+                            },
+                            {
+                                "title": "Networking event",
+                                "text": "Mixers, industry meets and member evenings where guests arrive throughout the night.",
+                                "image": "/images/clients/type-3.png"
+                            },
+                            {
+                                "title": "Corporate meet",
+                                "text": "AGMs, town halls, offsites and annual days for employees and shareholders.",
+                                "image": "/images/clients/type-4.png"
+                            }
+                        ],
+                        "statementTitle": "One code, every session",
+                        "statementText": "Each delegate gets one unique QR code that works across your whole event. It opens the doors they're invited to, and only those, from the morning keynote to the closing dinner.",
+                        "whyTitle": "Why corporate teams choose EventQRapp",
+                        "whySub": "Less admin before the event, fewer surprises on the day.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning your next conference or launch? Let's make entry effortless.",
+                        "toolsHeading": "Channels and tools that work for business",
+                        "essentialsDescription": "The essentials for any business event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next business event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-business-corporate"
+                    }
+                },
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "ENGAGEMENT · HALDI · MEHENDI · SANGEET · RECEPTION",
+                        "tagline": "Built for every function of the wedding",
+                        "heading": "Wedding celebrations, welcomed with ease",
+                        "sub": "Send beautiful QR invitations for every function, keep each ceremony's guest list separate, and let your family enjoy the day while the gate takes care of itself.",
+                        "servicesTitle": "One invitation for the whole celebration",
+                        "servicesSub": "From the engagement to the reception, every function and every guest list lives in one place.",
+                        "services": [
+                            {
+                                "label": "Beautiful invitations:",
+                                "text": "Pick a ready template or upload your own design, sent by email and WhatsApp."
+                            },
+                            {
+                                "label": "Function-wise entry:",
+                                "text": "Haldi, Mehendi, Sangeet, wedding and reception, each with its own guest list."
+                            },
+                            {
+                                "label": "Family and VIP lists:",
+                                "text": "Keep close family, friends and special guests on the right lists and gates."
+                            },
+                            {
+                                "label": "RSVP and preferences:",
+                                "text": "Know who is coming and what they would like to eat before you brief the caterer."
+                            },
+                            {
+                                "label": "Smooth gate entry:",
+                                "text": "Helpers scan QR codes on their phones, so nobody queues at the venue door."
+                            },
+                            {
+                                "label": "Print cards too:",
+                                "text": "Download print-ready cards for the guests you would rather invite by hand."
+                            }
+                        ],
+                        "servicesImage": "/images/landing/dashboard-hero.jpg",
+                        "typesTitle": "Built for every wedding function",
+                        "types": [
+                            {
+                                "title": "Engagement",
+                                "text": "A close, carefully invited circle of family and friends.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Haldi and Mehendi",
+                                "text": "Lively, informal functions where guests arrive and leave through the day.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Sangeet",
+                                "text": "Big evening celebrations with music, dinner and a long guest list.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Wedding reception",
+                                "text": "The largest gathering, where the right guests need to reach the right gate.",
+                                "image": ""
+                            }
+                        ],
+                        "statementTitle": "One code, every function",
+                        "statementText": "Each guest gets one unique QR code for the whole celebration. It opens the functions they are invited to, and only those, from the Haldi to the reception.",
+                        "whyTitle": "Why families choose EventQRapp",
+                        "whySub": "Less running around before the wedding, more time to enjoy it.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning a wedding? Let's make every entry effortless.",
+                        "toolsHeading": "Channels and tools that work for your event",
+                        "essentialsDescription": "The essentials for any event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-wedding-pre-wedding"
+                    }
+                },
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "CONVOCATION · FRESHERS · FAREWELL · COLLEGE FEST",
+                        "tagline": "Built for schools, colleges and universities",
+                        "heading": "Campus events, organised from the first invite",
+                        "sub": "Invite students, parents and guests with QR codes, keep every gathering to its guest list, and check people in at the gate without a paper register.",
+                        "servicesTitle": "One platform for every campus gathering",
+                        "servicesSub": "From the freshers' welcome to the farewell, your guest lists stay in one place.",
+                        "services": [
+                            {
+                                "label": "Invitations that reach everyone:",
+                                "text": "Send by email and WhatsApp, or download print-ready cards for notice boards and parents."
+                            },
+                            {
+                                "label": "Student and guest lists:",
+                                "text": "Upload an Excel list of students, parents and chief guests in one go."
+                            },
+                            {
+                                "label": "Event-wise entry:",
+                                "text": "Separate sessions for ceremonies, performances and dinners, each with its own list."
+                            },
+                            {
+                                "label": "Fast gate check-in:",
+                                "text": "Volunteers scan QR codes on their phones, so the entrance never backs up."
+                            },
+                            {
+                                "label": "Entry-once codes:",
+                                "text": "Set a code to work a single time so a pass cannot be handed on."
+                            },
+                            {
+                                "label": "Attendance reports:",
+                                "text": "Invited versus attended, ready for the department and the management."
+                            }
+                        ],
+                        "servicesImage": "/images/landing/dashboard-hero.jpg",
+                        "typesTitle": "Built for every campus event",
+                        "types": [
+                            {
+                                "title": "Convocation",
+                                "text": "Graduates and their families, each admitted to the right seating.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Freshers and welcome",
+                                "text": "A new batch arriving together, checked in quickly.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Farewell",
+                                "text": "A final-year send-off for students, faculty and guests.",
+                                "image": ""
+                            },
+                            {
+                                "title": "College fest",
+                                "text": "Multi-day fests with several shows and a changing crowd.",
+                                "image": ""
+                            }
+                        ],
+                        "statementTitle": "One code, every event",
+                        "statementText": "Each student and guest gets one unique QR code. It opens the events they are invited to, and only those, across the whole day.",
+                        "whyTitle": "Why campuses choose EventQRapp",
+                        "whySub": "Less paperwork for organisers, a smoother entrance for everyone.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning your next campus event? Let's make entry effortless.",
+                        "toolsHeading": "Channels and tools that work for your event",
+                        "essentialsDescription": "The essentials for any event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-education-campus"
+                    }
+                },
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "BIRTHDAY · BABY SHOWER · ANNAPRASAN · GRIHA PRAVESH",
+                        "tagline": "Built for the moments that matter at home",
+                        "heading": "Family celebrations, invited with care",
+                        "sub": "Design a lovely invitation, send it to everyone on WhatsApp and email in minutes, and know exactly who is coming before the day.",
+                        "servicesTitle": "Everything a family celebration needs",
+                        "servicesSub": "No group chats to chase, no lists on paper, just one guest list that stays up to date.",
+                        "services": [
+                            {
+                                "label": "Your own invitation:",
+                                "text": "Pick a ready template or upload your own design, with a live preview before sending."
+                            },
+                            {
+                                "label": "Send in minutes:",
+                                "text": "Upload your guest list or add guests one by one, then send by email and WhatsApp."
+                            },
+                            {
+                                "label": "RSVP answers:",
+                                "text": "Guests reply accept or decline, so you can plan the food and the seating."
+                            },
+                            {
+                                "label": "Venue on the map:",
+                                "text": "Guests get a verified location so everyone finds the door."
+                            },
+                            {
+                                "label": "Easy entry:",
+                                "text": "A helper scans the QR code at the door, with no register to fill."
+                            },
+                            {
+                                "label": "Print cards too:",
+                                "text": "Download print-ready cards for elders who prefer a card in hand."
+                            }
+                        ],
+                        "servicesImage": "/images/landing/dashboard-hero.jpg",
+                        "typesTitle": "Built for every family occasion",
+                        "types": [
+                            {
+                                "title": "Birthday and baby shower",
+                                "text": "Parties where you want to know the headcount early.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Annaprasan",
+                                "text": "A first-rice ceremony shared with close family and friends.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Griha Pravesh",
+                                "text": "A housewarming where relatives and neighbours come and go.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Anniversary",
+                                "text": "A milestone celebration with a guest list worth getting right.",
+                                "image": ""
+                            }
+                        ],
+                        "statementTitle": "One code for every guest",
+                        "statementText": "Each guest receives one unique QR code on their phone. They show it at the door and walk straight in.",
+                        "whyTitle": "Why families choose EventQRapp",
+                        "whySub": "Simple enough for a birthday, strong enough for a big family function.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning a family celebration? Let's make it effortless.",
+                        "toolsHeading": "Channels and tools that work for your event",
+                        "essentialsDescription": "The essentials for any event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-personal-family"
+                    }
+                },
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "FESTIVALS · PUJA · CULTURAL PROGRAMS · COMMUNITY FAIRS",
+                        "tagline": "Built for communities and committees",
+                        "heading": "Festivals and community events, welcomed in order",
+                        "sub": "Invite members, patrons and guests with QR codes, manage entry across programs and days, and share an attendance report with your committee.",
+                        "servicesTitle": "One place for every community gathering",
+                        "servicesSub": "Committees, volunteers and guest lists, working from the same dashboard.",
+                        "services": [
+                            {
+                                "label": "Invitations for the community:",
+                                "text": "Send by email and WhatsApp, or download print-ready cards for notice boards."
+                            },
+                            {
+                                "label": "Program-wise entry:",
+                                "text": "Set sessions for each day or performance, with their own guest lists."
+                            },
+                            {
+                                "label": "Patrons and special guests:",
+                                "text": "Keep chief guests, donors and members on the right lists."
+                            },
+                            {
+                                "label": "Volunteer scanning:",
+                                "text": "Committee volunteers scan QR codes on their own phones at the gate."
+                            },
+                            {
+                                "label": "Multi-gate entry:",
+                                "text": "Main and special gates, each admitting the right people."
+                            },
+                            {
+                                "label": "Attendance reports:",
+                                "text": "Invited versus attended for each program, ready for the committee."
+                            }
+                        ],
+                        "servicesImage": "/images/landing/dashboard-hero.jpg",
+                        "typesTitle": "Built for every festival and gathering",
+                        "types": [
+                            {
+                                "title": "Festival celebration",
+                                "text": "Large celebrations where guests arrive across the day.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Puja gathering",
+                                "text": "Community pujas with members, patrons and invited guests.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Cultural program",
+                                "text": "Dance, music and drama evenings with a seated audience.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Community fair",
+                                "text": "Open fairs and stalls where entry still needs order.",
+                                "image": ""
+                            }
+                        ],
+                        "statementTitle": "One code, every program",
+                        "statementText": "Each guest gets one unique QR code that works across the days and programs they are invited to, and only those.",
+                        "whyTitle": "Why committees choose EventQRapp",
+                        "whySub": "Less crowding at the gate, a clear record for the committee.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning your next festival or cultural program? Let's make entry effortless.",
+                        "toolsHeading": "Channels and tools that work for your event",
+                        "essentialsDescription": "The essentials for any event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-festivals-culture"
+                    }
+                },
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "TOURNAMENTS · MARATHONS · CLUB EVENTS · SPORTS MEETS",
+                        "tagline": "Built for tournaments and fitness events",
+                        "heading": "Sports events, checked in before the first whistle",
+                        "sub": "Register players, officials and spectators with QR passes, keep each match day to its list, and see attendance live from the gate.",
+                        "servicesTitle": "One platform from registration to the final",
+                        "servicesSub": "Players, teams, officials and spectators, each with the right pass.",
+                        "services": [
+                            {
+                                "label": "Branded passes:",
+                                "text": "Your club or tournament design on every pass, sent by email and WhatsApp."
+                            },
+                            {
+                                "label": "Players, officials and guests:",
+                                "text": "Separate lists and entry rules for each group."
+                            },
+                            {
+                                "label": "Match-day sessions:",
+                                "text": "Each match or race day with its own guest list and entry rule."
+                            },
+                            {
+                                "label": "Quick gate check-in:",
+                                "text": "Volunteers scan QR codes on their phones, so queues move."
+                            },
+                            {
+                                "label": "Live attendance:",
+                                "text": "See how many have entered while the event is on."
+                            },
+                            {
+                                "label": "Reports for sponsors:",
+                                "text": "Invited versus attended, ready to share after the event."
+                            }
+                        ],
+                        "servicesImage": "/images/landing/dashboard-hero.jpg",
+                        "typesTitle": "Built for every sports event",
+                        "types": [
+                            {
+                                "title": "Cricket tournament",
+                                "text": "Teams, officials and spectators across several match days.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Football tournament",
+                                "text": "Fixtures, finals and fan entry managed from one list.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Marathon",
+                                "text": "Runners and volunteers checked in at the start line.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Club and college sports meet",
+                                "text": "Annual meets with students, families and guests.",
+                                "image": ""
+                            }
+                        ],
+                        "statementTitle": "One pass, every match day",
+                        "statementText": "Each player and guest gets one unique QR code that works for the match days and areas they are cleared for, and only those.",
+                        "whyTitle": "Why organisers choose EventQRapp",
+                        "whySub": "Less queueing, more time on the field.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning your next tournament or run? Let's make entry effortless.",
+                        "toolsHeading": "Channels and tools that work for your event",
+                        "essentialsDescription": "The essentials for any event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-sports-fitness"
+                    }
+                },
+                {
+                    "type": "ClientContent",
+                    "props": {
+                        "demoLabel": "Book a demo",
+                        "tutorialLabel": "See how it works",
+                        "clientsHeading": "Event planners, agencies and families already on board",
+                        "privacyHeading": "Your guest list stays protected",
+                        "privacyDescription": "Codes can't be shared to sneak extra people in, every scan is logged, and only the staff you assign can check guests in.",
+                        "callbackLabel": "Request a callback",
+                        "scheduleLabel": "Schedule a callback",
+                        "essentialsHeading": "Everything your event desk needs",
+                        "contactLabel": "Contact us",
+                        "footer": {
+                            "title": "Join the organisers who never stress about the guest list",
+                            "body": "Set up your event today and send your first QR invitations in minutes. You only pay for the guests you invite.",
+                            "primary": "Create your first event",
+                            "note": "No credit card needed to start · No subscription"
+                        },
+                        "tools": [
+                            "Email and WhatsApp invitations",
+                            "Excel guest list upload",
+                            "Print-ready PDF invitation cards",
+                            "Staff scanning on mobile phones",
+                            "Map-verified venue locations",
+                            "Multi-gate entry (Main and VIP)",
+                            "Downloadable attendance and access logs",
+                            "GST invoices and statements",
+                            "Google sign-in for your team"
+                        ],
+                        "essentials": [
+                            "Branded QR invitations",
+                            "Session-wise access",
+                            "Mobile gate scanning",
+                            "Live attendance dashboard"
+                        ],
+                        "eyebrow": "CONCERTS · COMEDY · DJ NIGHTS · FOOD FESTIVALS · EXHIBITIONS",
+                        "tagline": "Built for shows, nights out and exhibitions",
+                        "heading": "Shows and social nights, let in without the queue",
+                        "sub": "Send QR invitations to your guest list, keep VIP and general entry apart, and let crowds in quickly while staying in control of who enters.",
+                        "servicesTitle": "One platform from guest list to last entry",
+                        "servicesSub": "Invitations, gates and attendance in one dashboard, so the door never slows the night down.",
+                        "services": [
+                            {
+                                "label": "Branded invitations:",
+                                "text": "Your show or venue design on every pass, sent by email and WhatsApp."
+                            },
+                            {
+                                "label": "VIP and general entry:",
+                                "text": "Separate guest lists and gates for VIP, guests and the press."
+                            },
+                            {
+                                "label": "Show-wise sessions:",
+                                "text": "Set a list and an entry rule for each show, stall area or night."
+                            },
+                            {
+                                "label": "Codes that cannot be shared:",
+                                "text": "Use Only Once access so one pass lets in one person."
+                            },
+                            {
+                                "label": "Fast gate check-in:",
+                                "text": "Door staff scan QR codes on their phones, so the line keeps moving."
+                            },
+                            {
+                                "label": "Attendance reports:",
+                                "text": "Invited versus attended, ready for sponsors and partners."
+                            }
+                        ],
+                        "servicesImage": "/images/landing/dashboard-hero.jpg",
+                        "typesTitle": "Built for every show and social event",
+                        "types": [
+                            {
+                                "title": "Live concert",
+                                "text": "Large crowds, several gates and a guest list that must be right.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Comedy show",
+                                "text": "Seated audiences admitted show by show.",
+                                "image": ""
+                            },
+                            {
+                                "title": "DJ night",
+                                "text": "Late-night entry with guest lists and VIP areas.",
+                                "image": ""
+                            },
+                            {
+                                "title": "Food festival and exhibition",
+                                "text": "Open events where invited guests and trade visitors need separate entry.",
+                                "image": ""
+                            }
+                        ],
+                        "statementTitle": "One code, one entry",
+                        "statementText": "Each guest gets one unique QR code. Set it to work once, and it cannot be passed on to sneak extra people in.",
+                        "whyTitle": "Why organisers choose EventQRapp",
+                        "whySub": "A faster door and a clear count for every show.",
+                        "why": [
+                            "No subscription, pay per invitee",
+                            "Setup in a single sitting",
+                            "Guests need no app",
+                            "Unlimited staff accounts at no extra cost",
+                            "Reports ready the moment it ends"
+                        ],
+                        "closing": "Planning your next show or social night? Let's make entry effortless.",
+                        "toolsHeading": "Channels and tools that work for your event",
+                        "essentialsDescription": "The essentials for any event, in one dashboard.",
+                        "enquiryHeading": "Let's plan your next event",
+                        "enquiryDescription": "Tell us about your event and our team will get back to you within one working day.",
+                        "enquirySubmitLabel": "Submit request",
+                        "whyImage": "/images/clients/why-dashboard.png",
+                        "id": "clients-entertainment-social"
                     }
                 }
             ]

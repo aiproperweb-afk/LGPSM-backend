@@ -25,16 +25,13 @@ function requireExpectedVersion(expectedVersion) {
 async function requirePage(id) {
     requirePageId(id);
     const page = await cmsPage_repository_1.cmsPageRepository.findById(id);
-    if (!page)
+    if (!page || !cmsPage_validator_1.editableCmsSlugs.includes(page.slug) || !(0, cmsPage_validator_1.supportsPageContract)(page.slug, page.route, page.schemaVersion))
         throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
     return page;
 }
 async function requireEditablePage(id, expectedVersion) {
     requireExpectedVersion(expectedVersion);
     const page = await requirePage(id);
-    if (!(0, cmsPage_validator_1.supportsPageContract)(page.slug, page.route, page.schemaVersion)) {
-        throw cmsError(409, 'CMS_SCHEMA_UNSUPPORTED', 'This page does not use a supported CMS contract.');
-    }
     if (page.editVersion !== expectedVersion)
         throw editConflict(page.editVersion);
     return page;
@@ -69,6 +66,29 @@ async function validateContent(data, slug) {
     const validated = (0, cmsPage_validator_1.validatePuckData)(data, slug);
     await verifyMediaReferences(validated.mediaIds);
     return validated;
+}
+async function clientsSnapshots(defaults) {
+    const existing = await Page_1.Page.find({ slug: { $in: defaults.content.map(section => section.props.id) } })
+        .select('slug draftData publishedData').lean();
+    const bySlug = new Map(existing.map(page => [page.slug, page]));
+    const snapshot = (field) => ({
+        ...defaults,
+        content: defaults.content.map(section => {
+            const slug = String(section.props.id);
+            const previous = bySlug.get(slug)?.[field];
+            if (!previous)
+                return section;
+            try {
+                return (0, cmsPage_validator_1.validatePuckData)(previous, slug).data.content[0];
+            }
+            catch (error) {
+                if (error.code !== 'CMS_CONTENT_INVALID')
+                    throw error;
+                return section;
+            }
+        })
+    });
+    return { draftData: snapshot('draftData'), publishedData: snapshot('publishedData') };
 }
 exports.cmsPageService = {
     async listPages() {
@@ -109,6 +129,8 @@ exports.cmsPageService = {
         return this.throwEditConflict(id);
     },
     async getPublishedPage(slug) {
+        if (!cmsPage_validator_1.supportedCmsSlugs.includes(slug))
+            throw cmsError(404, 'PAGE_NOT_FOUND', 'Published page not found');
         const page = await cmsPage_repository_1.cmsPageRepository.findPublishedBySlug(slug);
         if (!page)
             throw cmsError(404, 'PAGE_NOT_FOUND', 'Published page not found');
@@ -118,7 +140,7 @@ exports.cmsPageService = {
         if (!Array.isArray(input) || input.length === 0) {
             throw cmsError(400, 'CMS_SEED_EMPTY', 'Provide at least one populated page in the CMS seed file.');
         }
-        const seeds = input.map(cmsPage_validator_1.validateCmsSeedInput);
+        const seeds = input.map(cmsPage_validator_1.validateCmsSeedInput).filter(seed => cmsPage_validator_1.editableCmsSlugs.includes(seed.slug));
         const slugs = new Set();
         const routes = new Set();
         for (const seed of seeds) {
@@ -131,13 +153,16 @@ exports.cmsPageService = {
         const seededAt = new Date();
         const results = [];
         for (const seed of seeds) {
+            const snapshots = seed.slug === 'clients'
+                ? await clientsSnapshots(seed.data)
+                : { draftData: seed.data, publishedData: seed.data };
             const result = await cmsPage_repository_1.cmsPageRepository.seedOnInsert({
                 name: seed.name,
                 slug: seed.slug,
                 route: seed.route,
-                draftData: seed.data,
-                publishedData: seed.data,
-                status: Page_1.PageStatus.PUBLISHED,
+                ...snapshots,
+                status: JSON.stringify(snapshots.draftData) === JSON.stringify(snapshots.publishedData)
+                    ? Page_1.PageStatus.PUBLISHED : Page_1.PageStatus.DRAFT,
                 schemaVersion: seed.schemaVersion,
                 version: 1,
                 editVersion: 0,

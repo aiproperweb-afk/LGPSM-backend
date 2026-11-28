@@ -7,6 +7,9 @@ const MAX_TEXT_LENGTH = 4000;
 
 const contracts = new Map(seed.map(page => [page.slug, page]));
 
+export const supportedCmsSlugs = [...contracts.keys()];
+export const editableCmsSlugs = seed.filter(page => page.editable !== false).map(page => page.slug);
+
 export function supportsPageContract(slug: string, route: string, schemaVersion: number) {
   const contract = contracts.get(slug);
   return contract?.route === route && contract.schemaVersion === schemaVersion;
@@ -14,13 +17,14 @@ export function supportsPageContract(slug: string, route: string, schemaVersion:
 const approvedLinks = new Set(['/signup', '/contact', '/#how-it-works', '/#features', '/#pricing', '/#faq']);
 
 const slugSchema = z.string().trim().min(1).max(100).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must use lowercase letters, numbers and hyphens');
-const routeSchema = z.string().trim().min(1).max(200).regex(/^\/(?!\/)[A-Za-z0-9/_-]*$/, 'Route must be a local path without query strings');
+const routeSchema = z.string().trim().min(1).max(200).regex(/^\/(?:(?:[A-Za-z0-9_-]+|\[id\])(?:\/(?:[A-Za-z0-9_-]+|\[id\]))*|#(?:navbar|footer))?$/, 'Route must be a local path without query strings');
 
 export const cmsPageSeedSchema = z.object({
   name: z.string().trim().min(1).max(120),
   slug: slugSchema,
   route: routeSchema,
   schemaVersion: z.literal(1),
+  editable: z.boolean().optional(),
   data: z.record(z.string(), z.unknown()),
   componentStructureLocked: z.boolean().optional().default(false)
 }).strict();
@@ -30,7 +34,7 @@ export const cmsPublishBodySchema = cmsDraftBodySchema;
 
 export type PuckData = Record<string, unknown> & {
   root: { props: Record<string, unknown> };
-  content: unknown[];
+  content: { type: string; props: Record<string, unknown> & { id: string } }[];
   zones?: Record<string, unknown[]>;
 };
 
@@ -62,8 +66,8 @@ function fields(value: unknown, sample: unknown, path: string, ids: Set<string>,
   if (typeof sample === 'string') {
     safeText(value, path);
     if (key.endsWith('Href') && !approvedLinks.has(value)) fail(path, 'destination is not approved');
-    if (key === 'image') {
-      if (optionalImage && value === '') return;
+    if (key === 'image' || key.endsWith('Image')) {
+      if ((optionalImage || sample === '') && value === '') return;
       if (/^media:[0-9a-fA-F]{24}$/.test(value)) ids.add(value.slice(6).toLowerCase());
       else if (!/^\/images\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+\.(?:png|jpe?g|webp)$/i.test(value)) fail(path, 'image reference is not approved');
     }
@@ -82,7 +86,10 @@ function fields(value: unknown, sample: unknown, path: string, ids: Set<string>,
   }
   const defaults = object(sample, path);
   const record = exact(value, Object.keys(defaults), path);
-  for (const [name, item] of Object.entries(defaults)) fields(record[name], item, path + '.' + name, ids, name, optionalImage);
+  for (const [name, item] of Object.entries(defaults)) {
+    if (key === 'labels') safeText(record[name], path + '.' + name);
+    else fields(record[name], item, path + '.' + name, ids, name, optionalImage);
+  }
 }
 
 export function validatePuckData(input: unknown, slug: string): { data: PuckData; mediaIds: string[]; structure: string } {
@@ -93,7 +100,12 @@ export function validatePuckData(input: unknown, slug: string): { data: PuckData
   exact(data, data.zones === undefined ? ['root', 'content'] : ['root', 'content', 'zones'], 'data');
   exact(exact(data.root, ['props'], 'data.root').props, [], 'data.root.props');
   if (data.zones !== undefined) exact(data.zones, [], 'data.zones');
-  const content = data.content;
+  let content = data.content;
+  if (slug === 'home' && Array.isArray(content) && content.length === contract.data.content.length - 1) {
+    const index = contract.data.content.findIndex(section => section.type === 'Testimonials');
+    // Legacy Home snapshots predate testimonials. Compare them using the same fixed section order.
+    content = [...content.slice(0, index), contract.data.content[index], ...content.slice(index)];
+  }
   if (!Array.isArray(content) || content.length !== contract.data.content.length) fail('data.content', 'page section count is fixed');
   const mediaIds = new Set<string>();
   const structure = contract.data.content.map((section, index) => {

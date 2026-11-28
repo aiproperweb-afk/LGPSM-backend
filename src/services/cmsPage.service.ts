@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { Media, MediaPurpose } from '../models/Media';
 import { Page, PageStatus } from '../models/Page';
 import { cmsPageRepository } from '../repositories/cmsPage.repository';
-import { supportsPageContract, validateCmsSeedInput, validatePuckData } from '../validators/cmsPage.validator';
+import { editableCmsSlugs, supportsPageContract, supportedCmsSlugs, validateCmsSeedInput, validatePuckData } from '../validators/cmsPage.validator';
 import { mediaService } from './media.service';
 
 function cmsError(statusCode: number, code: string, message: string, extra?: Record<string, unknown>) {
@@ -22,16 +22,13 @@ function requireExpectedVersion(expectedVersion: number) {
 async function requirePage(id: string) {
   requirePageId(id);
   const page = await cmsPageRepository.findById(id);
-  if (!page) throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
+  if (!page || !editableCmsSlugs.includes(page.slug) || !supportsPageContract(page.slug, page.route, page.schemaVersion)) throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
   return page;
 }
 
 async function requireEditablePage(id: string, expectedVersion: number) {
   requireExpectedVersion(expectedVersion);
   const page = await requirePage(id);
-  if (!supportsPageContract(page.slug, page.route, page.schemaVersion)) {
-    throw cmsError(409, 'CMS_SCHEMA_UNSUPPORTED', 'This page does not use a supported CMS contract.');
-  }
   if (page.editVersion !== expectedVersion) throw editConflict(page.editVersion);
   return page;
 }
@@ -66,6 +63,28 @@ async function validateContent(data: unknown, slug: string) {
   const validated = validatePuckData(data, slug);
   await verifyMediaReferences(validated.mediaIds);
   return validated;
+}
+
+
+async function clientsSnapshots(defaults: ReturnType<typeof validatePuckData>['data']) {
+  const existing = await Page.find({ slug: { $in: defaults.content.map(section => section.props.id) } })
+    .select('slug draftData publishedData').lean();
+  const bySlug = new Map(existing.map(page => [page.slug, page]));
+  const snapshot = (field: 'draftData' | 'publishedData') => ({
+    ...defaults,
+    content: defaults.content.map(section => {
+      const slug = String(section.props.id);
+      const previous = bySlug.get(slug)?.[field];
+      if (!previous) return section;
+      try {
+        return validatePuckData(previous, slug).data.content[0];
+      } catch (error) {
+        if ((error as { code?: string }).code !== 'CMS_CONTENT_INVALID') throw error;
+        return section;
+      }
+    })
+  });
+  return { draftData: snapshot('draftData'), publishedData: snapshot('publishedData') };
 }
 
 export const cmsPageService = {
@@ -108,6 +127,7 @@ export const cmsPageService = {
   },
 
   async getPublishedPage(slug: string) {
+    if (!supportedCmsSlugs.includes(slug)) throw cmsError(404, 'PAGE_NOT_FOUND', 'Published page not found');
     const page = await cmsPageRepository.findPublishedBySlug(slug);
     if (!page) throw cmsError(404, 'PAGE_NOT_FOUND', 'Published page not found');
     return page;
@@ -117,7 +137,7 @@ export const cmsPageService = {
     if (!Array.isArray(input) || input.length === 0) {
       throw cmsError(400, 'CMS_SEED_EMPTY', 'Provide at least one populated page in the CMS seed file.');
     }
-    const seeds = input.map(validateCmsSeedInput);
+    const seeds = input.map(validateCmsSeedInput).filter(seed => editableCmsSlugs.includes(seed.slug));
     const slugs = new Set<string>();
     const routes = new Set<string>();
     for (const seed of seeds) {
@@ -130,13 +150,16 @@ export const cmsPageService = {
     const seededAt = new Date();
     const results = [];
     for (const seed of seeds) {
+      const snapshots = seed.slug === 'clients'
+        ? await clientsSnapshots(seed.data)
+        : { draftData: seed.data, publishedData: seed.data };
       const result = await cmsPageRepository.seedOnInsert({
         name: seed.name,
         slug: seed.slug,
         route: seed.route,
-        draftData: seed.data,
-        publishedData: seed.data,
-        status: PageStatus.PUBLISHED,
+        ...snapshots,
+        status: JSON.stringify(snapshots.draftData) === JSON.stringify(snapshots.publishedData)
+          ? PageStatus.PUBLISHED : PageStatus.DRAFT,
         schemaVersion: seed.schemaVersion,
         version: 1,
         editVersion: 0,
