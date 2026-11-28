@@ -244,6 +244,9 @@ function isSafeImage(value) {
         return true;
     return /^media:[0-9a-fA-F]{24}$/.test(value)
         || /^\/images\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+\.(?:png|jpe?g|webp)$/i.test(value)
+        || value === "/images/branding/Final-Logo.svg"
+        || value === "/images/branding/eventqrapp-logo-light.svg"
+        || value === "/images/landing/hero-wave-2.svg"
         || isHttpsUrl(value);
 }
 /** Only YouTube, Vimeo and direct https MP4/WebM files. Returns what to render, or null. */
@@ -406,7 +409,7 @@ const field = (label, bindings, extra = {}) => ({
 const listProps = { items: { kind: "array", max: 30, item: { text: longText, href: link } } };
 const optionProps = { options: { kind: "array", max: 30, item: { label: text } } };
 exports.COMPONENTS = {
-    ExistingSection: { label: "Existing section", category: "layout", props: { source: { kind: "text" } } },
+    ExistingSection: { label: "Existing section", category: "layout", props: { source: { kind: "text" }, visualHero: { kind: "bool" }, hero: slot(exports.GENERAL_CHILDREN.filter(type => !["ExistingSection", "ContactForm"].includes(type))) } },
     Section: container("Section", "layout"),
     Container: container("Container", "layout"),
     Row: container("Row", "layout"),
