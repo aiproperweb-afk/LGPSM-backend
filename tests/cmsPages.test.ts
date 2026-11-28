@@ -314,6 +314,30 @@ describe('CMS pages', () => {
       .toEqual(homepageSeed[0].data);
   });
 
+  it('keeps visual Contact drafts separate and requires a working Contact form to publish', async () => {
+    await cmsPageService.seedPages(homepageSeed);
+    const contact = await Page.findOne({ slug: 'contact' });
+    const home = await Page.findOne({ slug: 'home' });
+    const data = {
+      root: { props: { builder: 'contact', schemaVersion: 2 } },
+      content: [{
+        type: 'Heading',
+        props: { id: 'contact-heading', text: 'Contact draft', style: { mobile: { width: '75%' } } }
+      }]
+    };
+    const headers = { ...adminHeaders, 'If-Match': '0' };
+    const draftPath = (id: unknown) => '/api/v1/admin/pages/' + String(id) + '/draft';
+    expect((await request(app).patch(draftPath(home?.id)).set(headers).send({ data })).status).toBe(400);
+    const draft = await request(app).patch(draftPath(contact?.id)).set(headers).send({ data });
+    expect(draft.status).toBe(200);
+    expect(draft.body.data.draftData).toEqual(data);
+    const rejected = await request(app).post('/api/v1/admin/pages/' + contact?.id + '/publish')
+      .set({ ...adminHeaders, 'If-Match': '1' }).send({ data });
+    expect(rejected.status).toBe(400);
+    const live = await request(app).get('/api/v1/public/pages/contact');
+    expect(live.body.data.content.root.props).toEqual({});
+  });
+
   it('lists only the requested public entries even with old dashboard records in the database', async () => {
     const retired = await createPage({ name: 'Dashboard', slug: 'workspace-dashboard', route: '/dashboard' });
     expect(await cmsPageService.seedPages(homepageSeed)).toHaveLength(7);

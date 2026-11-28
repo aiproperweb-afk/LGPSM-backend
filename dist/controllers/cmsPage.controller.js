@@ -62,6 +62,8 @@ exports.cmsPageController = {
         try {
             res.set('Cache-Control', 'no-store');
             const page = await cmsPage_service_1.cmsPageService.getPublishedPage(req.params.slug);
+            if (page.slug === 'contact')
+                res.set('X-Contact-CMS-Schema', '2');
             return res.status(200).json({
                 success: true,
                 data: {

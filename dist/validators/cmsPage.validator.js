@@ -9,6 +9,7 @@ exports.validatePuckData = validatePuckData;
 exports.validateCmsSeedInput = validateCmsSeedInput;
 const zod_1 = require("zod");
 const cms_pages_v1_json_1 = __importDefault(require("./cms-pages.v1.json"));
+const contactBuilder_schema_1 = require("./contactBuilder.schema");
 exports.MAX_CMS_PAYLOAD_BYTES = 90 * 1024;
 const MAX_TEXT_LENGTH = 4000;
 const contracts = new Map(cms_pages_v1_json_1.default.map(page => [page.slug, page]));
@@ -93,10 +94,19 @@ function fields(value, sample, path, ids, key = '', optionalImage = false) {
             fields(record[name], item, path + '.' + name, ids, name, optionalImage);
     }
 }
-function validatePuckData(input, slug) {
+function validatePuckData(input, slug, publishing = false) {
     const contract = contracts.get(slug);
     if (!contract)
         fail('data', 'page contract is unsupported');
+    if (slug === 'contact' && (0, contactBuilder_schema_1.isBuilderData)(input)) {
+        const result = (0, contactBuilder_schema_1.validateBuilderData)(input);
+        if (!result.ok)
+            fail(result.path, result.message);
+        const problems = publishing ? (0, contactBuilder_schema_1.publishProblems)(result.data) : [];
+        if (problems.length)
+            fail('data', problems[0]);
+        return { data: result.data, mediaIds: result.mediaIds, structure: 'contact-builder-v2' };
+    }
     const data = object(input, 'data');
     if (Buffer.byteLength(JSON.stringify(data), 'utf8') > exports.MAX_CMS_PAYLOAD_BYTES)
         fail('data', 'payload exceeds maximum size');
