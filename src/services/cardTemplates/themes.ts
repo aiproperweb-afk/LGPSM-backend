@@ -2,14 +2,15 @@ import type { CardDesign } from '../../models/Template';
 
 /**
  * The cards designed for one event type each (Figma "Event Management Invitation Card": Business & Corporate, Festivals & Culture,
- * Personal & Family > Birthday).
+ * Personal & Family).
  * Every one is a fixed background with the same details as the master card laid out as a column, so only the styling and the order
  * differ: they are described here and drawn by themedCard.ts. All sizes are Figma pixels on the 393 x 682 card.
  */
 export const THEMED_DESIGNS = [
   'BUSINESS_CONFERENCE', 'PRODUCT_LAUNCH', 'NETWORKING_EVENT', 'CORPORATE_MEET',
   'FESTIVAL_CELEBRATION', 'PUJA_GATHERING', 'CULTURAL_PROGRAM', 'COMMUNITY_FAIR',
-  'BIRTHDAY_GOLD', 'BIRTHDAY_LILAC', 'BIRTHDAY_BLUSH', 'BIRTHDAY_RAINBOW'
+  'BIRTHDAY_GOLD', 'BIRTHDAY_LILAC', 'BIRTHDAY_BLUSH', 'BIRTHDAY_RAINBOW',
+  'BABY_SHOWER', 'ANNAPRASAN', 'GRIHA_PRAVESH', 'ANNIVERSARY', 'ENGAGEMENT', 'HALDI', 'MEHENDI', 'SANGEET', 'WEDDING_RECEPTION'
 ] as const;
 export type ThemedDesign = (typeof THEMED_DESIGNS)[number];
 
@@ -35,7 +36,8 @@ export interface TextStyle {
 
 /** `details` is the date and the location with the line between them */
 /** `eyebrow` is a fixed line of the design's own; `datecard` is the date set large (month, weekday | day | time) for a one-day event */
-export type ThemeBlock = 'logo' | 'eyebrow' | 'title' | 'info' | 'qr' | 'details' | 'when' | 'where' | 'datecard' | 'divider' | 'pin';
+/** `divider2` is the design's ornament line drawn a second time */
+export type ThemeBlock = 'logo' | 'eyebrow' | 'title' | 'info' | 'qr' | 'details' | 'when' | 'where' | 'datecard' | 'divider' | 'divider2' | 'pin';
 
 export interface CardTheme {
   /** file name (without extension) of the background in assets/cardTemplates/themes; the sample logo is `<key>.logo.png` */
@@ -60,9 +62,9 @@ export interface CardTheme {
   safe: [number, number];
   /**
    * `circle`: a white ring the logo sits inside. `frame`: a picture frame of the design (birthday photos): the event's picture fills
-   * the opening, `inner` across (a circle unless `radius` is given), over the frame's artwork when it has one.
+   * the opening, `inner` across (a circle unless `radius` is given; an oval when `innerHeight` differs), over the frame's artwork when it has one.
    */
-  logo: { size: number; circle?: { border: string }; frame?: { inner: number; radius?: number; art?: string }; noSample?: boolean };
+  logo: { size: number; circle?: { border: string }; frame?: { inner: number; innerHeight?: number; radius?: number; art?: string }; noSample?: boolean };
   eyebrow?: { text: string; style: TextStyle };
   datecard?: { month: TextStyle; small: TextStyle; day: TextStyle; rule: string; gap: number };
   title: TextStyle;
@@ -70,7 +72,10 @@ export interface CardTheme {
   secondary: TextStyle;
   infoGap: number;
   /** an empty `labelText` draws the QR box without a caption, as the design has it */
-  qr: { size: number; inset: number; border: string; borderWidth: number; radius: number; label: TextStyle; labelText: string; labelAbove?: boolean; labelGap: number };
+  /** `art`: an ornamental border picture used instead of the drawn one */
+  qr: { size: number; inset: number; border: string; borderWidth: number; radius: number; label: TextStyle; labelText: string; labelAbove?: boolean; labelGap: number; art?: string };
+  /** a rounded box the design draws around the date and location (`details`) */
+  box?: { color: string; width: number; radius: number; padY: number };
   when: TextStyle;
   where: TextStyle;
   rule?: { color: string; opacity: number; width: number; gapBefore: number; gapAfter: number };
@@ -100,6 +105,12 @@ const BIRTHDAY_SAMPLE = {
   primary: 'Primary Information',
   secondary: 'Secondary Information',
   dateTime: 'Thu 31 Dec 2026 2:00 PM – Fri 1 Jan 2027 4:00 PM'
+};
+const FAMILY_SAMPLE = {
+  primary: 'Primary Information',
+  secondary: 'Secondary Information',
+  dateTime: 'Thu 31 Dec 2026 2:00 PM – Fri 1 Jan 2027 4:00 PM',
+  location: '24, Shanti Pally, Near Ruby Crossing, Kolkata - 700107.'
 };
 const FESTIVAL_SAMPLE = {
   primary: 'Primary Information',
@@ -300,5 +311,139 @@ export const THEMES: Record<ThemedDesign, CardTheme> = {
     when: text('Chewy', 400, 18, '#FF5CA2', 24, { lines: 2, width: 300 }),
     where: text('Chewy', 400, 15, '#FF5CA2', 19, { lines: 3, width: 300 }),
     datecard: { month: text('Chewy', 400, 24, '#FF5CA2', 28), small: text('Chewy', 400, 15, '#FF5CA2', 19, { width: 100 }), day: text('Chewy', 400, 28, '#FF5CA2', 37, { width: 44 }), rule: '#FF9AC5', gap: 12 }
+  },
+  BABY_SHOWER: {
+    key: 'baby-shower', name: 'Baby Shower Blue Ribbon', category: PERSONAL, subcategory: 'Baby Shower',
+    palette: { background: '#FAF7F2', primary: '#07344E', accent: '#E78221', ink: '#00283F', heading: 'serif' },
+    sample: { ...FAMILY_SAMPLE, title: 'Your Sample Event Title Goes here', dateTime: '22 January, Friday | at 12:00pm' },
+    order: ['logo', 'title', 'info', 'qr', 'when', 'where'], gaps: { title: 5, info: 26, qr: 33, when: 32, where: 9 }, region: [18, 644], safe: [14, 668],
+    logo: { size: 120, frame: { inner: 104, art: 'baby-shower.logo' } },
+    title: text('Birthstone', 400, 48, '#07344E', 50, { lines: 3, width: 330 }),
+    primary: text('Inter', 700, 24, '#004387', 29),
+    secondary: text('Inter', 700, 16, '#E78221', 19),
+    infoGap: 8,
+    qr: qrBox('#78A5BF', text('Alice', 400, 15, '#165A82', 17, { upper: true }), { size: 150, borderWidth: 2, radius: 8, labelGap: 11 }),
+    when: text('Alice', 400, 18, '#00283F', 21, { lines: 2, width: 314 }),
+    where: text('Alice', 400, 18, '#00283F', 23, { lines: 3, width: 314 })
+  },
+  ANNAPRASAN: {
+    key: 'annaprasan', name: 'Annaprasan Lotus', category: PERSONAL, subcategory: 'Annaprasan',
+    palette: { background: '#F2D6DA', primary: '#E42558', accent: '#F26B8F', ink: '#403D15', heading: 'serif' },
+    sample: { ...FAMILY_SAMPLE, title: 'Sample Event title goes here', dateTime: '1 January, Friday | at 3:00pm' },
+    order: ['logo', 'title', 'info', 'qr', 'when', 'where'], gaps: { title: 14, info: 29, qr: 23, when: 25, where: 9 }, region: [34, 643], safe: [26, 658],
+    logo: { size: 144, frame: { inner: 124, art: 'annaprasan.logo' } },
+    title: text('Bigshot One', 400, 49, '#E42558', 51, { lines: 3, width: 340 }),
+    primary: text('Alice', 400, 24, '#403D15', 26, { width: 300 }),
+    secondary: text('Alice', 400, 18, '#403D15', 23, { width: 300 }),
+    infoGap: 0,
+    qr: qrBox('#F26B8F', text('Alice', 400, 15, '#403D15', 17, { upper: true }), { size: 120, borderWidth: 2, radius: 5, labelGap: 10 }),
+    when: text('Alice', 400, 18, '#403D15', 21, { lines: 2, width: 300 }),
+    where: text('Alice', 400, 18, '#403D15', 23, { lines: 3, width: 314 })
+  },
+  GRIHA_PRAVESH: {
+    key: 'griha-pravesh', name: 'Griha Pravesh Marigold', category: PERSONAL, subcategory: 'Griha Pravesh',
+    palette: { background: '#F6F3EC', primary: '#BA3127', accent: '#ECB45B', ink: '#BA3127', heading: 'serif' },
+    sample: { ...FAMILY_SAMPLE, title: 'Sample Event title goes here', dateTime: '1 January, Friday | at 3:00pm' },
+    order: ['logo', 'title', 'info', 'qr', 'when', 'where'], gaps: { title: 27, info: 26, qr: 30, when: 17, where: 7 }, region: [37, 649], safe: [28, 666],
+    logo: { size: 140, frame: { inner: 128, art: 'griha-pravesh.logo' } },
+    title: text('Bigshot One', 400, 49, '#BA3127', 51, { lines: 3, width: 340 }),
+    primary: text('Alegreya SC', 700, 20, '#BA3127', 27, { width: 250 }),
+    secondary: text('Alegreya SC', 700, 15, '#BA3127', 20, { width: 250 }),
+    infoGap: 2,
+    qr: qrBox('#ECB45B', text('Alegreya SC', 400, 15, '#BA3127', 20, { upper: true }), { size: 120, inset: 5, borderWidth: 2, radius: 5, labelGap: 9 }),
+    when: text('Alegreya SC', 700, 18, '#BA3127', 24, { lines: 2, width: 320 }),
+    where: text('Alegreya SC', 400, 18, '#BA3127', 24, { lines: 3, width: 338 })
+  },
+  ANNIVERSARY: {
+    key: 'anniversary', name: 'Anniversary Sage Florals', category: PERSONAL, subcategory: 'Anniversary',
+    palette: { background: '#E2E6D8', primary: '#45573E', accent: '#8E5800', ink: '#373C41', heading: 'serif' },
+    sample: { ...FAMILY_SAMPLE, title: 'Sample Anniversary Event title goes here', location: 'Grand Ballroom, 25 Park Street, Kolkata, WB, India' },
+    order: ['logo', 'title', 'info', 'details', 'qr'], gaps: { title: 10, info: 17, details: 26, qr: 16 }, region: [27, 653], safe: [18, 668],
+    logo: { size: 133, frame: { inner: 117, art: 'anniversary.frame' } },
+    title: text('Abhaya Libre ExtraBold', 800, 34, '#45573E', 40, { lines: 3, width: 320 }),
+    primary: text('Alan Sans', 400, 24, '#8E5800', 29, { width: 320 }),
+    secondary: text('Alan Sans', 400, 18, '#4D644F', 22, { width: 320 }),
+    infoGap: 2,
+    qr: qrBox('#45573E', text('Montserrat', 400, 12, '#45573E', 14), { size: 137, borderWidth: 1, radius: 5, labelGap: 8 }),
+    when: text('Inter', 700, 17, '#373C41', 21, { lines: 2, width: 327 }),
+    where: text('Inter', 400, 18, '#373C41', 22, { lines: 3, width: 320 }),
+    rule: { color: '#004387', opacity: 0.5, width: 327, gapBefore: 10, gapAfter: 10 },
+    box: { color: '#6E7136', width: 345, radius: 10, padY: 12 }
+  },
+  ENGAGEMENT: {
+    key: 'engagement', name: 'Engagement Pink Blossoms', category: PERSONAL, subcategory: 'Engagement',
+    palette: { background: '#F8DDE1', primary: '#64413E', accent: '#DE354C', ink: '#64413E', heading: 'serif' },
+    sample: { ...FAMILY_SAMPLE, title: 'Your sample Event title goes here' },
+    order: ['logo', 'title', 'when', 'info', 'qr', 'where'], gaps: { title: 15, when: 16, info: 14, qr: 24, where: 20 }, region: [40, 631], safe: [32, 642],
+    logo: { size: 118, frame: { inner: 113, art: 'engagement.logo' } },
+    title: text('Berkshire Swash', 400, 32, '#64413E', 40, { lines: 3, width: 328, tracking: -0.64 }),
+    primary: text('Berkshire Swash', 400, 24, '#DE354C', 39, { width: 328, tracking: -0.48 }),
+    secondary: text('Berkshire Swash', 400, 18, '#64413E', 29, { width: 328, tracking: -0.36 }),
+    infoGap: 0,
+    qr: qrBox('#64413E', text('Aleo', 400, 15, '#64413E', 18), { size: 139, borderWidth: 2, radius: 12, labelGap: 13 }),
+    when: text('Aleo', 500, 14, '#64413E', 23, { lines: 2, width: 345 }),
+    where: text('Aleo', 500, 16, '#64413E', 23, { lines: 3, width: 300 })
+  },
+  HALDI: {
+    key: 'haldi', name: 'Haldi Sunflowers', category: PERSONAL, subcategory: 'Haldi',
+    palette: { background: '#8F2A2B', primary: '#8F2A2B', accent: '#F6AD71', ink: '#3A1010', heading: 'serif' },
+    sample: { ...FAMILY_SAMPLE, title: 'Sample Event title goes here for you!' },
+    order: ['logo', 'title', 'divider', 'info', 'qr', 'when', 'divider2', 'where'], gaps: { title: 17, divider: 21, info: 8, qr: 25, when: 22, divider2: 8, where: 6 }, region: [46, 625], safe: [40, 642],
+    logo: { size: 120, frame: { inner: 120, art: 'haldi.logo' } },
+    title: text('Berkshire Swash', 400, 32, '#F6AD71', 37, { lines: 3, width: 325, tracking: -0.64 }),
+    primary: text('Alice', 400, 23, '#FFFFFF', 34, { upper: true, width: 310 }),
+    secondary: text('Alice', 400, 18, '#FFA41B', 27, { upper: true, width: 310 }),
+    infoGap: 0,
+    // the design has no caption under its code
+    qr: qrBox('#F6AD71', text('Alice', 400, 12, '#FFFFFF', 16), { size: 120, borderWidth: 2, radius: 5, labelText: '', labelGap: 0 }),
+    when: text('Alice', 400, 19, '#FFFFFF', 22, { upper: true, lines: 2, width: 255 }),
+    where: text('Alice', 400, 17, '#FFFFFF', 19, { lines: 3, width: 311 }),
+    divider: { file: 'haldi-divider', width: 87, height: 7 }
+  },
+  MEHENDI: {
+    key: 'mehendi', name: 'Mehendi Green Arch', category: PERSONAL, subcategory: 'Mehendi',
+    palette: { background: '#F5FFE3', primary: '#494D09', accent: '#888C49', ink: '#1D1F03', heading: 'serif' },
+    sample: { ...FAMILY_SAMPLE, title: 'Sample Event title goes here' },
+    // the last detail sits in the darker band at the foot of the card, under the code that straddles its edge
+    order: ['logo', 'title', 'divider', 'when', 'info', 'qr', 'where'], gaps: { title: 20, divider: 24, when: 15, info: 24, qr: 22, where: 28 }, region: [22, 653], safe: [18, 670],
+    logo: { size: 130, frame: { inner: 126, art: 'mehendi.logo' } },
+    title: text('IM Fell Great Primer', 400, 40, '#494D09', 40, { lines: 3, width: 290 }),
+    primary: text('IM Fell Great Primer', 400, 30, '#494D09', 34, { width: 320 }),
+    secondary: text('IM Fell Great Primer', 400, 24, '#494D09', 34, { width: 320 }),
+    infoGap: 0,
+    qr: qrBox('#888C49', text('Inter', 400, 12, '#494D09', 16), { size: 120, borderWidth: 2, radius: 14, labelText: '', labelGap: 0 }),
+    when: text('Inter', 700, 18, '#202020', 22, { lines: 2, width: 260 }),
+    where: text('Inter', 600, 14, '#1D1F03', 20, { lines: 3, width: 270 }),
+    divider: { file: 'mehendi-divider', width: 171, height: 11 }
+  },
+  SANGEET: {
+    key: 'sangeet', name: 'Sangeet Lanterns', category: PERSONAL, subcategory: 'Sangeet',
+    palette: { background: '#FDF6EC', primary: '#772634', accent: '#D6912A', ink: '#772634', heading: 'serif' },
+    sample: { ...FAMILY_SAMPLE, title: 'Sample Event title goes here' },
+    order: ['logo', 'title', 'info', 'qr', 'divider', 'where', 'when'], gaps: { title: 12, info: 32, qr: 27, divider: 20, where: 15, when: 12 }, region: [25, 636], safe: [18, 648],
+    logo: { size: 151, frame: { inner: 126, innerHeight: 147, art: 'sangeet.logo' } },
+    title: text('Cinzel Decorative', 700, 29, '#D6912A', 39, { upper: true, lines: 3, width: 292 }),
+    primary: text('Chonburi', 400, 21, '#A45B00', 24, { upper: true, width: 320, lines: 2 }),
+    secondary: text('Chonburi', 400, 15, '#C17800', 24, { upper: true, width: 320 }),
+    infoGap: 0,
+    qr: qrBox('#D6912A', text('Cinzel', 700, 12, '#D6912A', 16), { size: 122, borderWidth: 2, radius: 5, labelText: '', labelGap: 0 }),
+    when: text('Cinzel', 700, 14, '#772634', 19, { lines: 2, width: 287 }),
+    where: text('Cinzel', 700, 14, '#D6912A', 19, { lines: 3, width: 287 }),
+    divider: { file: 'sangeet-divider', width: 130, height: 14 }
+  },
+  WEDDING_RECEPTION: {
+    key: 'wedding-reception', name: 'Wedding Reception Blush', category: PERSONAL, subcategory: 'Wedding Reception',
+    palette: { background: '#FFFBF9', primary: '#202020', accent: '#C98B72', ink: '#202020', heading: 'serif' },
+    sample: { ...FAMILY_SAMPLE, title: 'Sample Event title goes here', location: 'Saltlake, Kolkata' },
+    order: ['logo', 'title', 'qr', 'info', 'pin', 'where', 'when'], gaps: { title: 15, qr: 20, info: 4, pin: 12, where: 0, when: 0 }, region: [10, 655], safe: [8, 668],
+    logo: { size: 186, frame: { inner: 136, art: 'wedding-reception.frame' } },
+    title: text('Ancizar Serif', 400, 40, '#202020', 36, { lines: 3, width: 262 }),
+    primary: text('Ancizar Serif', 600, 26, '#202020', 33),
+    secondary: text('Ancizar Serif', 400, 22, '#202020', 31),
+    infoGap: 0,
+    qr: qrBox('#202020', text('Ancizar Serif', 400, 12, '#202020', 30, { upper: true }), { size: 151, inset: 17, borderWidth: 0, labelGap: 3, art: 'wedding-reception-qr' }),
+    when: text('Ancizar Serif', 400, 16, '#202020', 28, { lines: 2, width: 355 }),
+    where: text('Ancizar Serif', 400, 22, '#202020', 30, { lines: 3, width: 320 }),
+    pin: { file: 'wedding-reception-pin', size: 20 }
   }
 };

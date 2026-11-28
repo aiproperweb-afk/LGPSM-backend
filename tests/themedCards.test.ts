@@ -64,12 +64,23 @@ describe('themed cards', () => {
         expect((await pixels(card)).equals(await pixels(without))).toBe(false);
       }
     }
+    // the Personal & Family cards: round, eight-sided and oval frames, and a wreath
+    for (const design of ['BABY_SHOWER', 'ANNAPRASAN', 'GRIHA_PRAVESH', 'ANNIVERSARY', 'ENGAGEMENT', 'HALDI', 'MEHENDI', 'SANGEET', 'WEDDING_RECEPTION'] as const) {
+      const card = await renderThemedCard(design, { ...THEMES[design].sample, qr, logo: photo });
+      expect(await read(card)).toBe(CODE);
+      expect((await pixels(card)).equals(await pixels(await renderThemedCard(design, { ...THEMES[design].sample, qr })))).toBe(false);
+    }
     // the rainbow card's round frame is at the top: its middle shows the picture
     const framedCard = await renderThemedCard('BIRTHDAY_RAINBOW', { ...THEMES.BIRTHDAY_RAINBOW.sample, date: THEMES.BIRTHDAY_RAINBOW.sampleDate, qr, logo: photo });
     const [r, g, b] = await colourAt(framedCard, 393, 246);
     expect(g).toBeGreaterThan(100);
     expect(r).toBeLessThan(60);
     expect(b).toBeLessThan(100);
+  });
+
+  it('has one card for every Personal & Family event type', () => {
+    const subcategories = new Set(THEMED_DESIGNS.map((d) => THEMES[d]).filter((t) => t.category === 'Personal & Family').map((t) => t.subcategory));
+    expect([...subcategories].sort()).toEqual(['Annaprasan', 'Anniversary', 'Baby Shower', 'Birthday', 'Engagement', 'Griha Pravesh', 'Haldi', 'Mehendi', 'Sangeet', 'Wedding Reception']);
   });
 
   it('gives the date in parts for a one-day event only', () => {

@@ -24,7 +24,10 @@ const METRICS: Record<string, [number, number]> = {
   Inter: [0.969, 0.241], Poppins: [1.05, 0.35], Montserrat: [0.968, 0.251], Judson: [0.908, 0.255],
   'Lobster Two': [1.0, 0.25], Alice: [0.909, 0.234], 'Luckiest Guy': [0.703, 0.297],
   Alkatra: [1.095, 0.589], 'Abril Fatface': [1.058, 0.291], Nunito: [1.011, 0.353], Chewy: [0.979, 0.303], 'Young Serif': [1.046, 0.366],
-  Alexandria: [0.968, 0.251]
+  Alexandria: [0.968, 0.251],
+  Birthstone: [0.9, 0.35], 'Abhaya Libre ExtraBold': [0.84, 0.34], 'Alan Sans': [0.99, 0.31], 'Alegreya SC': [1.016, 0.345], Aleo: [0.905, 0.295],
+  'Ancizar Serif': [0.9, 0.3], 'Berkshire Swash': [0.98, 0.262], 'Bigshot One': [0.869, 0.179], Chonburi: [0.95, 0.25], Cinzel: [0.976, 0.372],
+  'Cinzel Decorative': [0.976, 0.372], 'IM Fell Great Primer': [0.948, 0.274]
 };
 
 const round = (n: number) => Math.round(n * 100) / 100;
@@ -40,7 +43,9 @@ const cached = (file: string) => {
 interface Fitted { w: Wrapped; style: TextStyle; height: number }
 
 async function fitted(raw: string, style: TextStyle): Promise<Fitted> {
-  const value = style.upper ? raw.toLocaleUpperCase() : raw;
+  const cased = style.upper ? raw.toLocaleUpperCase() : raw;
+  // a time and its AM/PM stay on one line
+  const value = cased.replace(/(\d:\d\d) (AM|PM)\b/g, '$1\u00a0$2');
   // (the font file must exist: a style naming a family that is not bundled would silently fall back to a system font)
   if (!fontFileFor(style.family, style.weight)) throw new Error(`No bundled font for ${style.family}`);
   const w = await fit(value, style.family, style.weight, style.size, style.min, style.lines, style.width ?? 345);
@@ -61,19 +66,26 @@ async function picture(input: Buffer, width: number, height: number, s: number) 
   return sharp(input, { failOn: 'none' }).rotate().resize(Math.round(width * s), Math.round(height * s), { fit: 'inside' }).png().toBuffer({ resolveWithObject: true });
 }
 
-/** The event's picture in the design's photo frame: it fills the opening when it is about square, else it stands whole on white. */
-async function framed(logo: Buffer, inner: number, radius: number | undefined, s: number): Promise<Buffer> {
+/**
+ * The event's picture in the design's photo frame: it fills the opening when it is about square, else it stands whole on white. The opening is
+ * a circle, a rounded square when `radius` is given, or an oval when it is taller than it is wide (`innerHeight`).
+ */
+async function framed(logo: Buffer, inner: number, radius: number | undefined, s: number, innerHeight: number = inner): Promise<Buffer> {
   const side = Math.round(inner * s);
+  const tall = Math.round(innerHeight * s);
   const upright = await sharp(logo, { failOn: 'none' }).rotate().png().toBuffer();
   const { width = 1, height = 1, isOpaque } = { ...(await sharp(upright).metadata()), ...(await sharp(upright).stats()) };
   const square = width / height > 0.74 && width / height < 1.35 && isOpaque;
   // in a circle, a picture that must stay whole is kept clear of the curve
   const room = square ? side : Math.round(side * (radius === undefined ? 0.7 : 0.86));
-  const picture = await sharp(upright).resize(room, room, { fit: square ? 'cover' : 'inside' }).png().toBuffer({ resolveWithObject: true });
-  const r = radius === undefined ? side / 2 : Math.round(radius * s);
-  const mask = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${side}" height="${side}"><rect width="${side}" height="${side}" rx="${r}" fill="#fff"/></svg>`);
-  const filled = await sharp({ create: { width: side, height: side, channels: 4, background: '#ffffff' } })
-    .composite([{ input: picture.data, left: Math.round((side - picture.info.width) / 2), top: Math.round((side - picture.info.height) / 2) }]).png().toBuffer();
+  const roomTall = square ? tall : room;
+  const picture = await sharp(upright).resize(room, roomTall, { fit: square ? 'cover' : 'inside' }).png().toBuffer({ resolveWithObject: true });
+  const opening = radius === undefined
+    ? `<ellipse cx="${side / 2}" cy="${tall / 2}" rx="${side / 2}" ry="${tall / 2}" fill="#fff"/>`
+    : `<rect width="${side}" height="${tall}" rx="${Math.round(radius * s)}" fill="#fff"/>`;
+  const mask = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${side}" height="${tall}">${opening}</svg>`);
+  const filled = await sharp({ create: { width: side, height: tall, channels: 4, background: '#ffffff' } })
+    .composite([{ input: picture.data, left: Math.round((side - picture.info.width) / 2), top: Math.round((tall - picture.info.height) / 2) }]).png().toBuffer();
   return sharp(filled).composite([{ input: mask, blend: 'dest-in' }]).png().toBuffer();
 }
 
@@ -85,13 +97,13 @@ async function logoBlock(theme: CardTheme, logo: Buffer | null, sample: boolean,
     if (!logo && !(sample && !theme.logo.noSample)) return null;
     // without the event's own picture, a preview shows the designers' whole frame and picture
     const art = logo ? (frame.art ? await picture(cached(`${frame.art}.png`), size, size, s) : null) : await picture(cached(`${theme.key}.logo.png`), size, size, s);
-    const photo = logo ? await framed(logo, frame.inner, frame.radius, s) : null;
+    const photo = logo ? await framed(logo, frame.inner, frame.radius, s, frame.innerHeight) : null;
     return {
       key: 'logo',
       height: size,
       draw: (top, _svg, layers) => {
         if (art) centred(layers, art.data, art.info.width, art.info.height, top);
-        if (photo) centred(layers, photo, Math.round(frame.inner * s), Math.round(frame.inner * s), top);
+        if (photo) centred(layers, photo, Math.round(frame.inner * s), Math.round((frame.innerHeight ?? frame.inner) * s), top);
       }
     };
   }
@@ -115,14 +127,18 @@ async function qrBlock(theme: CardTheme, qr: Buffer, scanLabel: string, size: nu
   const inner = Math.round((size - 2 * q.inset) * s);
   const png = await sharp(qr, { failOn: 'none' }).resize(inner, inner, { fit: 'contain', background: '#ffffff' }).png().toBuffer();
   const label = q.labelText ? await fitted(scanLabel, q.label) : null;
+  // a design with an ornamental border draws it around a plain white square
+  const art = q.art ? await picture(cached(`${q.art}.png`), size, size, s) : null;
   return {
     key: 'qr',
     height: size + (label ? q.labelGap + label.height : 0),
     draw: (top, svg, layers) => {
       const boxTop = label && q.labelAbove ? top + label.height + q.labelGap : top;
       const x = (MASTER_WIDTH - size) / 2;
-      svg.push(`<rect x="${round((x + q.borderWidth / 2) * s)}" y="${round((boxTop + q.borderWidth / 2) * s)}" width="${round((size - q.borderWidth) * s)}" height="${round((size - q.borderWidth) * s)}" rx="${round(q.radius * s)}" fill="#ffffff" stroke="${q.border}" stroke-width="${round(q.borderWidth * s)}"/>`);
+      if (art) svg.push(`<rect x="${round((x + q.inset) * s)}" y="${round((boxTop + q.inset) * s)}" width="${round((size - 2 * q.inset) * s)}" height="${round((size - 2 * q.inset) * s)}" fill="#ffffff"/>`);
+      else svg.push(`<rect x="${round((x + q.borderWidth / 2) * s)}" y="${round((boxTop + q.borderWidth / 2) * s)}" width="${round((size - q.borderWidth) * s)}" height="${round((size - q.borderWidth) * s)}" rx="${round(q.radius * s)}" fill="#ffffff" stroke="${q.border}" stroke-width="${round(q.borderWidth * s)}"/>`);
       layers.push({ input: png, left: Math.round((x + q.inset) * s), top: Math.round((boxTop + q.inset) * s) });
+      if (art) layers.push({ input: art.data, left: Math.round((MASTER_WIDTH * s - art.info.width) / 2), top: Math.round(boxTop * s) });
       if (label) svg.push(textSvg(label, q.labelAbove ? top : boxTop + size + q.labelGap, s));
     }
   };
@@ -201,10 +217,15 @@ export async function renderThemedCard(design: ThemedDesign, input: MasterCardIn
         const l = where ? await fitted(where, narrow(theme.where)) : null;
         const rule = d && l ? theme.rule : undefined;
         const between = rule ? rule.gapBefore + 1 + rule.gapAfter : d && l ? theme.detailsGap ?? 8 : 0;
+        const box = theme.box;
+        const pad = box?.padY ?? 0;
+        const inside = (d?.height ?? 0) + between + (l?.height ?? 0);
         return {
           key,
-          height: (d?.height ?? 0) + between + (l?.height ?? 0),
-          draw: (top, svg) => {
+          height: inside + 2 * pad,
+          draw: (start, svg) => {
+            if (box) svg.push(`<rect x="${round(((MASTER_WIDTH - box.width) / 2) * s)}" y="${round(start * s)}" width="${round(box.width * s)}" height="${round((inside + 2 * pad) * s)}" rx="${round(box.radius * s)}" fill="none" stroke="${box.color}" stroke-width="${round(s)}"/>`);
+            const top = start + pad;
             if (d) svg.push(textSvg(d, top, s));
             if (rule) {
               const y = round((top + d!.height + rule.gapBefore + 0.5) * s);
@@ -216,7 +237,8 @@ export async function renderThemedCard(design: ThemedDesign, input: MasterCardIn
       }
       // ornaments: only beside the details they belong to
       case 'pin': return theme.pin && (when || where) ? imageBlock(key, theme.pin.file, theme.pin.size, theme.pin.size, s) : null;
-      case 'divider': {
+      case 'divider':
+      case 'divider2': {
         const line = theme.divider;
         if (!line) return null;
         if (line.file) return imageBlock(key, line.file, line.width, line.height, s);
@@ -227,7 +249,7 @@ export async function renderThemedCard(design: ThemedDesign, input: MasterCardIn
 
   let blocks = (await Promise.all(theme.order.map(build))).filter((b): b is Block => !!b);
   // a divider with nothing on one side of it divides nothing
-  blocks = blocks.filter((b, i) => b.key !== 'divider' || (i > 0 && i < blocks.length - 1));
+  blocks = blocks.filter((b, i) => (b.key !== 'divider' && b.key !== 'divider2') || (i > 0 && i < blocks.length - 1));
 
   const gaps = blocks.map((b, i) => (i === 0 ? 0 : theme.gaps[b.key] ?? 0));
   const total = () => sum(blocks.map((b) => b.height)) + sum(gaps);

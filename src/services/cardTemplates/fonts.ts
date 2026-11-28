@@ -42,6 +42,19 @@ const FONT_FILES: Record<string, string> = {
   'Nunito:700': 'Nunito-Bold.ttf',
   'Chewy:400': 'Chewy-Regular.ttf',
   'Young Serif:400': 'YoungSerif-Regular.ttf',
+  'Abhaya Libre ExtraBold:800': 'AbhayaLibre-ExtraBold.ttf',
+  'Alan Sans:400': 'AlanSans-Regular.ttf',
+  'Alegreya SC:400': 'AlegreyaSC-Regular.ttf',
+  'Alegreya SC:700': 'AlegreyaSC-Bold.ttf',
+  'Aleo:400': 'Aleo-Regular.ttf',
+  'Aleo:500': 'Aleo-Medium.ttf',
+  'Ancizar Serif:600': 'AncizarSerif-SemiBold.ttf',
+  'Berkshire Swash:400': 'BerkshireSwash-Regular.ttf',
+  'Bigshot One:400': 'BigshotOne-Regular.ttf',
+  'Chonburi:400': 'Chonburi-Regular.ttf',
+  'Cinzel:700': 'Cinzel-Bold.ttf',
+  'Cinzel Decorative:700': 'CinzelDecorative-Bold.ttf',
+  'IM Fell Great Primer:400': 'IMFellGreatPrimer-Regular.ttf',
 };
 
 /** Families tried, in order, when a glyph is missing (Bengali and Devanagari names, for example). */

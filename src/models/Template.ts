@@ -22,6 +22,15 @@ export const CARD_DESIGNS = [
   'BIRTHDAY_LILAC',
   'BIRTHDAY_BLUSH',
   'BIRTHDAY_RAINBOW',
+  'BABY_SHOWER',
+  'ANNAPRASAN',
+  'GRIHA_PRAVESH',
+  'ANNIVERSARY',
+  'ENGAGEMENT',
+  'HALDI',
+  'MEHENDI',
+  'SANGEET',
+  'WEDDING_RECEPTION',
   // Rendered from `designSpec` (see services/cardTemplates/designSpec.ts) instead of fixed Figma artwork
   'CUSTOM'
 ] as const;

@@ -35,7 +35,7 @@ describe('the master card is the only template', () => {
   });
   afterAll(async () => { delete process.env.MASTER_CARD_ONLY; await mongoose.disconnect(); await mongo.stop(); });
 
-  const SHARED = ['Master Card', 'Business Conference', 'Product Launch', 'Networking Event', 'Corporate Meet', 'Festival Celebration', 'Puja Gathering', 'Cultural Program', 'Community Fair', 'Birthday Gold Balloons', 'Birthday Lilac Balloons', 'Birthday Pink Watercolour', 'Birthday Rainbow Stars'];
+  const SHARED = ['Master Card', 'Business Conference', 'Product Launch', 'Networking Event', 'Corporate Meet', 'Festival Celebration', 'Puja Gathering', 'Cultural Program', 'Community Fair', 'Birthday Gold Balloons', 'Birthday Lilac Balloons', 'Birthday Pink Watercolour', 'Birthday Rainbow Stars', 'Baby Shower Blue Ribbon', 'Annaprasan Lotus', 'Griha Pravesh Marigold', 'Anniversary Sage Florals', 'Engagement Pink Blossoms', 'Haldi Sunflowers', 'Mehendi Green Arch', 'Sangeet Lanterns', 'Wedding Reception Blush'];
   const names = async (who: any, query = '') => (await request(app).get(`/api/v1/templates${query}`).set(auth(who))).body.data.map((t: any) => t.name).sort();
 
   it('lists only the current shared cards (installed the first time they are needed) to an organizer and to an admin', async () => {

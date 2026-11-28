@@ -13,7 +13,9 @@ import { DEFAULT_TEMPLATES, planDefaultTemplates, installDefaultTemplates } from
 const BUSINESS = ['Business Conference', 'Product Launch', 'Networking Event', 'Corporate Meet'];
 const FESTIVALS = ['Festival Celebration', 'Puja Gathering', 'Cultural Program', 'Community Fair'];
 const BIRTHDAYS = ['Birthday Gold Balloons', 'Birthday Lilac Balloons', 'Birthday Pink Watercolour', 'Birthday Rainbow Stars'];
-const ALL = ['Master Card', ...BUSINESS, ...FESTIVALS, ...BIRTHDAYS];
+// One card for each of the other Personal & Family event types
+const FAMILY = ['Baby Shower Blue Ribbon', 'Annaprasan Lotus', 'Griha Pravesh Marigold', 'Anniversary Sage Florals', 'Engagement Pink Blossoms', 'Haldi Sunflowers', 'Mehendi Green Arch', 'Sangeet Lanterns', 'Wedding Reception Blush'];
+const ALL = ['Master Card', ...BUSINESS, ...FESTIVALS, ...BIRTHDAYS, ...FAMILY];
 
 jest.setTimeout(180000);
 
@@ -37,12 +39,12 @@ beforeEach(async () => {
 });
 
 describe('installing the default templates', () => {
-  it('offers the master card for every event, four cards each for business and festivals, and four birthday cards', () => {
+  it('offers the master card for every event, four cards each for business and festivals, four birthday cards and one for every other family event', () => {
     expect(DEFAULT_TEMPLATES.map((t) => [t.name, t.category])).toEqual([
       ['Master Card', undefined],
       ...BUSINESS.map((n) => [n, 'Business & Corporate']),
       ...FESTIVALS.map((n) => [n, 'Festivals & Culture']),
-      ...BIRTHDAYS.map((n) => [n, 'Personal & Family'])
+      ...[...BIRTHDAYS, ...FAMILY].map((n) => [n, 'Personal & Family'])
     ]);
   });
 
