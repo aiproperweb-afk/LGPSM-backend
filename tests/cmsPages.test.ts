@@ -322,7 +322,7 @@ describe('CMS pages', () => {
       root: { props: { builder: 'visual', schemaVersion: 2 } },
       content: [
         { type: 'Heading', props: { id: 'new-heading', text: 'A new heading' } },
-        { type: 'ExistingSection', props: { id: 'existing-hero', source: existing.props.id, copy: existing.props } },
+        { type: 'ExistingSection', props: { id: 'existing-hero', source: existing.props.id, copy: existing.props, elements: [{ key: 'e1234567890abcdef', rank: 0, text: 'Updated element', style: { mobile: { fontSize: '16px' } } }] } },
       ],
     };
     const path = '/api/v1/admin/pages/' + home?.id + '/publish';
@@ -330,6 +330,9 @@ describe('CMS pages', () => {
     const invalid = structuredClone(data);
     Object.assign(invalid.content[1].props, { copy: { id: existing.props.id } });
     expect((await request(app).post(path).set(headers).send({ data: invalid })).status).toBe(400);
+    const malformed = structuredClone(data);
+    malformed.content[1].props.elements?.push({ ...malformed.content[1].props.elements[0] });
+    expect((await request(app).post(path).set(headers).send({ data: malformed })).status).toBe(400);
     expect((await request(app).post(path).set(headers).send({ data })).status).toBe(200);
     const live = await request(app).get('/api/v1/public/pages/home');
     expect(live.body.data.content).toEqual(data);

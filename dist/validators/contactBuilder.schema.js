@@ -409,7 +409,10 @@ const field = (label, bindings, extra = {}) => ({
 const listProps = { items: { kind: "array", max: 30, item: { text: longText, href: link } } };
 const optionProps = { options: { kind: "array", max: 30, item: { label: text } } };
 exports.COMPONENTS = {
-    ExistingSection: { label: "Existing section", category: "layout", props: { source: { kind: "text" }, visualHero: { kind: "bool" }, hero: slot(exports.GENERAL_CHILDREN.filter(type => !["ExistingSection", "ContactForm"].includes(type))) } },
+    ExistingSection: { label: "Existing section", category: "layout", props: { source: { kind: "text" }, visualHero: { kind: "bool" }, elements: { kind: "array", max: 900, item: {
+                    key: { kind: "anchor" }, rank: { kind: "number", min: 0, max: 899 }, text: { kind: "text", max: 4000, multiline: true }, src: { kind: "image" },
+                    alt: { kind: "text", max: 300 }, placeholder: { kind: "text", max: 300 }, href: { kind: "link" }, style: { kind: "style" }
+                } }, hero: slot(exports.GENERAL_CHILDREN.filter(type => !["ExistingSection", "ContactForm"].includes(type))) } },
     Section: container("Section", "layout"),
     Container: container("Container", "layout"),
     Row: container("Row", "layout"),
@@ -651,6 +654,15 @@ function cleanNodes(value, allow, path, walk, depth) {
         const spec = exports.COMPONENTS[type];
         const result = { id: id };
         if (type === "ExistingSection") {
+            if (Array.isArray(props.elements)) {
+                const keys = new Set();
+                for (const element of props.elements) {
+                    if (!isObject(element) || typeof element.key !== "string" || !/^e[0-9a-f]{16}$/.test(element.key) || keys.has(element.key)) {
+                        fail(at + ".elements", "contains an invalid or duplicate element key");
+                    }
+                    keys.add(element.key);
+                }
+            }
             const approved = typeof props.source === "string" && walk.existing?.(props.source, props.copy);
             if (!approved)
                 fail(at, "uses an invalid existing section");
