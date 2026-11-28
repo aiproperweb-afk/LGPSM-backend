@@ -94,6 +94,17 @@ describe('themed cards', () => {
     }
   });
 
+  it('has one card for every Sports & Fitness event type, each drawing the event\'s own logo', async () => {
+    const sports = THEMED_DESIGNS.filter((d) => THEMES[d].category === 'Sports & Fitness');
+    expect(sports.map((d) => THEMES[d].subcategory)).toEqual(['Cricket Tournament', 'Football Tournament', 'Marathon', 'Fitness Event']);
+    const logo = await sharp({ create: { width: 600, height: 600, channels: 3, background: '#0a7f3f' } }).jpeg().toBuffer();
+    for (const design of sports) {
+      const card = await renderThemedCard(design, { ...THEMES[design].sample, qr, logo });
+      expect(await read(card)).toBe(CODE);
+      expect((await pixels(card)).equals(await pixels(await renderThemedCard(design, { ...THEMES[design].sample, qr })))).toBe(false);
+    }
+  });
+
   it('keeps the College Fest date and place on the ribbon and below it, whatever sits above', async () => {
     const foot = async (input: object) => sharp(await renderThemedCard('COLLEGE_FEST', { ...THEMES.COLLEGE_FEST.sample, ...input, qr })).extract({ left: 0, top: 990, width: 786, height: 374 }).raw().toBuffer();
     const full = await foot({});

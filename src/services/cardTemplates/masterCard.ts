@@ -61,9 +61,10 @@ export const clean = (t?: string) => (t || '').replace(/[\u0000-\u001f\u007f]/g,
 export interface Wrapped { lines: string[]; size: number }
 
 /** Wraps `text` to `width` in at most `maxLines` lines, shrinking from `size` to `minSize` first; ends in "…" only as a last resort. */
-export async function fit(text: string, family: string, weight: number, size: number, minSize: number, maxLines: number, width: number = CONTENT_WIDTH): Promise<Wrapped> {
+export async function fit(text: string, family: string, weight: number, size: number, minSize: number, maxLines: number, width: number = CONTENT_WIDTH, tracking = 0): Promise<Wrapped> {
   const words = text.split(' ').filter(Boolean);
-  const widthAt = (t: string, s: number) => measureText(t, family, weight, s);
+  // (letters set apart take more room; set closer, the measured width is already enough)
+  const widthAt = async (t: string, s: number) => (await measureText(t, family, weight, s)) + Math.max(0, tracking) * Math.max(0, t.length - 1);
   const wrapAt = async (s: number): Promise<string[]> => {
     const lines: string[] = [];
     let current = '';

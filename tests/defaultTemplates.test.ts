@@ -16,7 +16,8 @@ const BIRTHDAYS = ['Birthday Gold Balloons', 'Birthday Lilac Balloons', 'Birthda
 // One card for each of the other Personal & Family event types
 const FAMILY = ['Baby Shower Blue Ribbon', 'Annaprasan Lotus', 'Griha Pravesh Marigold', 'Anniversary Sage Florals', 'Engagement Pink Blossoms', 'Haldi Sunflowers', 'Mehendi Green Arch', 'Sangeet Lanterns', 'Wedding Reception Blush'];
 const EDUCATION = ['Convocation Gold Frame', 'Freshers Welcome Night', 'Farewell Fairy Lights', 'College Fest Stage'];
-const ALL = ['Master Card', ...BUSINESS, ...FESTIVALS, ...BIRTHDAYS, ...FAMILY, ...EDUCATION];
+const SPORTS = ['Cricket Stadium Blue', 'Football Night Match', 'Marathon Night Run', 'Fitness Event Power'];
+const ALL = ['Master Card', ...BUSINESS, ...FESTIVALS, ...BIRTHDAYS, ...FAMILY, ...EDUCATION, ...SPORTS];
 
 jest.setTimeout(180000);
 
@@ -40,20 +41,21 @@ beforeEach(async () => {
 });
 
 describe('installing the default templates', () => {
-  it('offers the master card for every event, four cards each for business and festivals, four birthday cards, one for every other family event and four for education', () => {
+  it('offers the master card for every event, four cards each for business and festivals, four birthday cards, one for every other family event and four each for education and sports', () => {
     expect(DEFAULT_TEMPLATES.map((t) => [t.name, t.category])).toEqual([
       ['Master Card', undefined],
       ...BUSINESS.map((n) => [n, 'Business & Corporate']),
       ...FESTIVALS.map((n) => [n, 'Festivals & Culture']),
       ...[...BIRTHDAYS, ...FAMILY].map((n) => [n, 'Personal & Family']),
-      ...EDUCATION.map((n) => [n, 'Education & Campus'])
+      ...EDUCATION.map((n) => [n, 'Education & Campus']),
+      ...SPORTS.map((n) => [n, 'Sports & Fitness'])
     ]);
   });
 
   it('plans them on an empty database, without writing anything', async () => {
     const plan = await planDefaultTemplates();
     expect(plan.templatesToCreate.map((t) => t.name)).toEqual(ALL);
-    expect(plan.categoriesToCreate).toEqual(['Business & Corporate', 'Festivals & Culture', 'Personal & Family', 'Education & Campus']);
+    expect(plan.categoriesToCreate).toEqual(['Business & Corporate', 'Festivals & Culture', 'Personal & Family', 'Education & Campus', 'Sports & Fitness']);
     expect(await Template.countDocuments()).toBe(0);
     expect(await Category.countDocuments()).toBe(0);
   });
@@ -66,7 +68,7 @@ describe('installing the default templates', () => {
     const result = await installDefaultTemplates(String(admin._id));
     expect(result.created).toEqual(ALL);
     expect(await Template.findById(existing._id).lean()).toEqual(before);
-    expect(await Category.countDocuments()).toBe(5); // Personal, the existing business one, Festivals & Culture, Personal & Family and Education & Campus
+    expect(await Category.countDocuments()).toBe(6); // Personal, the existing business one, Festivals & Culture, Personal & Family, Education & Campus and Sports & Fitness
     const after: any = await Category.findById(business._id).lean();
     expect(after.name).toBe('business & corporate');
     expect(after.subcategories.map((c: any) => c.name)).toEqual(['Product launch', 'Business Conference', 'Networking Event', 'Corporate Meet']);

@@ -39,9 +39,10 @@ exports.escapeXml = escapeXml;
 const clean = (t) => (t || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
 exports.clean = clean;
 /** Wraps `text` to `width` in at most `maxLines` lines, shrinking from `size` to `minSize` first; ends in "…" only as a last resort. */
-async function fit(text, family, weight, size, minSize, maxLines, width = CONTENT_WIDTH) {
+async function fit(text, family, weight, size, minSize, maxLines, width = CONTENT_WIDTH, tracking = 0) {
     const words = text.split(' ').filter(Boolean);
-    const widthAt = (t, s) => (0, fonts_1.measureText)(t, family, weight, s);
+    // (letters set apart take more room; set closer, the measured width is already enough)
+    const widthAt = async (t, s) => (await (0, fonts_1.measureText)(t, family, weight, s)) + Math.max(0, tracking) * Math.max(0, t.length - 1);
     const wrapAt = async (s) => {
         const lines = [];
         let current = '';

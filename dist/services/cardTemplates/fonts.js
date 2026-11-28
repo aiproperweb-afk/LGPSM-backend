@@ -67,6 +67,16 @@ const FONT_FILES = {
     'Poppins:400': 'Poppins-Regular.ttf',
     'Kalnia:400': 'Kalnia-Regular.ttf',
     'Kantumruy Pro:400': 'KantumruyPro-Regular.ttf',
+    'Poppins:700': 'Poppins-Bold.ttf',
+    'Tomorrow:400': 'Tomorrow-Regular.ttf',
+    'Tomorrow:700': 'Tomorrow-Bold.ttf',
+    'Tomorrow Medium:500': 'Tomorrow-Medium.ttf',
+    'BBH Hegarty:400': 'BBHHegarty-Regular.ttf',
+    'BBH Bogle:400': 'BBHBogle-Regular.ttf',
+    'BBH Bartle:400': 'BBHBartle-Regular.ttf',
+    'Koulen:400': 'Koulen-Regular.ttf',
+    'Kode Mono:500': 'KodeMono-Medium.ttf',
+    'Iosevka Charon Mono:700': 'IosevkaCharonMono-Bold.ttf',
 };
 /** Families tried, in order, when a glyph is missing (Bengali and Devanagari names, for example). */
 exports.FALLBACK_FAMILIES = ['Noto Sans Bengali', 'Noto Sans Devanagari', 'Inter'];

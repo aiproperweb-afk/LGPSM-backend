@@ -28,7 +28,9 @@ const METRICS: Record<string, [number, number]> = {
   Birthstone: [0.9, 0.35], 'Abhaya Libre ExtraBold': [0.84, 0.34], 'Alan Sans': [0.99, 0.31], 'Alegreya SC': [1.016, 0.345], Aleo: [0.905, 0.295],
   'Ancizar Serif': [0.9, 0.3], 'Berkshire Swash': [0.98, 0.262], 'Bigshot One': [0.869, 0.179], Chonburi: [0.95, 0.25], Cinzel: [0.976, 0.372],
   'Cinzel Decorative': [0.976, 0.372], 'IM Fell Great Primer': [0.948, 0.274],
-  'Inria Serif': [0.976, 0.223], 'Inknut Antiqua': [1.703, 0.876], 'Bebas Neue': [0.9, 0.3], Kalnia: [1.045, 0.3], 'Kantumruy Pro': [0.92, 0.26]
+  'Inria Serif': [0.976, 0.223], 'Inknut Antiqua': [1.703, 0.876], 'Bebas Neue': [0.9, 0.3], Kalnia: [1.045, 0.3], 'Kantumruy Pro': [0.92, 0.26],
+  Tomorrow: [1.0, 0.2], 'Tomorrow Medium': [1.0, 0.2], 'BBH Hegarty': [0.95, 0.25], 'BBH Bogle': [0.95, 0.25], 'BBH Bartle': [0.95, 0.25],
+  Koulen: [1.221, 0.586], 'Kode Mono': [0.98, 0.3], 'Iosevka Charon Mono': [1.015, 0.265]
 };
 
 const round = (n: number) => Math.round(n * 100) / 100;
@@ -49,7 +51,15 @@ async function fitted(raw: string, style: TextStyle): Promise<Fitted> {
   const value = cased.replace(/(\d:\d\d) (AM|PM)\b/g, '$1\u00a0$2');
   // (the font file must exist: a style naming a family that is not bundled would silently fall back to a system font)
   if (!fontFileFor(style.family, style.weight)) throw new Error(`No bundled font for ${style.family}`);
-  const w = await fit(value, style.family, style.weight, style.size, style.min, style.lines, style.width ?? 345);
+  const wrap = (width: number, size = style.size, min = style.min) => fit(value, style.family, style.weight, size, min, style.lines, width, style.tracking);
+  const full = style.width ?? 345;
+  let w = await wrap(full);
+  // the narrowest width that still takes as many lines, at the size just found
+  for (let width = full - 10; style.balance && w.lines.length > 1 && width > full / 2; width -= 10) {
+    const next = await wrap(width, w.size, w.size);
+    if (next.lines.length !== w.lines.length || next.lines.some((l) => l.endsWith('…'))) break;
+    w = next;
+  }
   return { w, style, height: w.lines.length * w.size * style.lh };
 }
 
@@ -58,8 +68,13 @@ function textSvg({ w, style }: Fitted, top: number, s: number, centre: number = 
   const line = w.size * style.lh;
   const baseline = (line - (asc + desc) * w.size) / 2 + asc * w.size;
   const tracking = style.tracking ? ` letter-spacing="${round(style.tracking * s)}"` : '';
+  // (a border is the same words drawn first with a stroke: half of it shows around the letters laid over it)
+  const edge = style.outline ? `fill="${style.outline.color}" stroke="${style.outline.color}" stroke-width="${round(style.outline.width * s)}" stroke-linejoin="round"` : null;
   return w.lines
-    .map((t, i) => `<text x="${round(centre * s)}" y="${round((top + i * line + baseline) * s)}" text-anchor="middle" font-family="${fontStack(style.family)}" font-weight="${style.weight}" font-size="${round(w.size * s)}"${tracking} fill="${style.color}">${escapeXml(t)}</text>`)
+    .map((t, i) => {
+      const at = `x="${round(centre * s)}" y="${round((top + i * line + baseline) * s)}" text-anchor="middle" font-family="${fontStack(style.family)}" font-weight="${style.weight}" font-size="${round(w.size * s)}"${tracking}`;
+      return `${edge ? `<text ${at} ${edge}>${escapeXml(t)}</text>` : ''}<text ${at} fill="${style.color}">${escapeXml(t)}</text>`;
+    })
     .join('');
 }
 
@@ -204,7 +219,16 @@ export async function renderThemedCard(design: ThemedDesign, input: MasterCardIn
         const [, day, hours] = (theme.whenBelow && /^(.*?\b\d{4}) (\d{1,2}:\d\d.*)$/.exec(when)) || [];
         if (!theme.whenBelow || !day || /\d{4}/.test(hours)) return single(key, when, narrow(theme.when));
         const [a, b] = await Promise.all([fitted(hours, theme.when), fitted(day, theme.whenBelow)]);
-        return { key, height: a.height + b.height, draw: (top, svg) => { svg.push(textSvg(a, top, s), textSvg(b, top + a.height, s)); } };
+        const rule = theme.whenBelowRule;
+        const between = rule?.gap ?? 0;
+        return {
+          key,
+          height: a.height + between + b.height,
+          draw: (top, svg) => {
+            svg.push(textSvg(a, top, s), textSvg(b, top + a.height + between, s));
+            if (rule) svg.push(`<rect x="${round(((MASTER_WIDTH - rule.width) / 2) * s)}" y="${round((top + a.height + rule.offset - 0.5) * s)}" width="${round(rule.width * s)}" height="${round(s)}" fill="${rule.color}"/>`);
+          }
+        };
       }
       case 'where': return single(key, where, narrow(theme.where));
       case 'qr': return qr ? qrBlock(theme, qr, scanLabel, theme.qr.size, s) : null;

@@ -65,7 +65,7 @@ exports.CARD_DESIGNS = [
     'HALDI',
     'MEHENDI',
     'SANGEET',
-    'WEDDING_RECEPTION', 'CONVOCATION', 'FRESHERS_WELCOME', 'FAREWELL', 'COLLEGE_FEST',
+    'WEDDING_RECEPTION', 'CONVOCATION', 'FRESHERS_WELCOME', 'FAREWELL', 'COLLEGE_FEST', 'CRICKET_TOURNAMENT', 'FOOTBALL_TOURNAMENT', 'MARATHON', 'FITNESS_EVENT',
     // Rendered from `designSpec` (see services/cardTemplates/designSpec.ts) instead of fixed Figma artwork
     'CUSTOM'
 ];

@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.THEMES = exports.isSharedDesign = exports.SHARED_DESIGNS = exports.isThemedDesign = exports.THEMED_DESIGNS = void 0;
 /**
  * The cards designed for one event type each (Figma "Event Management Invitation Card": Business & Corporate, Festivals & Culture,
- * Personal & Family, Education & Campus).
+ * Personal & Family, Education & Campus, Sports & Fitness).
  * Every one is a fixed background with the same details as the master card laid out as a column, so only the styling and the order
  * differ: they are described here and drawn by themedCard.ts. All sizes are Figma pixels on the 393 x 682 card.
  */
@@ -12,7 +12,8 @@ exports.THEMED_DESIGNS = [
     'FESTIVAL_CELEBRATION', 'PUJA_GATHERING', 'CULTURAL_PROGRAM', 'COMMUNITY_FAIR',
     'BIRTHDAY_GOLD', 'BIRTHDAY_LILAC', 'BIRTHDAY_BLUSH', 'BIRTHDAY_RAINBOW',
     'BABY_SHOWER', 'ANNAPRASAN', 'GRIHA_PRAVESH', 'ANNIVERSARY', 'ENGAGEMENT', 'HALDI', 'MEHENDI', 'SANGEET', 'WEDDING_RECEPTION',
-    'CONVOCATION', 'FRESHERS_WELCOME', 'FAREWELL', 'COLLEGE_FEST'
+    'CONVOCATION', 'FRESHERS_WELCOME', 'FAREWELL', 'COLLEGE_FEST',
+    'CRICKET_TOURNAMENT', 'FOOTBALL_TOURNAMENT', 'MARATHON', 'FITNESS_EVENT'
 ];
 const isThemedDesign = (design) => exports.THEMED_DESIGNS.includes(design);
 exports.isThemedDesign = isThemedDesign;
@@ -25,6 +26,7 @@ const qrBox = (border, label, more = {}) => ({ size: 160, inset: 8, border, bord
 const BUSINESS = 'Business & Corporate';
 const FESTIVALS = 'Festivals & Culture';
 const EDUCATION = 'Education & Campus';
+const SPORTS = 'Sports & Fitness';
 const BUSINESS_SAMPLE = {
     title: 'Annual Business Leadership and Innovation Summit 26',
     primary: 'Primary Additional Info',
@@ -440,5 +442,66 @@ exports.THEMES = {
         whenBelow: text('Kantumruy Pro', 400, 18, '#FFC880', 22, { upper: true, width: 271, tracking: -0.54 }),
         where: text('Poppins', 500, 13, '#FFFFFF', 18, { lines: 3, width: 260 }),
         pin: { file: 'college-fest-pin', size: 26, height: 32 }
+    },
+    CRICKET_TOURNAMENT: {
+        key: 'cricket-tournament', name: 'Cricket Stadium Blue', category: SPORTS, subcategory: 'Cricket Tournament',
+        palette: { background: '#002245', primary: '#00457F', accent: '#0A6CC4', ink: '#001A36', heading: 'sans' },
+        sample: { title: 'Annual Cricket Tournament 2026', primary: 'Tollygune Jagarani Club', secondary: 'Block', dateTime: 'Thu 31 Dec 2026 2:00 PM – Fri 1 Jan 2027 4:00 PM', location: 'Gostho Paul Sarani, Maidan, B. B. D. Bagh Kolkata, WB, India' },
+        order: ['logo', 'title', 'info', 'qr', 'details'], gaps: { title: 25, info: 31, qr: 17, details: 30 }, region: [32, 651], safe: [22, 656],
+        logo: { size: 87 },
+        title: text('Tomorrow', 700, 32, '#FFFFFF', 38, { upper: true, lines: 3, width: 345 }),
+        primary: text('Inter', 700, 22, '#FFFFFF', 27, { width: 345 }),
+        secondary: text('Inter', 700, 22, '#FFFFFF', 27, { width: 345 }),
+        infoGap: 6,
+        qr: qrBox('#FFFFFF', text('Tomorrow Medium', 500, 14, '#FFFFFF', 17, { upper: true }), { borderWidth: 0, labelText: 'Scan QR Code' }),
+        when: text('Tomorrow', 700, 18, '#FFFFFF', 22, { lines: 2, width: 345 }),
+        where: text('Tomorrow', 400, 18, '#FFFFFF', 22, { lines: 3, width: 325 }),
+        rule: { color: '#FFFFFF', opacity: 0.5, width: 345, gapBefore: 10, gapAfter: 10 }
+    },
+    FOOTBALL_TOURNAMENT: {
+        key: 'football-tournament', name: 'Football Night Match', category: SPORTS, subcategory: 'Football Tournament',
+        palette: { background: '#0B0D0A', primary: '#5E6B22', accent: '#B8C769', ink: '#10130A', heading: 'sans' },
+        sample: { ...FAMILY_SAMPLE, title: 'Sample title goes here', dateTime: '17 August 2028 8:00 PM', location: 'Grand Tower, 53/8 Demo Address goes here' },
+        // the address sits on the ribbon of the artwork, the time and date under it
+        order: ['logo', 'title', 'qr', 'info', 'where', 'when'], gaps: { title: 18, qr: 21, info: 44 }, region: [35, 489], safe: [22, 510],
+        anchor: { where: { middle: 553 }, when: { top: 596 } },
+        logo: { size: 86 },
+        title: text('BBH Hegarty', 400, 32, '#B8C769', 38, { upper: true, lines: 3, width: 345, tracking: 1.92, min: 15 }),
+        primary: text('Inter', 700, 22, '#FFFFFF', 27, { width: 345 }),
+        secondary: text('Inter', 500, 18, '#FFFFFF', 22, { width: 345 }),
+        infoGap: 8,
+        qr: qrBox('#B8C769', text('BBH Bogle', 400, 12, '#FFFFFF', 14, { upper: true, tracking: 0.72 }), { size: 129, borderWidth: 2, radius: 5 }),
+        when: text('BBH Bartle', 400, 12, '#FFFFFF', 14, { upper: true, lines: 3, width: 330, tracking: 0.72 }),
+        whenBelow: text('BBH Bartle', 400, 12, '#FFFFFF', 14, { upper: true, width: 330, tracking: 0.72 }),
+        whenBelowRule: { color: '#FFFFFF', width: 47.5, offset: 10, gap: 18 },
+        where: text('BBH Hegarty', 400, 12, '#FFFFFF', 14, { upper: true, lines: 3, width: 365, tracking: 0.72, balance: true })
+    },
+    MARATHON: {
+        key: 'marathon', name: 'Marathon Night Run', category: SPORTS, subcategory: 'Marathon',
+        palette: { background: '#0E0A08', primary: '#7A5A00', accent: '#FFEFA3', ink: '#171006', heading: 'sans' },
+        sample: { ...FAMILY_SAMPLE, title: 'Sunday Running Marathon', dateTime: 'Thu 31 Dec 2026 2:00 PM – Fri 1 Jan 2027 4:00 PM' },
+        order: ['logo', 'title', 'qr', 'info', 'when', 'where'], gaps: { title: 18, qr: 24, info: 24, when: 27, where: 16 }, region: [25, 639], safe: [14, 668],
+        logo: { size: 90 },
+        title: text('Koulen', 400, 52, '#FFEFA3', 52, { upper: true, lines: 3, width: 345 }),
+        primary: text('Inter', 700, 24, '#FFEFA3', 29, { width: 345 }),
+        secondary: text('Inter', 500, 18, '#FFFFFF', 22, { width: 345 }),
+        infoGap: 8,
+        qr: qrBox('#FFEFA3', text('Kode Mono', 500, 12, '#FFFFFF', 19, { upper: true, tracking: -0.36 }), { size: 135, borderWidth: 2, radius: 5, labelGap: 12 }),
+        when: text('Iosevka Charon Mono', 700, 18, '#FFFFFF', 23, { lines: 2, width: 250 }),
+        where: text('Kode Mono', 500, 16, '#FFFFFF', 20, { lines: 3, width: 345, tracking: -0.48, balance: true })
+    },
+    FITNESS_EVENT: {
+        key: 'fitness-event', name: 'Fitness Event Power', category: SPORTS, subcategory: 'Fitness Event',
+        palette: { background: '#731C05', primary: '#831D02', accent: '#C2400F', ink: '#3F0D00', heading: 'sans' },
+        sample: { ...FAMILY_SAMPLE, title: 'Fitness Event title goes here', dateTime: 'Thu 31 Dec 2026 2:00 PM – Fri 1 Jan 2027 4:00 PM' },
+        order: ['logo', 'title', 'info', 'qr', 'when', 'where'], gaps: { title: 13, info: 27, qr: 41, when: 35, where: 18 }, region: [25, 647], safe: [14, 666],
+        logo: { size: 90 },
+        title: text('Koulen', 400, 40, '#FFFFFF', 45, { upper: true, lines: 3, width: 345, outline: { color: '#3F0D00', width: 4 } }),
+        primary: text('Inter', 700, 24, '#FFFFFF', 29, { width: 345 }),
+        secondary: text('Inter', 500, 18, '#FFFFFF', 22, { width: 345 }),
+        infoGap: 8,
+        qr: qrBox('#831D02', text('Poppins', 700, 12, '#FFFFFF', 18, { upper: true }), { size: 139, borderWidth: 1.7, radius: 4.3, labelGap: 6 }),
+        when: text('Inter', 700, 18, '#FFFFFF', 22, { lines: 2, width: 345 }),
+        where: text('Poppins', 600, 14, '#FFFFFF', 21, { lines: 3, width: 302 })
     }
 };
