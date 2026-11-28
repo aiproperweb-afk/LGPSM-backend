@@ -16,7 +16,6 @@ import { InviteeSet } from '../src/models/InviteeSet';
 import { Session } from '../src/models/Session';
 import { AuditLog } from '../src/models/AuditLog';
 import { generateAccessToken } from '../src/utils/token';
-import { withGuests } from './helpers/withGuests';
 
 const mockSendEmail = jest.fn().mockResolvedValue(true);
 jest.mock('../src/utils/email.provider', () => ({ sendEmail: (...a: any[]) => mockSendEmail(...a) }));
@@ -70,7 +69,7 @@ describe('admin: guests, lists and the Preview List (items 14, 20, 22)', () => {
 
   it('an Excel upload works for the admin, and a guest\'s address can be a system user\'s address', async () => {
     await request(app).post('/api/users').set(auth(admin)).send({ fullName: 'Rina Staff', email: 'rina@x.com', phone: '9876500078', password: 'password123', role: 'SYSTEM_USER', organizerId: String(org._id) });
-    const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests([['Name', 'Email', 'Mobile'], ['Rina Staff', 'rina@x.com', '9876500078'], ['Other', 'other@x.com', '9876500079']])), 'Invitees');
+    const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet([['Name', 'Email', 'Mobile'], ['Rina Staff', 'rina@x.com', '9876500078'], ['Other', 'other@x.com', '9876500079']]), 'Invitees');
     const up = await request(app).post(`/api/v1/events/${ev._id}/invitees/import`).set(auth(admin)).field('mode', 'REPLACE').attach('file', xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer, 'list.xlsx');
     expect(up.status).toBe(200);
     expect(await Invitee.countDocuments({ eventId: ev._id })).toBe(2);

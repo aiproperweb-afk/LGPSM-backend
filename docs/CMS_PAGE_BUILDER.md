@@ -13,8 +13,6 @@ The backend stores Puck JSON snapshots in MongoDB. It does not install Puck or s
 | `updatedBy`, `publishedBy`, `publishedAt` | User references and publication timestamp. Seeding sets the timestamp without a user actor. |
 | `createdAt`, `updatedAt`, `componentStructureLocked` | Mongoose timestamps and a boolean policy for fixed layouts. |
 
-The CMS contains only the public site content, including all seven client categories and the shared navbar and footer. The backend reports `cms: ready` in `/api/health` after startup seeding succeeds. Previously seeded workspace records are excluded from the supported contracts.
-
 ## Routes
 
 All routes are under `/api/v1`:
@@ -84,7 +82,7 @@ Example public response
 }
 ```
 
-The checked-in v1 seed at `src/validators/cms-pages.v1.json` is generated from the frontend with `node scripts/export-cms-seed.mjs`. It is both the initial page data and the basis for validating the exact component order, IDs, props, and nested field shapes for the supported public pages and shared site sections. The validator enforces the 90 KiB limit, fixed arrays, approved internal CTA destinations, plain text, safe raster asset paths, and registered CMS media IDs. Changes to fields and initial content require regenerating the seed and testing the frontend and backend together. Incompatible field changes need a new schema version and an explicit database migration.
+The checked-in v1 seed at `src/validators/cms-pages.v1.json` is generated from the frontend with `node scripts/export-cms-seed.mjs`. It is both the initial page data and the basis for validating the exact component order, IDs, props, and nested field shapes for `home` and `contact`. The validator enforces the 90 KiB limit, fixed arrays, approved internal CTA destinations, plain text, safe raster asset paths, and registered CMS media IDs. Changes to fields and initial content require regenerating the seed and testing the frontend and backend together. Incompatible field changes need a new schema version and an explicit database migration.
 
 Administrators upload images through `POST /api/v1/media/upload`, with multipart fields `file` and `purpose=CMS_PAGE`. Persist the returned `media:<id>` key. Public images resolve through the standard media API redirect to the Hostinger media origin. CMS files use disk storage in the existing media directory. Draft and publish validate ownership of the media record by purpose and verify the bytes are available.
 

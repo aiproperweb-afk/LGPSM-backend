@@ -32,21 +32,19 @@ async function safely(label, work) {
     }
 }
 exports.alertService = {
-    // Platform alerts for administrators: the in-app notification and the email each follow their own switch (Settings > Notifications)
+    // Platform alerts for administrators, governed by the admin notification preferences
     async notifyAdmins(preference, content, opts = {}) {
         await safely(content.title, async () => {
-            const [push, email] = await Promise.all([platformSettings_service_1.platformSettingsService.getPushPreferences(), platformSettings_service_1.platformSettingsService.getNotificationPreferences()]);
-            const byEmail = opts.email !== false && email[preference]; // (high-volume or purely informative notices are in-app only)
-            if (!push[preference] && !byEmail)
+            const prefs = await platformSettings_service_1.platformSettingsService.getNotificationPreferences();
+            if (!prefs[preference])
                 return;
             const admins = await User_1.User.find({ role: User_1.Role.ADMIN, isActive: true }).select('_id email fullName').lean();
             if (admins.length === 0)
                 return;
-            if (push[preference])
-                await Notification_1.Notification.insertMany(admins.map((a) => toDoc(a._id, content)));
+            await Notification_1.Notification.insertMany(admins.map((a) => toDoc(a._id, content)));
             // Email goes out in the background so a slow mail server never delays the request
-            if (!byEmail)
-                return;
+            if (opts.email === false)
+                return; // in-app only (high-volume or purely informative notices)
             void Promise.all(admins
                 .filter((a) => a.email)
                 .map((a) => (0, email_provider_1.sendEmail)(a.email, `LGPSM: ${content.title}`, `<p>${(0, html_1.escapeHtml)(content.message)}</p><p style="color:#828282;font-size:12px">You can change these alerts in Settings &gt; Notifications Settings.</p>`)
@@ -93,7 +91,7 @@ exports.alertService = {
     // Check-ins at the door: the event's organizer and the administrators see a running count while guests arrive
     async guestCheckedIn(event, staffName) {
         await safely('guest check-in', async () => {
-            const prefs = await platformSettings_service_1.platformSettingsService.getPushPreferences();
+            const prefs = await platformSettings_service_1.platformSettingsService.getNotificationPreferences();
             const admins = prefs.guestCheckIns ? (await User_1.User.find({ role: User_1.Role.ADMIN, isActive: true }).select('_id').lean()).map((a) => a._id) : [];
             const recipients = [...(event.organizerId ? [event.organizerId] : []), ...admins];
             const minutesText = (m) => (m <= 1 ? 'the last minute' : `the last ${m} minutes`);

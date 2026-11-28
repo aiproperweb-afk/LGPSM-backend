@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { Media, MediaPurpose } from '../models/Media';
 import { Page, PageStatus } from '../models/Page';
 import { cmsPageRepository } from '../repositories/cmsPage.repository';
-import { supportsPageContract, supportedCmsSlugs, validateCmsSeedInput, validatePuckData } from '../validators/cmsPage.validator';
+import { editableCmsSlugs, supportsPageContract, supportedCmsSlugs, validateCmsSeedInput, validatePuckData } from '../validators/cmsPage.validator';
 import { mediaService } from './media.service';
 
 function cmsError(statusCode: number, code: string, message: string, extra?: Record<string, unknown>) {
@@ -22,7 +22,7 @@ function requireExpectedVersion(expectedVersion: number) {
 async function requirePage(id: string) {
   requirePageId(id);
   const page = await cmsPageRepository.findById(id);
-  if (!page || !supportsPageContract(page.slug, page.route, page.schemaVersion)) throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
+  if (!page || !editableCmsSlugs.includes(page.slug) || !supportsPageContract(page.slug, page.route, page.schemaVersion)) throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
   return page;
 }
 
@@ -52,17 +52,39 @@ async function verifyMediaReferences(mediaIds: string[]) {
 }
 
 function validateStructure(page: { componentStructureLocked: boolean; draftData: unknown; slug: string }, structure: string) {
-  if (!page.componentStructureLocked) return;
+  if (!page.componentStructureLocked || ((page.slug === 'contact' && structure === 'contact-builder-v2') || structure === 'visual-builder-v2')) return;
   const current = validatePuckData(page.draftData, page.slug).structure;
   if (current !== structure) {
     throw cmsError(409, 'CMS_STRUCTURE_LOCKED', 'This page has a fixed component structure; component insertion, deletion and reordering are not allowed.');
   }
 }
 
-async function validateContent(data: unknown, slug: string) {
-  const validated = validatePuckData(data, slug);
+async function validateContent(data: unknown, slug: string, publishing = false) {
+  const validated = validatePuckData(data, slug, publishing);
   await verifyMediaReferences(validated.mediaIds);
   return validated;
+}
+
+
+async function clientsSnapshots(defaults: ReturnType<typeof validatePuckData>['data']) {
+  const existing = await Page.find({ slug: { $in: defaults.content.map(section => section.props.id) } })
+    .select('slug draftData publishedData').lean();
+  const bySlug = new Map(existing.map(page => [page.slug, page]));
+  const snapshot = (field: 'draftData' | 'publishedData') => ({
+    ...defaults,
+    content: defaults.content.map(section => {
+      const slug = String(section.props.id);
+      const previous = bySlug.get(slug)?.[field];
+      if (!previous) return section;
+      try {
+        return validatePuckData(previous, slug).data.content[0];
+      } catch (error) {
+        if ((error as { code?: string }).code !== 'CMS_CONTENT_INVALID') throw error;
+        return section;
+      }
+    })
+  });
+  return { draftData: snapshot('draftData'), publishedData: snapshot('publishedData') };
 }
 
 export const cmsPageService = {
@@ -86,7 +108,7 @@ export const cmsPageService = {
 
   async publish(id: string, expectedVersion: number, data: unknown, actorId: string) {
     const page = await requireEditablePage(id, expectedVersion);
-    const validated = await validateContent(data, page.slug);
+    const validated = await validateContent(data, page.slug, true);
     if ((validated.data.content as unknown[]).length === 0) {
       throw cmsError(400, 'CMS_CONTENT_EMPTY', 'A page must contain content before it can be published.');
     }
@@ -115,7 +137,7 @@ export const cmsPageService = {
     if (!Array.isArray(input) || input.length === 0) {
       throw cmsError(400, 'CMS_SEED_EMPTY', 'Provide at least one populated page in the CMS seed file.');
     }
-    const seeds = input.map(validateCmsSeedInput);
+    const seeds = input.map(validateCmsSeedInput).filter(seed => editableCmsSlugs.includes(seed.slug));
     const slugs = new Set<string>();
     const routes = new Set<string>();
     for (const seed of seeds) {
@@ -128,13 +150,16 @@ export const cmsPageService = {
     const seededAt = new Date();
     const results = [];
     for (const seed of seeds) {
+      const snapshots = seed.slug === 'clients'
+        ? await clientsSnapshots(seed.data)
+        : { draftData: seed.data, publishedData: seed.data };
       const result = await cmsPageRepository.seedOnInsert({
         name: seed.name,
         slug: seed.slug,
         route: seed.route,
-        draftData: seed.data,
-        publishedData: seed.data,
-        status: PageStatus.PUBLISHED,
+        ...snapshots,
+        status: JSON.stringify(snapshots.draftData) === JSON.stringify(snapshots.publishedData)
+          ? PageStatus.PUBLISHED : PageStatus.DRAFT,
         schemaVersion: seed.schemaVersion,
         version: 1,
         editVersion: 0,

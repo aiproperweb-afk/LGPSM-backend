@@ -33,10 +33,8 @@ async function loadCardContext(event) {
     // unreadable one) falls back to the design that suits the event type, so a card is always produced.
     let designSpec;
     let templateDesign = template?.cardDesign;
-    // (in master-card-only mode, besides the built-in shared designs: an organizer's own uploaded design for that organizer's events, and a
-    // design an administrator uploaded for everyone. One taken out of the list keeps drawing for the events that already use it.)
-    const sharedUpload = !!template && ((0, masterCard_1.isSharedUpload)(template) || (!!template.isSystemTemplate && template.templateData?.dynamicDetails === true && template.templateData?.retired === true));
-    if (template?.cardDesign === 'CUSTOM' && (!(0, masterCard_1.masterCardOnly)() || sharedUpload || (!!template.ownerId && String(template.ownerId) === String(event.organizerId)))) {
+    // (while the master card is the only shared design, only an organizer's own uploaded design is drawn besides it, for that organizer's events)
+    if (template?.cardDesign === 'CUSTOM' && (!(0, masterCard_1.masterCardOnly)() || (!!template.ownerId && String(template.ownerId) === String(event.organizerId)))) {
         // (a "retired" template is no longer offered in the template list, but the events that already use it keep their card)
         const usable = (template.isActive !== false || template.templateData?.retired === true) &&
             (!template.ownerId || (template.isSystemTemplate && template.isPublished !== false) || String(template.ownerId) === String(event.organizerId));

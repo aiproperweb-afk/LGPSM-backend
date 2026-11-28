@@ -1,6 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { normalizePhoneNumber } from '../services/whatsapp.service';
-import { MAX_GUESTS_PER_PASS } from '../utils/guestCount';
 
 export enum InvitationStatus {
   PENDING = 'PENDING',
@@ -33,8 +32,6 @@ export interface IInvitee extends Document {
   dietaryPreference?: string;
   dietarySelections?: { title: string; value: string }[];
   companyName?: string;
-  /** How many people this guest's pass admits (the sheet's "No of Guests"): each session admits it at most this many times */
-  guestCount?: number;
   /** e.g. "Employee ID: 4521" (Add Invitee "Professional Identity"); can be printed on the card */
   professionalIdentity?: string;
   /** A second custom detail, when both card lines carry one */
@@ -102,7 +99,6 @@ const InviteeSchema: Schema = new Schema(
       type: [{ title: { type: String, required: true }, value: { type: String, required: true } }],
       default: undefined
     },
-    guestCount: { type: Number, default: 1, min: 1, max: MAX_GUESTS_PER_PASS },
     companyName: { type: String, trim: true },
     professionalIdentity: { type: String, trim: true, maxlength: 100 },
     secondaryIdentity: { type: String, trim: true, maxlength: 100 },

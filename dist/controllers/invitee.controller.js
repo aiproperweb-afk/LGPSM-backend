@@ -281,23 +281,6 @@ exports.inviteeController = {
             }
         }
     },
-    async removeFromSession(req, res, next) {
-        try {
-            const actor = { userId: req.user.userId, role: req.user.role };
-            const result = await invitee_service_1.inviteeService.removeFromSession(req.params.eventId, actor, req.body.sessionId, req.body.inviteeIds);
-            res.status(200).json({ success: true, data: result });
-        }
-        catch (error) {
-            if (error.message === 'EVENT_NOT_FOUND')
-                res.status(404).json({ error: 'Not Found', message: 'Event not found or inaccessible', details: [] });
-            else if (error.message === 'INVALID_INVITEES')
-                res.status(400).json({ error: 'Bad Request', message: 'One or more invitees are invalid or belong to a different event', details: [] });
-            else if (error.message === 'INVALID_SESSIONS')
-                res.status(400).json({ error: 'Bad Request', message: 'The session does not belong to this event', details: [] });
-            else
-                next(error);
-        }
-    },
     async deleteInvitee(req, res, next) {
         try {
             const organizerId = req.user.userId;

@@ -21,8 +21,6 @@ router.get('/event-features', (0, authorizeRoles_1.authorizeRoles)(User_1.Role.A
 router.put('/event-features', (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ADMIN), validate(platformSettings_validator_1.eventFeaturesSchema), platformSettings_controller_1.platformSettingsController.updateEventFeatures);
 router.get('/notifications', (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ADMIN), platformSettings_controller_1.platformSettingsController.getNotificationPreferences);
 router.put('/notifications', (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ADMIN), validate(platformSettings_validator_1.notificationPreferencesSchema), platformSettings_controller_1.platformSettingsController.updateNotificationPreferences);
-router.get('/push-notifications', (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ADMIN), platformSettings_controller_1.platformSettingsController.getPushPreferences);
-router.put('/push-notifications', (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ADMIN), validate(platformSettings_validator_1.notificationPreferencesSchema), platformSettings_controller_1.platformSettingsController.updatePushPreferences);
 router.get('/pricing', (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ADMIN), platformSettings_controller_1.platformSettingsController.getPricing);
 router.put('/pricing', (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ADMIN), validate(platformSettings_validator_1.pricingSchema), platformSettings_controller_1.platformSettingsController.updatePricing);
 router.put('/gst', (0, authorizeRoles_1.authorizeRoles)(User_1.Role.ADMIN), validate(platformSettings_validator_1.gstSchema), platformSettings_controller_1.platformSettingsController.updateGst);

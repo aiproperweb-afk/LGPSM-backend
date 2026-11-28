@@ -1,5 +1,5 @@
 import { canUseCategory } from '../services/category.service';
-import { createUploadedTemplate, getTextZones, previewTextZones, redetectTextZones, setTextZones, UploadError } from '../services/cardTemplates/uploadedTemplate';
+import { createUploadedTemplate, getTextZones, redetectTextZones, setTextZones, UploadError } from '../services/cardTemplates/uploadedTemplate';
 import { Request, Response } from 'express';
 import { templateService } from '../services/template.service';
 import { installDefaultTemplates, planDefaultTemplates } from '../services/cardTemplates/defaultTemplates';
@@ -50,18 +50,6 @@ export const templateController = {
       if (error instanceof UploadError) return res.status(error.status).json({ success: false, message: error.message });
       console.error('Request failed:', error?.message);
       return res.status(500).json({ error: 'Internal Server Error', message: 'The text areas could not be saved. Please try again.' });
-    }
-  },
-  async previewTextZones(req: Request, res: Response) {
-    try {
-      const png = await previewTextZones({ userId: (req as any).user.userId }, String(req.params.id), req.body.zones);
-      res.setHeader('Content-Type', 'image/png');
-      res.setHeader('Cache-Control', 'no-store');
-      return res.status(200).send(png);
-    } catch (error: any) {
-      if (error instanceof UploadError) return res.status(error.status).json({ success: false, message: error.message });
-      console.error('Request failed:', error?.message);
-      return res.status(500).json({ error: 'Internal Server Error', message: 'The image could not be created. Please try again.' });
     }
   },
   async detectTextZones(req: Request, res: Response) {
@@ -185,7 +173,6 @@ export const templateController = {
       return res.status(200).json({ success: true, message: 'Template deactivated successfully', data: template });
     } catch (error: any) {
       if (error.message === 'TEMPLATE_NOT_FOUND') return res.status(404).json({ error: 'Not Found', message: 'Template not found' });
-      if (error?.statusCode === 409) return res.status(409).json({ success: false, error: 'Conflict', message: error.message });
       console.error('Request failed:', error?.message);
       return res.status(500).json({ error: 'Internal Server Error', message: 'Something went wrong. Please try again.' });
     }

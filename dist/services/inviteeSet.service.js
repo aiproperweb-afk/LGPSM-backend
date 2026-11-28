@@ -22,7 +22,6 @@ const Event_1 = require("../models/Event");
 const User_1 = require("../models/User");
 const auditLog_service_1 = require("./auditLog.service");
 const whatsapp_service_1 = require("./whatsapp.service");
-const guestCount_1 = require("../utils/guestCount");
 // Guests without a tracked list (added by hand, or before lists were tracked) are treated as one "earlier" list.
 exports.LEGACY_SET = 'legacy';
 exports.ALL_SETS = 'all';
@@ -142,7 +141,7 @@ exports.inviteeSetService = {
         await manageableEvent(actor, eventId);
         const eid = new mongoose_1.default.Types.ObjectId(eventId);
         const [invitees, sets] = await Promise.all([
-            Invitee_1.Invitee.find({ eventId: eid }).select('inviteeSetId invitationStatus rsvpStatus qrTokenHash createdAt sessionAccess').lean(),
+            Invitee_1.Invitee.find({ eventId: eid }).select('inviteeSetId invitationStatus rsvpStatus qrTokenHash createdAt').lean(),
             InviteeSet_1.InviteeSet.find({ eventId: eid }).sort({ createdAt: 1 }).lean()
         ]);
         const allSets = sets;
@@ -166,14 +165,8 @@ exports.inviteeSetService = {
         const aside = await Invitee_1.Invitee.aggregate([{ $match: { eventId: eid, archivedAt: { $ne: null } } }, { $group: { _id: { $ifNull: ['$inviteeSetId', exports.LEGACY_SET] }, n: { $sum: 1 } } }]).option({ includeArchived: true });
         const asideBySet = new Map(aside.map((r) => [String(r._id), r.n]));
         const rows = new Map();
-        // a list uploaded to one session counts the guests who can still attend it (a guest removed from that session is no longer in it)
-        const sessionsOfEvent = await Session_1.Session.find({ eventId: eid }).lean();
-        const boundTo = new Map(sets.filter((s) => s.sessionId).map((s) => [String(s._id), sessionsOfEvent.find((x) => String(x._id) === String(s.sessionId))]));
         for (const inv of invitees) {
             const k = (0, exports.setKeyOf)(inv);
-            const bound = boundTo.get(k);
-            if (bound && !(0, sessionAccess_1.inviteeAllowedInSession)(inv, bound))
-                continue;
             const r = rows.get(k) || { total: 0, sent: 0, notSent: 0, failed: 0, unknown: 0, rsvp: 0, checkedIn: 0 };
             const a = activity.get(String(inv._id));
             r.total++;
@@ -261,7 +254,7 @@ exports.inviteeSetService = {
             uploadedBy: s.createdBy ? people.get(String(s.createdBy)) || null : null, removedBy: s.removedBy ? removedBy.get(String(s.removedBy)) || null : null,
             setAside: asideBySet.get(String(s._id)) || 0
         }));
-        return { sets: out, sessionLists, removedLists, archivedCount, totalGuests: invitees.length, hasSent: out.some((s) => s.locked) };
+        return { sets: out, sessionLists, removedLists, archivedCount, hasSent: out.some((s) => s.locked) };
     },
     /**
      * Removes every invitee list of an event that has not been used yet. Used when the organizer changes which guest details go on
@@ -387,13 +380,8 @@ exports.inviteeSetService = {
                 throw fail(404, 'List not found');
             Object.assign(filter, (0, sessionAccess_1.inviteesAllowedFilter)(sess));
         }
-        else if (setId !== exports.ALL_SETS) {
+        else if (setId !== exports.ALL_SETS)
             filter.inviteeSetId = setId === exports.LEGACY_SET ? null : new mongoose_1.default.Types.ObjectId(setId);
-            const own = setId === exports.LEGACY_SET ? null : await InviteeSet_1.InviteeSet.findOne({ _id: setId, eventId: eid }).select('sessionId').lean();
-            const bound = own?.sessionId ? await Session_1.Session.findOne({ _id: own.sessionId, eventId: eid }) : null;
-            if (bound)
-                filter.$and = [(0, sessionAccess_1.inviteesAllowedFilter)(bound)];
-        }
         const term = q.trim().slice(0, 100);
         if (term) {
             const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -401,7 +389,7 @@ exports.inviteeSetService = {
         }
         const lim = Math.min(Math.max(limit, 1), 100);
         const [guests, total] = await Promise.all([
-            Invitee_1.Invitee.find(filter).select('name email mobile companyName company guestCount invitationStatus rsvpStatus qrTokenHash inviteeSetId sessionAccess').sort({ name: 1 }).skip((Math.max(page, 1) - 1) * lim).limit(lim).lean(),
+            Invitee_1.Invitee.find(filter).select('name email mobile companyName company invitationStatus rsvpStatus qrTokenHash inviteeSetId sessionAccess').sort({ name: 1 }).skip((Math.max(page, 1) - 1) * lim).limit(lim).lean(),
             Invitee_1.Invitee.countDocuments(filter)
         ]);
         const activity = await loadActivity(eid, guests);
@@ -414,7 +402,7 @@ exports.inviteeSetService = {
             total, page, limit: lim,
             members: guests.map((g) => {
                 const a = activity.get(String(g._id));
-                return { id: String(g._id), name: g.name, email: g.email || null, mobile: g.mobile || null, company: g.companyName || g.company || null, guestCount: (0, guestCount_1.guestLimit)(g), delivery: (0, exports.deliveryStateOf)(a), rsvpStatus: g.rsvpStatus, checkedIn: a.checkedIn, setId: (0, exports.setKeyOf)(g), setName: g.inviteeSetId ? listName.get(String(g.inviteeSetId)) || 'Removed list' : 'Manual', sessions: sessionNamesOf(g), sessionCount: eventSessions.length };
+                return { id: String(g._id), name: g.name, email: g.email || null, mobile: g.mobile || null, company: g.companyName || g.company || null, delivery: (0, exports.deliveryStateOf)(a), rsvpStatus: g.rsvpStatus, checkedIn: a.checkedIn, setId: (0, exports.setKeyOf)(g), setName: g.inviteeSetId ? listName.get(String(g.inviteeSetId)) || 'Removed list' : 'Manual', sessions: sessionNamesOf(g), sessionCount: eventSessions.length };
             })
         };
     },

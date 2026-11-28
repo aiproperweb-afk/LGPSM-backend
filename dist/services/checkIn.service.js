@@ -20,7 +20,6 @@ const qrPayload_1 = require("../utils/qrPayload");
 const sessionAccess_1 = require("../utils/sessionAccess");
 const clock_1 = require("../utils/clock");
 const admissionWindow_1 = require("../utils/admissionWindow");
-const guestCount_1 = require("../utils/guestCount");
 const whatsapp_service_1 = require("./whatsapp.service");
 /**
  * Core service for event check-in operations (QR scanning and manual entry).
@@ -36,9 +35,9 @@ const whatsapp_service_1 = require("./whatsapp.service");
  * - Token Validation: Parses QR payloads securely using `parseInvitationQrPayload` and hashes tokens
  *   to query MongoDB (`qrTokenHash`). Superseded tokens from older invitation resends are rejected (`QR_TOKEN_SUPERSEDED`).
  * - RSVP Eligibility: Rejects guests with DECLINED/PENDING status based on event RSVP settings.
- * - Guest limit: a pass admits as many people as its "No of Guests" in each session (both access-control settings). One attendance
- *   record per guest and session counts them (`scanCount`); once full, further scans are refused (`ONLY_ONCE_VIOLATION`, or
- *   `DUPLICATE_CHECKIN` for an entry without a session).
+ * - Access Control:
+ *   - ONLY_ONCE: Allows only one check-in per session (`ONLY_ONCE_VIOLATION`).
+ *   - NO_RESTRICTION: Logs check-ins but rejects duplicate attempts if already recorded.
  *   - Primary Session Rule: When primary session `validateAgainstOtherSessions` is active, guests must
  *     check in to the primary session first before entering secondary sessions (`PRIMARY_SESSION_CHECKIN_REQUIRED`).
  */
@@ -62,10 +61,6 @@ function supportsTransactions() {
     })();
     return transactionSupport;
 }
-/** How many people an attendance record has let in */
-const admittedOn = (record) => record.scanCount ?? 1;
-/** Everyone the pass admits is already in. The code is the one the scanners know; the counts let them say it clearly. */
-const guestLimitReached = (code, invitee, record) => Object.assign(new Error(code), { guestCount: (0, guestCount_1.guestLimit)(invitee), admitted: admittedOn(record) });
 /** A time-based refusal that carries the window so the response can say when check-in opens or closed. */
 class AdmissionError extends Error {
     code;
@@ -173,21 +168,20 @@ exports.checkInService = {
         }
         await this.validateInviteeEligibility(invitee, event);
         let session = null;
-        let existing = null;
         if (sessionId) {
             session = await this.validateSessionAndRules(invitee, eventId, sessionId, now);
-            existing = session._existingCheckIn;
+            // "No restriction": a second scan of the same pass is allowed
+            if (session._existingCheckIn && session.accessControl === Session_1.AccessControl.NO_RESTRICTION) {
+                return this.recordRepeatEntry(event, session._existingCheckIn, invitee, session, now);
+            }
         }
         else {
-            existing = await checkIn_repository_1.checkInRepository.findEventWideCheckIn(invitee._id.toString(), eventId);
-            if (existing && admittedOn(existing) >= (0, guestCount_1.guestLimit)(invitee))
-                throw guestLimitReached('DUPLICATE_CHECKIN', invitee, existing);
+            const existing = await checkIn_repository_1.checkInRepository.findEventWideCheckIn(invitee._id.toString(), eventId);
+            if (existing) {
+                throw new Error('DUPLICATE_CHECKIN');
+            }
         }
-        const qr = method === CheckIn_1.CheckInMethod.QR;
-        const full = sessionId ? 'ONLY_ONCE_VIOLATION' : 'DUPLICATE_CHECKIN';
-        // The pass already let someone in here: the next person of the same invitation is counted on that record
-        if (existing)
-            return this.admitAnother({ actor, event, existing, invitee, session, now, qr, full });
+        // A duplicate key (11000) from a concurrent scan surfaces as "already checked in" in the controller
         let checkIn;
         try {
             checkIn = await this.commitAdmission(event, {
@@ -197,52 +191,37 @@ exports.checkInService = {
                 checkInMethod: method,
                 checkedInBy: new mongoose_1.default.Types.ObjectId(actor.userId),
                 checkInAt: now
-            }, now, qr);
+            }, now, method === CheckIn_1.CheckInMethod.QR);
         }
         catch (e) {
-            // two first scans of the same pass at the same instant: the loser is counted on the winner's record, if there is room
-            if (e?.code === 11000) {
-                const winner = sessionId
-                    ? await checkIn_repository_1.checkInRepository.findByInviteeAndSession(invitee._id.toString(), String(sessionId))
-                    : await checkIn_repository_1.checkInRepository.findEventWideCheckIn(invitee._id.toString(), eventId);
+            // two scans of a NO_RESTRICTION pass at the same instant: the loser is a repeat entry on the winner's record
+            if (e?.code === 11000 && session?.accessControl === Session_1.AccessControl.NO_RESTRICTION) {
+                const winner = await checkIn_repository_1.checkInRepository.findByInviteeAndSession(invitee._id.toString(), String(sessionId));
                 if (winner)
-                    return this.admitAnother({ actor, event, existing: winner, invitee, session, now, qr, full });
+                    return this.recordRepeatEntry(event, winner, invitee, session, now);
             }
             throw e;
         }
-        this.announceArrival(actor, event);
-        return this.formatCheckInResponse(checkIn, invitee, session);
-    },
-    /** The organizer and the administrators are told as guests arrive (a running count, never one notice per scan) */
-    announceArrival(actor, event) {
+        // the organizer and the administrators are told as guests arrive (a running count, never one notice per scan)
         void (async () => {
             const staff = await User_1.User.findById(actor.userId).select('fullName').lean();
             await alert_service_1.alertService.guestCheckedIn(event, staff?.fullName || 'a staff member');
         })().catch(() => undefined);
+        return this.formatCheckInResponse(checkIn, invitee, session);
     },
     /**
-     * The one place a new attendance record is written (see `gated`).
-     */
-    async commitAdmission(event, data, now, qr) {
-        return this.gated(event, now, qr, {
-            write: async (session) => (session ? (await CheckIn_1.CheckIn.create([data], { session }))[0] : checkIn_repository_1.checkInRepository.create(data)),
-            undo: async (created) => { await CheckIn_1.CheckIn.deleteOne({ _id: created._id }); }
-        });
-    },
-    /**
-     * Every admission is written here, whether it creates the attendance record or counts one more person on it. Reading the event's
-     * status earlier and writing later would leave a gap in which a cancel/close could commit in between, so the write is tied to the event
-     * document itself:
+     * The one place an attendance record is written. Reading the event's status earlier and inserting later would leave a gap
+     * in which a cancel/close could commit in between, so the insert is tied to the event document itself:
      *
-     *  - Where MongoDB supports transactions (Atlas, any replica set) the write runs in a transaction that FIRST updates the
+     *  - Where MongoDB supports transactions (Atlas, any replica set) the insert runs in a transaction that FIRST updates the
      *    event (`admissionSeq`+1, only while it is PUBLISHED). Cancel and close update that same document, so MongoDB makes the
      *    two conflict and serialises them: either the check-in commits first and is legitimate attendance, or the cancel/close
      *    commits first and the check-in's conditional update matches nothing, so it is refused and nothing is written.
-     *  - Where it does not (a standalone mongod used in local development), the event is claimed the same way, the write is
-     *    made, and the event is read again; if it is no longer open the write is undone and the scan refused.
-     *    That reverses an admission that was never acknowledged to anyone, but it is not crash-safe like a transaction.
+     *  - Where it does not (a standalone mongod used in local development), the event is claimed the same way, the record is
+     *    inserted, and the event is read again; if it is no longer open the just-written record is removed and the scan refused.
+     *    That removes an attendance row that was never acknowledged to anyone, but it is not crash-safe like a transaction.
      */
-    async gated(event, now, qr, op) {
+    async commitAdmission(event, data, now, qr) {
         const eventId = event._id;
         const refuseClosed = async (session) => {
             const fresh = await Event_1.Event.findById(eventId).session(session ?? null);
@@ -252,16 +231,17 @@ exports.checkInService = {
         if (await supportsTransactions()) {
             const session = await mongoose_1.default.startSession();
             try {
-                let written;
+                let created;
                 await session.withTransaction(async () => {
                     const gate = await Event_1.Event.findOneAndUpdate({ _id: eventId, status: Event_1.EventStatus.PUBLISHED }, { $inc: { admissionSeq: 1 } }, { new: true, session, timestamps: false });
                     if (!gate)
                         await refuseClosed(session);
                     // the window is judged on the event exactly as this transaction sees it (it may have just been changed)
                     this.assertEventAdmitting(gate, now, qr);
-                    written = await op.write(session);
+                    const [doc] = await CheckIn_1.CheckIn.create([data], { session });
+                    created = doc;
                 });
-                return written;
+                return created;
             }
             finally {
                 await session.endSession();
@@ -270,13 +250,13 @@ exports.checkInService = {
         const claimed = await Event_1.Event.updateOne({ _id: eventId, status: Event_1.EventStatus.PUBLISHED }, { $inc: { admissionSeq: 1 } }, { timestamps: false });
         if (!claimed.matchedCount)
             await refuseClosed();
-        const written = await op.write();
+        const created = await checkIn_repository_1.checkInRepository.create(data);
         const stillOpen = await Event_1.Event.exists({ _id: eventId, status: Event_1.EventStatus.PUBLISHED });
         if (!stillOpen) {
-            await op.undo(written);
+            await CheckIn_1.CheckIn.deleteOne({ _id: created._id });
             await refuseClosed();
         }
-        return written;
+        return created;
     },
     /**
      * Event status and admission window. `qr` only changes which word is used once the window has ended: a pass is
@@ -336,18 +316,13 @@ exports.checkInService = {
                 eventId: record.eventId,
                 checkInMethod: record.checkInMethod,
                 checkInAt: record.checkInAt,
-                admitted: admittedOn(record),
-                scanCount: admittedOn(record),
-                guestCount: invitee ? (0, guestCount_1.guestLimit)(invitee) : 1,
-                lastScanAt: record.lastScanAt ?? null,
                 invitee: invitee ? {
                     _id: invitee._id,
                     name: invitee.name,
                     email: invitee.email,
                     mobile: invitee.mobile,
                     dietaryPreference: invitee.dietaryPreference,
-                    rsvpStatus: invitee.rsvpStatus,
-                    guestCount: (0, guestCount_1.guestLimit)(invitee)
+                    rsvpStatus: invitee.rsvpStatus
                 } : null,
                 session: session ? {
                     _id: session._id,
@@ -439,12 +414,13 @@ exports.checkInService = {
         if (!(0, sessionAccess_1.inviteeAllowedInSession)(invitee, session)) {
             throw new Error('INVITEE_SESSION_DENIED');
         }
-        // A pass admits as many people as its "No of Guests", in each session, whatever the session's access control. Further people are
-        // counted by the caller on the same attendance record, never as a second record.
+        // AccessControl (ONLY_ONCE / NO_RESTRICTION) check
         const existingSessionCheckIn = await checkIn_repository_1.checkInRepository.findByInviteeAndSession(invitee._id.toString(), sessionId);
-        if (existingSessionCheckIn && admittedOn(existingSessionCheckIn) >= (0, guestCount_1.guestLimit)(invitee)) {
-            throw guestLimitReached('ONLY_ONCE_VIOLATION', invitee, existingSessionCheckIn);
+        if (session.accessControl === Session_1.AccessControl.ONLY_ONCE && existingSessionCheckIn) {
+            throw new Error('ONLY_ONCE_VIOLATION');
         }
+        // NO_RESTRICTION: the same pass may be scanned again (every other rule above and below still applies). The repeat is
+        // handled by the caller as a repeat entry on the existing attendance record, never as a second record.
         // "Consider access session validation on other session access" is configured on the primary
         // (first) session: when enabled, guests must have checked in to it before entering other sessions.
         const primary = await Session_1.Session.findOne({ eventId }).sort({ _id: 1 });
@@ -456,20 +432,13 @@ exports.checkInService = {
         }
         return Object.assign(session, { _existingCheckIn: existingSessionCheckIn });
     },
-    /** One more person of the same invitation: counted on the existing record, never beyond the pass's number of guests */
-    async admitAnother(args) {
-        const { actor, event, existing, invitee, session, now, qr, full } = args;
-        const limit = (0, guestCount_1.guestLimit)(invitee);
-        const updated = await this.gated(event, now, qr, {
-            // the limit is part of the update's condition, so scans racing each other can never admit one person too many
-            write: (tx) => CheckIn_1.CheckIn.findOneAndUpdate({ _id: existing._id, $expr: { $lt: [{ $ifNull: ['$scanCount', 1] }, limit] } }, [{ $set: { scanCount: { $add: [{ $ifNull: ['$scanCount', 1] }, 1] }, lastScanAt: now } }], { new: true, session: tx }),
-            undo: async (written) => { if (written)
-                await CheckIn_1.CheckIn.updateOne({ _id: existing._id }, { $inc: { scanCount: -1 } }); }
-        });
-        if (!updated)
-            throw guestLimitReached(full, invitee, await CheckIn_1.CheckIn.findById(existing._id) ?? existing);
-        this.announceArrival(actor, event);
-        return { ...this.formatCheckInResponse(updated, invitee, session), reEntry: true };
+    /** NO_RESTRICTION repeat scan: count it on the existing record. Nothing new is admitted, so the event's admission counter is untouched. */
+    async recordRepeatEntry(event, existing, invitee, session, now) {
+        // narrow the window for a race with a cancel/close: a repeat entry is refused once the event has ended
+        if (!(await Event_1.Event.exists({ _id: event._id, status: Event_1.EventStatus.PUBLISHED })))
+            this.assertEventAdmitting(await Event_1.Event.findById(event._id), now, true);
+        const updated = await CheckIn_1.CheckIn.findOneAndUpdate({ _id: existing._id }, { $inc: { scanCount: 1 }, $set: { lastScanAt: now } }, { new: true });
+        return { ...this.formatCheckInResponse((updated || existing), invitee, session), reEntry: true, scanCount: updated?.scanCount ?? 2 };
     },
     formatCheckInResponse(checkIn, invitee, session) {
         return {
@@ -484,14 +453,8 @@ exports.checkInService = {
                 email: invitee.email,
                 mobile: invitee.mobile,
                 dietaryPreference: invitee.dietaryPreference,
-                rsvpStatus: invitee.rsvpStatus,
-                guestCount: (0, guestCount_1.guestLimit)(invitee)
+                rsvpStatus: invitee.rsvpStatus
             },
-            // how many of the pass's people have entered here, and how many may still
-            admitted: admittedOn(checkIn),
-            scanCount: admittedOn(checkIn),
-            guestCount: (0, guestCount_1.guestLimit)(invitee),
-            remaining: Math.max(0, (0, guestCount_1.guestLimit)(invitee) - admittedOn(checkIn)),
             session: session ? {
                 _id: session._id,
                 name: session.name,

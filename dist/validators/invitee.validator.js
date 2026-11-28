@@ -1,10 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.removeFromSessionSchema = exports.bulkUpdateSessionAccessSchema = exports.updateSessionAccessSchema = exports.updateInviteeSchema = exports.createInviteeSchema = void 0;
+exports.bulkUpdateSessionAccessSchema = exports.updateSessionAccessSchema = exports.updateInviteeSchema = exports.createInviteeSchema = void 0;
 const zod_1 = require("zod");
 const phone_validator_1 = require("./phone.validator");
-const guestCount_1 = require("../utils/guestCount");
-const guestCount = zod_1.z.number({ message: 'No of Guests must be a number' }).int('No of Guests must be a whole number').min(1, 'No of Guests must be at least 1').max(guestCount_1.MAX_GUESTS_PER_PASS, `No of Guests can be at most ${guestCount_1.MAX_GUESTS_PER_PASS}`).optional();
 exports.createInviteeSchema = zod_1.z.object({
     body: zod_1.z.object({
         name: zod_1.z.string().trim().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
@@ -14,7 +12,6 @@ exports.createInviteeSchema = zod_1.z.object({
         company: zod_1.z.string().trim().max(200, 'Company must be 200 characters or less').optional(),
         professionalIdentity: zod_1.z.string().trim().max(100).optional(),
         secondaryIdentity: zod_1.z.string().trim().max(100).optional(),
-        guestCount,
         dietaryPreference: zod_1.z.string().max(200).optional(),
         sessionAccess: zod_1.z.array(zod_1.z.object({
             sessionId: zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid session ID'),
@@ -34,7 +31,6 @@ exports.updateInviteeSchema = zod_1.z.object({
         company: zod_1.z.string().trim().max(200, 'Company must be 200 characters or less').optional(),
         professionalIdentity: zod_1.z.string().trim().max(100).optional(),
         secondaryIdentity: zod_1.z.string().trim().max(100).optional(),
-        guestCount,
         dietaryPreference: zod_1.z.string().max(200).optional(),
         rsvpStatus: zod_1.z.enum(['PENDING', 'ACCEPTED', 'DECLINED']).optional(),
         sessionAccess: zod_1.z.array(zod_1.z.object({
@@ -58,11 +54,5 @@ exports.bulkUpdateSessionAccessSchema = zod_1.z.object({
             sessionId: zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid session ID'),
             allowed: zod_1.z.boolean()
         }))
-    })
-});
-exports.removeFromSessionSchema = zod_1.z.object({
-    body: zod_1.z.object({
-        sessionId: zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid session ID'),
-        inviteeIds: zod_1.z.array(zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid invitee ID')).min(1, 'At least one invitee required').max(5000, 'Too many invitees in one request')
     })
 });

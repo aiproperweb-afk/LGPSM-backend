@@ -19,8 +19,6 @@ const own = (action) => async (req, res, next) => {
 exports.userController = {
     sendPhoneCode: own((userId) => accountSecurity_service_1.accountSecurityService.sendProfilePhoneCode(userId)),
     verifyPhone: own((userId, body) => accountSecurity_service_1.accountSecurityService.verifyProfilePhone(userId, body.code)),
-    sendEmailCode: own((userId) => accountSecurity_service_1.accountSecurityService.sendProfileEmailCode(userId)),
-    verifyEmail: own((userId, body) => accountSecurity_service_1.accountSecurityService.verifyProfileEmail(userId, body.code)),
     requestEmailChange: own((userId, body) => accountSecurity_service_1.accountSecurityService.requestEmailChange(userId, body)),
     confirmEmailChange: own((userId, body) => accountSecurity_service_1.accountSecurityService.confirmEmailChange(userId, body.code)),
     async getProfile(req, res, next) {

@@ -14,8 +14,8 @@ const deliverySummary = (results: { status: string }[]) => ({
 const paymentRequired = (req: Request, res: Response) => res.status(402).json({
   success: false, error: 'Payment Required', code: 'PAYMENT_REQUIRED',
   message: (req as any).user?.role === 'ADMIN'
-    ? 'The organizer has to pay for these WhatsApp invitations first. Nothing was sent.'
-    : 'Please pay the bill for these WhatsApp invitations first. Nothing was sent.'
+    ? 'The organizer has to pay for these WhatsApp invitations first. Nothing was sent. Email invitations are free.'
+    : 'Please pay the bill for these WhatsApp invitations first. Nothing was sent. Email invitations are free.'
 });
 
 export const invitationController = {

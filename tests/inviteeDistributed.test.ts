@@ -5,7 +5,6 @@ import { User, Role } from '../src/models/User';
 import { Event, EventStatus } from '../src/models/Event';
 import { Invitee, InvitationStatus, RsvpStatus } from '../src/models/Invitee';
 import { InviteeSet } from '../src/models/InviteeSet';
-import { withGuests } from './helpers/withGuests';
 
 // "Instance" = a separate copy of the application's modules (its own mongoose, models, connection pool and its own
 // in-process lock) talking to the SAME MongoDB, like two backend processes. Nothing in-process can coordinate them: if
@@ -28,7 +27,7 @@ function loadInstance(): Instance {
   });
   return inst;
 }
-const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(withGuests(rows)), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
+const sheet = (rows: (string | number)[][]) => { const wb = xlsx.utils.book_new(); xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(rows), 'I'); return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer; };
 const mkEvent = () => Event.create({ organizerId: org._id, title: 'D', description: 'd', categoryId: new mongoose.Types.ObjectId(), format: 'PHYSICAL', status: EventStatus.PUBLISHED, schedule: { start: new Date(Date.now() + 864e5), end: new Date(Date.now() + 864e5 + 36e5) } } as any);
 const archivedGuest = (ev: any, extra: Record<string, unknown>) => Invitee.create({ eventId: ev._id, name: 'Draft Dee', invitationStatus: InvitationStatus.PENDING, rsvpStatus: RsvpStatus.PENDING, sessionAccess: [], archivedAt: new Date(), archivedReason: 'SUPERSEDED_BY_UPLOAD', ...extra } as any) as any;
 const actor = () => ({ userId: String(org._id), role: 'ORGANIZER' });

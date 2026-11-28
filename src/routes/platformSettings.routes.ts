@@ -23,8 +23,6 @@ router.get('/event-features', authorizeRoles(Role.ADMIN, Role.ORGANIZER), platfo
 router.put('/event-features', authorizeRoles(Role.ADMIN), validate(eventFeaturesSchema), platformSettingsController.updateEventFeatures);
 router.get('/notifications', authorizeRoles(Role.ADMIN), platformSettingsController.getNotificationPreferences);
 router.put('/notifications', authorizeRoles(Role.ADMIN), validate(notificationPreferencesSchema), platformSettingsController.updateNotificationPreferences);
-router.get('/push-notifications', authorizeRoles(Role.ADMIN), platformSettingsController.getPushPreferences);
-router.put('/push-notifications', authorizeRoles(Role.ADMIN), validate(notificationPreferencesSchema), platformSettingsController.updatePushPreferences);
 router.get('/pricing', authorizeRoles(Role.ADMIN), platformSettingsController.getPricing);
 router.put('/pricing', authorizeRoles(Role.ADMIN), validate(pricingSchema), platformSettingsController.updatePricing);
 router.put('/gst', authorizeRoles(Role.ADMIN), validate(gstSchema), platformSettingsController.updateGst);

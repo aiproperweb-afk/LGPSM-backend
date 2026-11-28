@@ -10,13 +10,3 @@ export function masterCardOnly(): boolean {
   if (v === 'false') return false;
   return process.env.NODE_ENV !== 'test';
 }
-
-/**
- * A design an administrator uploaded and published for everyone (its wording is replaced by each event's details). It is offered in
- * "master card only" mode too: that mode retires the older built-in designs, not the cards the administrator adds.
- */
-export const SHARED_UPLOAD_FILTER = { cardDesign: 'CUSTOM', isSystemTemplate: true, isPublished: true, 'templateData.dynamicDetails': true } as const;
-
-export function isSharedUpload(template: { cardDesign?: string | null; isSystemTemplate?: boolean; isPublished?: boolean; templateData?: { dynamicDetails?: boolean } | null } | null | undefined): boolean {
-  return !!template && template.cardDesign === 'CUSTOM' && template.isSystemTemplate === true && template.isPublished === true && template.templateData?.dynamicDetails === true;
-}

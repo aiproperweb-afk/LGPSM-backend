@@ -15,7 +15,7 @@ import { Role } from '../models/User';
 import mongoose from 'mongoose';
 import { Template } from '../models/Template';
 import { EVENT_TITLE_MAX_LENGTH } from '../constants/eventLimits';
-import { masterCardOnly, SHARED_UPLOAD_FILTER } from '../constants/masterCard';
+import { masterCardOnly } from '../constants/masterCard';
 import { ensureMasterTemplate } from './cardTemplates/defaultTemplates';
 import { SHARED_DESIGNS } from './cardTemplates/themes';
 
@@ -29,8 +29,6 @@ async function isOwnUploadOf(templateId: unknown, organizerId: string): Promise<
 async function isOfferedTemplate(templateId: unknown, organizerId: string): Promise<boolean> {
   if (!templateId || !mongoose.Types.ObjectId.isValid(String(templateId))) return false;
   if (await Template.exists({ _id: String(templateId), cardDesign: { $in: SHARED_DESIGNS }, isActive: { $ne: false } })) return true;
-  // a design an administrator uploaded and published for everyone
-  if (await Template.exists({ _id: String(templateId), ...SHARED_UPLOAD_FILTER, isActive: { $ne: false } })) return true;
   return isOwnUploadOf(templateId, organizerId);
 }
 import { findManageableEvent } from '../utils/eventAccess';
@@ -115,9 +113,9 @@ export class EventService {
    * Rate Locking & Pricing Business Rule:
    * - When an event is created, `platformSettingsService.currentRateSnapshot()` captures the global
    *   per-invitee price rate in effect at that moment.
-   * - This rate (`pricing.ratePerInvitee`) stays with the event once anything has been sent for it.
-   * - Until then, a change of the platform's rate (by Super Admin) applies to it as well
-   *   (platformSettingsService.applyRateToUnsentEvents).
+   * - This rate (`pricing.lockedRatePerInvitee`) is permanently locked to the event.
+   * - Subsequent changes to the platform's global price rate (by Super Admin) do NOT modify existing
+   *   or historical event rates.
    */
   async createEvent(organizerId: string, rawEventData: any, adminActorId?: string): Promise<IEvent> {
     // The owner is always the authenticated caller (or, for admins, the id the controller passes in)
@@ -196,7 +194,7 @@ export class EventService {
       },
       organizerId: new mongoose.Types.ObjectId(targetOrganizer),
       status: 'PUBLISHED',
-      // The per-invitee rate in force now goes on the event; a later change reaches it only while nothing has been sent
+      // The per-invitee rate in force now is locked on the event; later rate changes do not affect it
       pricing: await platformSettingsService.currentRateSnapshot(targetOrganizer)
     };
 
@@ -619,7 +617,7 @@ async function assertNothingOwed(eventId: unknown) {
 }
 
 /** Deletes everything an event's guests, sessions and passes are made of. Accounts and the audit trail are not touched. */
-export async function purgeOperationalData(eventId: string) {
+async function purgeOperationalData(eventId: string) {
   const eventObjId = new mongoose.Types.ObjectId(eventId);
   const [sessionRes, inviteeRes, invitationRes, checkInRes, assignmentRes] = await Promise.all([
     Session.deleteMany({ eventId: eventObjId }),

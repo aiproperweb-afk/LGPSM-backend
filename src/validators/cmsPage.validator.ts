@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import seed from './cms-pages.v1.json';
+import { isBuilderData, publishProblems, toPublicData, validateBuilderData, visitNodes } from './contactBuilder.schema';
 
 export const MAX_CMS_PAYLOAD_BYTES = 90 * 1024;
 const MAX_TEXT_LENGTH = 4000;
@@ -8,6 +9,7 @@ const MAX_TEXT_LENGTH = 4000;
 const contracts = new Map(seed.map(page => [page.slug, page]));
 
 export const supportedCmsSlugs = [...contracts.keys()];
+export const editableCmsSlugs = seed.filter(page => page.editable !== false).map(page => page.slug);
 
 export function supportsPageContract(slug: string, route: string, schemaVersion: number) {
   const contract = contracts.get(slug);
@@ -23,6 +25,7 @@ export const cmsPageSeedSchema = z.object({
   slug: slugSchema,
   route: routeSchema,
   schemaVersion: z.literal(1),
+  editable: z.boolean().optional(),
   data: z.record(z.string(), z.unknown()),
   componentStructureLocked: z.boolean().optional().default(false)
 }).strict();
@@ -32,7 +35,7 @@ export const cmsPublishBodySchema = cmsDraftBodySchema;
 
 export type PuckData = Record<string, unknown> & {
   root: { props: Record<string, unknown> };
-  content: unknown[];
+  content: { type: string; props: Record<string, unknown> & { id: string } }[];
   zones?: Record<string, unknown[]>;
 };
 
@@ -90,9 +93,48 @@ function fields(value: unknown, sample: unknown, path: string, ids: Set<string>,
   }
 }
 
-export function validatePuckData(input: unknown, slug: string): { data: PuckData; mediaIds: string[]; structure: string } {
+export function validatePuckData(input: unknown, slug: string, publishing = false): { data: PuckData; mediaIds: string[]; structure: string } {
   const contract = contracts.get(slug);
   if (!contract) fail('data', 'page contract is unsupported');
+  if (slug !== 'contact' && editableCmsSlugs.includes(slug) && isBuilderData(input)) {
+    const result = validateBuilderData(input, (source, copy) => {
+      const section = contract.data.content.find(item => item.props.id === source);
+      if (!section) return false;
+      const media = new Set<string>();
+      try {
+        fields(copy, section.props, 'section.content', media);
+        if ((copy as { id: string }).id !== source) return false;
+        return [...media];
+      } catch {
+        return false;
+      }
+    });
+    if (!result.ok) fail(result.path, result.message);
+    if (publishing) {
+      const visible = toPublicData(result.data);
+      if (!visible.content.length) fail('data.content', 'Add visible content before publishing');
+      if (slug !== 'home') {
+        const retained = new Map<string, number>();
+        visitNodes(visible.content, node => {
+          if (node.type === 'ExistingSection') {
+            const source = String(node.props.source);
+            retained.set(source, (retained.get(source) ?? 0) + 1);
+          }
+        });
+        if (contract.data.content.some(section => retained.get(section.props.id) !== 1)) {
+          fail('data.content', 'Keep one copy of each existing page or shared section');
+        }
+      }
+    }
+    return { data: result.data, mediaIds: result.mediaIds, structure: 'visual-builder-v2' };
+  }
+  if (slug === 'contact' && isBuilderData(input)) {
+    const result = validateBuilderData(input);
+    if (!result.ok) fail(result.path, result.message);
+    const problems = publishing ? publishProblems(result.data) : [];
+    if (problems.length) fail('data', problems[0]);
+    return { data: result.data, mediaIds: result.mediaIds, structure: 'contact-builder-v2' };
+  }
   const data = object(input, 'data');
   if (Buffer.byteLength(JSON.stringify(data), 'utf8') > MAX_CMS_PAYLOAD_BYTES) fail('data', 'payload exceeds maximum size');
   exact(data, data.zones === undefined ? ['root', 'content'] : ['root', 'content', 'zones'], 'data');

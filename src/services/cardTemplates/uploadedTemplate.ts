@@ -9,10 +9,6 @@ import { Media, MediaPurpose } from '../../models/Media';
 import { mediaIdFromKey } from '../../utils/mediaKey';
 import { CANVAS_PRESETS, CanvasPresetId, DesignSpec, parseDesignSpec } from './designSpec';
 import { detectTextZones, TextZone, ZoneRole } from './textZones';
-import QRCode from 'qrcode';
-import { buildSpecTexts } from './content';
-import { renderDesignSpec } from './specRenderer';
-import { previewSampleUrl } from '../../utils/qrPayload';
 
 /**
  * "Upload your own template": the organizer's finished invitation design becomes the card. The event details are already in
@@ -233,47 +229,13 @@ async function saveZones(t: OwnUpload, zones: TextZone[], mode: 'AUTO' | 'MANUAL
   return { updated };
 }
 
-/** The areas kept inside the picture */
-function insideCanvas(zones: TextZone[], W: number, H: number): TextZone[] {
-  return zones.map((z) => ({ ...z, x: Math.max(0, Math.min(W - 4, z.x)), y: Math.max(0, Math.min(H - 4, z.y)), w: Math.max(4, Math.min(W - z.x, z.w)), h: Math.max(4, Math.min(H - z.y, z.h)) }))
-    // a code is square
-    .map((z) => (z.role === 'qr' ? { ...z, w: Math.min(z.w, z.h), h: Math.min(z.w, z.h) } : z));
-}
-
-/**
- * The card these areas would produce, with sample event details and a sample QR, as a full-size PNG: what the administrator downloads to
- * compare with the original design before saving. Nothing is stored.
- */
-export async function previewTextZones(actor: { userId: string }, id: string, zones: TextZone[]): Promise<Buffer> {
-  const t = await ownUpload(actor, id);
-  const { width: W, height: H } = t.designSpec.canvas;
-  const dynamic = t.templateData?.dynamicDetails === true;
-  const light = await isLightAtBottom(t.previewImageKey as string, W, H);
-  const inside = insideCanvas(zones, W, H);
-  const spec = dynamic ? buildDynamicUploadedSpec(t.previewImageKey as string, W, H, light, inside) : buildUploadedSpec(t.previewImageKey as string, W, H, inside, light);
-  const start = new Date(Date.now() + 30 * 86400000);
-  start.setUTCHours(12, 30, 0, 0);
-  const texts = buildSpecTexts({
-    title: 'Sample Event Name',
-    startIso: start.toISOString(),
-    endIso: new Date(start.getTime() + 3 * 3600000).toISOString(),
-    venue: 'Sample Venue, City',
-    organizerName: 'Sample Host',
-    invitee: { name: 'Guest Name', companyName: 'Company Name' }
-  } as any);
-  const qr = await QRCode.toBuffer(previewSampleUrl(), { errorCorrectionLevel: 'H', margin: 4, width: 640 });
-  // the sample logo stands where a logo area is marked
-  const logo = inside.some((z) => z.role === 'logo') ? await sampleLogo() : undefined;
-  return (await renderDesignSpec({ spec, texts, qr, photo: logo, logo })).png;
-}
-
-const sampleLogo = () => sharp(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300"><rect width="600" height="300" rx="40" fill="#1F65FF"/><text x="300" y="185" font-family="sans-serif" font-size="110" font-weight="700" text-anchor="middle" fill="#fff">LOGO</text></svg>')).png().toBuffer();
-
 /** The areas marked by hand replace whatever was found */
 export async function setTextZones(actor: { userId: string }, id: string, zones: TextZone[]) {
   const t = await ownUpload(actor, id);
   const { width: W, height: H } = t.designSpec.canvas;
-  const inside = insideCanvas(zones, W, H);
+  const inside = zones.map((z) => ({ ...z, x: Math.max(0, Math.min(W - 4, z.x)), y: Math.max(0, Math.min(H - 4, z.y)), w: Math.max(4, Math.min(W - z.x, z.w)), h: Math.max(4, Math.min(H - z.y, z.h)) }))
+    // a code is square
+    .map((z) => (z.role === 'qr' ? { ...z, w: Math.min(z.w, z.h), h: Math.min(z.w, z.h) } : z));
   const { updated } = await saveZones(t, inside, inside.some((z) => WORDING.includes(z.role)) ? 'MANUAL' : 'NONE');
   return updated;
 }

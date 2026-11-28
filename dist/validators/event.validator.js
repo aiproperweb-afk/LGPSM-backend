@@ -32,24 +32,16 @@ const validateDietaryOptions = (preference, ctx) => {
     });
     if (!hasValidOptions) {
         ctx.addIssue({ code: zod_1.z.ZodIssueCode.custom, path: ['options'], message: 'Add at least one dietary option for each question.' });
-        return;
-    }
-    const longer = (text, max) => typeof text === 'string' && text.trim().length > max;
-    if (options.some((entry) => longer(entry?.title, eventLimits_1.FOOD_TITLE_MAX_LENGTH))) {
-        ctx.addIssue({ code: zod_1.z.ZodIssueCode.custom, path: ['options'], message: `Keep each food question title to ${eventLimits_1.FOOD_TITLE_MAX_LENGTH} characters.` });
-    }
-    if (options.some((entry) => (typeof entry === 'string' ? [entry] : entry.options).some((o) => longer(o, eventLimits_1.FOOD_OPTION_MAX_LENGTH)))) {
-        ctx.addIssue({ code: zod_1.z.ZodIssueCode.custom, path: ['options'], message: `Keep each food option to ${eventLimits_1.FOOD_OPTION_MAX_LENGTH} characters.` });
     }
 };
 const dietaryPreferenceCreateSchema = zod_1.z.object({
     enabled: zod_1.z.boolean().optional(),
-    title: zod_1.z.string().trim().max(eventLimits_1.FOOD_TITLE_MAX_LENGTH, `Keep the food question title to ${eventLimits_1.FOOD_TITLE_MAX_LENGTH} characters.`).optional(),
+    title: zod_1.z.string().max(100).optional(),
     options: zod_1.z.array(zod_1.z.any()).max(50, 'Too many dietary options').optional()
 }).superRefine(validateDietaryOptions);
 const dietaryPreferenceUpdateSchema = zod_1.z.object({
     enabled: zod_1.z.boolean(),
-    title: zod_1.z.string().trim().max(eventLimits_1.FOOD_TITLE_MAX_LENGTH, `Keep the food question title to ${eventLimits_1.FOOD_TITLE_MAX_LENGTH} characters.`).optional(),
+    title: zod_1.z.string().max(100).optional(),
     options: zod_1.z.array(zod_1.z.any()).max(50, 'Too many dietary options').optional()
 }).superRefine(validateDietaryOptions);
 // When guests may be admitted (see utils/admissionWindow). null / absent = follow the event's start and end.

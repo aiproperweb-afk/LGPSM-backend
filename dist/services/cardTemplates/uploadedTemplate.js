@@ -11,7 +11,6 @@ exports.titleCharLimit = titleCharLimit;
 exports.createUploadedTemplate = createUploadedTemplate;
 exports.shareAdminUpload = shareAdminUpload;
 exports.getTextZones = getTextZones;
-exports.previewTextZones = previewTextZones;
 exports.setTextZones = setTextZones;
 exports.redetectTextZones = redetectTextZones;
 exports.rebuildUploadedLayout = rebuildUploadedLayout;
@@ -28,10 +27,6 @@ const Media_1 = require("../../models/Media");
 const mediaKey_1 = require("../../utils/mediaKey");
 const designSpec_1 = require("./designSpec");
 const textZones_1 = require("./textZones");
-const qrcode_1 = __importDefault(require("qrcode"));
-const content_1 = require("./content");
-const specRenderer_1 = require("./specRenderer");
-const qrPayload_1 = require("../../utils/qrPayload");
 /**
  * "Upload your own template": the organizer's finished invitation design becomes the card. The event details are already in
  * their artwork, so only what is personal to each guest is added on top: the guest's own QR code (with its thin white margin, so it scans)
@@ -259,44 +254,13 @@ async function saveZones(t, zones, mode) {
     const updated = await Template_1.Template.findByIdAndUpdate(t._id, { designSpec: next, 'templateData.layoutVersion': 2, ...(dynamic ? { 'templateData.textAreas': mode, ...withTitleLimit(next) } : {}) }, { new: true });
     return { updated };
 }
-/** The areas kept inside the picture */
-function insideCanvas(zones, W, H) {
-    return zones.map((z) => ({ ...z, x: Math.max(0, Math.min(W - 4, z.x)), y: Math.max(0, Math.min(H - 4, z.y)), w: Math.max(4, Math.min(W - z.x, z.w)), h: Math.max(4, Math.min(H - z.y, z.h)) }))
-        // a code is square
-        .map((z) => (z.role === 'qr' ? { ...z, w: Math.min(z.w, z.h), h: Math.min(z.w, z.h) } : z));
-}
-/**
- * The card these areas would produce, with sample event details and a sample QR, as a full-size PNG: what the administrator downloads to
- * compare with the original design before saving. Nothing is stored.
- */
-async function previewTextZones(actor, id, zones) {
-    const t = await ownUpload(actor, id);
-    const { width: W, height: H } = t.designSpec.canvas;
-    const dynamic = t.templateData?.dynamicDetails === true;
-    const light = await isLightAtBottom(t.previewImageKey, W, H);
-    const inside = insideCanvas(zones, W, H);
-    const spec = dynamic ? buildDynamicUploadedSpec(t.previewImageKey, W, H, light, inside) : buildUploadedSpec(t.previewImageKey, W, H, inside, light);
-    const start = new Date(Date.now() + 30 * 86400000);
-    start.setUTCHours(12, 30, 0, 0);
-    const texts = (0, content_1.buildSpecTexts)({
-        title: 'Sample Event Name',
-        startIso: start.toISOString(),
-        endIso: new Date(start.getTime() + 3 * 3600000).toISOString(),
-        venue: 'Sample Venue, City',
-        organizerName: 'Sample Host',
-        invitee: { name: 'Guest Name', companyName: 'Company Name' }
-    });
-    const qr = await qrcode_1.default.toBuffer((0, qrPayload_1.previewSampleUrl)(), { errorCorrectionLevel: 'H', margin: 4, width: 640 });
-    // the sample logo stands where a logo area is marked
-    const logo = inside.some((z) => z.role === 'logo') ? await sampleLogo() : undefined;
-    return (await (0, specRenderer_1.renderDesignSpec)({ spec, texts, qr, photo: logo, logo })).png;
-}
-const sampleLogo = () => (0, sharp_1.default)(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300"><rect width="600" height="300" rx="40" fill="#1F65FF"/><text x="300" y="185" font-family="sans-serif" font-size="110" font-weight="700" text-anchor="middle" fill="#fff">LOGO</text></svg>')).png().toBuffer();
 /** The areas marked by hand replace whatever was found */
 async function setTextZones(actor, id, zones) {
     const t = await ownUpload(actor, id);
     const { width: W, height: H } = t.designSpec.canvas;
-    const inside = insideCanvas(zones, W, H);
+    const inside = zones.map((z) => ({ ...z, x: Math.max(0, Math.min(W - 4, z.x)), y: Math.max(0, Math.min(H - 4, z.y)), w: Math.max(4, Math.min(W - z.x, z.w)), h: Math.max(4, Math.min(H - z.y, z.h)) }))
+        // a code is square
+        .map((z) => (z.role === 'qr' ? { ...z, w: Math.min(z.w, z.h), h: Math.min(z.w, z.h) } : z));
     const { updated } = await saveZones(t, inside, inside.some((z) => WORDING.includes(z.role)) ? 'MANUAL' : 'NONE');
     return updated;
 }

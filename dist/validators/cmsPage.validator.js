@@ -3,16 +3,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cmsPublishBodySchema = exports.cmsDraftBodySchema = exports.cmsPageSeedSchema = exports.supportedCmsSlugs = exports.MAX_CMS_PAYLOAD_BYTES = void 0;
+exports.cmsPublishBodySchema = exports.cmsDraftBodySchema = exports.cmsPageSeedSchema = exports.editableCmsSlugs = exports.supportedCmsSlugs = exports.MAX_CMS_PAYLOAD_BYTES = void 0;
 exports.supportsPageContract = supportsPageContract;
 exports.validatePuckData = validatePuckData;
 exports.validateCmsSeedInput = validateCmsSeedInput;
 const zod_1 = require("zod");
 const cms_pages_v1_json_1 = __importDefault(require("./cms-pages.v1.json"));
+const contactBuilder_schema_1 = require("./contactBuilder.schema");
 exports.MAX_CMS_PAYLOAD_BYTES = 90 * 1024;
 const MAX_TEXT_LENGTH = 4000;
 const contracts = new Map(cms_pages_v1_json_1.default.map(page => [page.slug, page]));
 exports.supportedCmsSlugs = [...contracts.keys()];
+exports.editableCmsSlugs = cms_pages_v1_json_1.default.filter(page => page.editable !== false).map(page => page.slug);
 function supportsPageContract(slug, route, schemaVersion) {
     const contract = contracts.get(slug);
     return contract?.route === route && contract.schemaVersion === schemaVersion;
@@ -25,6 +27,7 @@ exports.cmsPageSeedSchema = zod_1.z.object({
     slug: slugSchema,
     route: routeSchema,
     schemaVersion: zod_1.z.literal(1),
+    editable: zod_1.z.boolean().optional(),
     data: zod_1.z.record(zod_1.z.string(), zod_1.z.unknown()),
     componentStructureLocked: zod_1.z.boolean().optional().default(false)
 }).strict();
@@ -91,10 +94,56 @@ function fields(value, sample, path, ids, key = '', optionalImage = false) {
             fields(record[name], item, path + '.' + name, ids, name, optionalImage);
     }
 }
-function validatePuckData(input, slug) {
+function validatePuckData(input, slug, publishing = false) {
     const contract = contracts.get(slug);
     if (!contract)
         fail('data', 'page contract is unsupported');
+    if (slug !== 'contact' && exports.editableCmsSlugs.includes(slug) && (0, contactBuilder_schema_1.isBuilderData)(input)) {
+        const result = (0, contactBuilder_schema_1.validateBuilderData)(input, (source, copy) => {
+            const section = contract.data.content.find(item => item.props.id === source);
+            if (!section)
+                return false;
+            const media = new Set();
+            try {
+                fields(copy, section.props, 'section.content', media);
+                if (copy.id !== source)
+                    return false;
+                return [...media];
+            }
+            catch {
+                return false;
+            }
+        });
+        if (!result.ok)
+            fail(result.path, result.message);
+        if (publishing) {
+            const visible = (0, contactBuilder_schema_1.toPublicData)(result.data);
+            if (!visible.content.length)
+                fail('data.content', 'Add visible content before publishing');
+            if (slug !== 'home') {
+                const retained = new Map();
+                (0, contactBuilder_schema_1.visitNodes)(visible.content, node => {
+                    if (node.type === 'ExistingSection') {
+                        const source = String(node.props.source);
+                        retained.set(source, (retained.get(source) ?? 0) + 1);
+                    }
+                });
+                if (contract.data.content.some(section => retained.get(section.props.id) !== 1)) {
+                    fail('data.content', 'Keep one copy of each existing page or shared section');
+                }
+            }
+        }
+        return { data: result.data, mediaIds: result.mediaIds, structure: 'visual-builder-v2' };
+    }
+    if (slug === 'contact' && (0, contactBuilder_schema_1.isBuilderData)(input)) {
+        const result = (0, contactBuilder_schema_1.validateBuilderData)(input);
+        if (!result.ok)
+            fail(result.path, result.message);
+        const problems = publishing ? (0, contactBuilder_schema_1.publishProblems)(result.data) : [];
+        if (problems.length)
+            fail('data', problems[0]);
+        return { data: result.data, mediaIds: result.mediaIds, structure: 'contact-builder-v2' };
+    }
     const data = object(input, 'data');
     if (Buffer.byteLength(JSON.stringify(data), 'utf8') > exports.MAX_CMS_PAYLOAD_BYTES)
         fail('data', 'payload exceeds maximum size');

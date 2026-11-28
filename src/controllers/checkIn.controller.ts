@@ -32,7 +32,7 @@ const REFUSALS: Record<string, { status: number; error: string; message: string 
   EVENT_COMPLETED: { status: 409, error: 'Conflict', message: 'This event is already completed.' },
   EVENT_NOT_PUBLISHED: { status: 409, error: 'Conflict', message: 'This event is not open for check-in.' },
   CREDENTIAL_REVOKED: { status: 410, error: 'Gone', message: 'This access pass has been revoked.' },
-  ONLY_ONCE_VIOLATION: { status: 409, error: 'Conflict', message: 'Invitee has already checked into this session' },
+  ONLY_ONCE_VIOLATION: { status: 409, error: 'Conflict', message: 'Invitee has already checked into this session (ONLY_ONCE rule)' },
   DUPLICATE_CHECKIN: { status: 409, error: 'Conflict', message: 'Invitee has already checked in' },
   PRIMARY_SESSION_CHECKIN_REQUIRED: { status: 409, error: 'Conflict', message: 'Guest must check in to the first session before entering this session' },
   CROSS_SESSION_CONFLICT: { status: 409, error: 'Conflict', message: 'Cross-session conflict: Invitee has already checked into another session for this event' },
@@ -61,18 +61,11 @@ function sendRefusal(res: Response, error: any): boolean {
   const refusal = REFUSALS[code];
   if (refusal) {
     // The existing 'already checked in' wording is kept; the code makes it machine-readable (ALREADY_CHECKED_IN)
-    // a family pass that is full says how many it admits
-    const counts = typeof error?.guestCount === 'number' ? { guestCount: error.guestCount, admitted: error.admitted } : {};
-    const message = (error?.guestCount ?? 1) > 1 ? `All ${error.guestCount} guests of this pass have already entered${code === 'ONLY_ONCE_VIOLATION' ? ' this session' : ''}.` : refusal.message;
-    res.status(refusal.status).json({ success: false, code: code === 'DUPLICATE_CHECKIN' ? 'ALREADY_CHECKED_IN' : code, error: refusal.error, message, ...counts });
+    res.status(refusal.status).json({ success: false, code: code === 'DUPLICATE_CHECKIN' ? 'ALREADY_CHECKED_IN' : code, error: refusal.error, message: refusal.message });
     return true;
   }
   return false;
 }
-
-/** What the door is told: for a family pass, how many of its people are now in */
-const admissionMessage = (r: { guestCount?: number; admitted?: number; reEntry?: boolean }) =>
-  (r?.guestCount ?? 1) > 1 ? `Check-in successful: ${r.admitted} of ${r.guestCount} guests in` : r?.reEntry ? 'Repeat entry allowed' : 'Check-in successful';
 
 export const checkInController = {
   async scanCheckIn(req: Request, res: Response, next: NextFunction) {
@@ -83,7 +76,7 @@ export const checkInController = {
       };
 
       const result = await checkInService.scanCheckIn(actor, req.body);
-      res.status(201).json({ success: true, message: admissionMessage(result as any), data: result });
+      res.status(201).json({ success: true, message: (result as any)?.reEntry ? 'Repeat entry allowed' : 'Check-in successful', data: result });
     } catch (error: any) {
       if (!sendRefusal(res, error)) next(error);
     }
@@ -97,7 +90,7 @@ export const checkInController = {
       };
 
       const result = await checkInService.manualCheckIn(actor, req.body);
-      res.status(201).json({ success: true, message: admissionMessage(result as any), data: result });
+      res.status(201).json({ success: true, message: (result as any)?.reEntry ? 'Repeat entry allowed' : 'Check-in successful', data: result });
     } catch (error: any) {
       if (!sendRefusal(res, error)) next(error);
     }
