@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { Media, MediaPurpose } from '../models/Media';
 import { Page, PageStatus } from '../models/Page';
 import { cmsPageRepository } from '../repositories/cmsPage.repository';
-import { supportsPageContract, supportedCmsSlugs, validateCmsSeedInput, validatePuckData } from '../validators/cmsPage.validator';
+import { supportsPageContract, validateCmsSeedInput, validatePuckData } from '../validators/cmsPage.validator';
 import { mediaService } from './media.service';
 
 function cmsError(statusCode: number, code: string, message: string, extra?: Record<string, unknown>) {
@@ -22,13 +22,16 @@ function requireExpectedVersion(expectedVersion: number) {
 async function requirePage(id: string) {
   requirePageId(id);
   const page = await cmsPageRepository.findById(id);
-  if (!page || !supportsPageContract(page.slug, page.route, page.schemaVersion)) throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
+  if (!page) throw cmsError(404, 'PAGE_NOT_FOUND', 'Page not found');
   return page;
 }
 
 async function requireEditablePage(id: string, expectedVersion: number) {
   requireExpectedVersion(expectedVersion);
   const page = await requirePage(id);
+  if (!supportsPageContract(page.slug, page.route, page.schemaVersion)) {
+    throw cmsError(409, 'CMS_SCHEMA_UNSUPPORTED', 'This page does not use a supported CMS contract.');
+  }
   if (page.editVersion !== expectedVersion) throw editConflict(page.editVersion);
   return page;
 }
@@ -105,7 +108,6 @@ export const cmsPageService = {
   },
 
   async getPublishedPage(slug: string) {
-    if (!supportedCmsSlugs.includes(slug)) throw cmsError(404, 'PAGE_NOT_FOUND', 'Published page not found');
     const page = await cmsPageRepository.findPublishedBySlug(slug);
     if (!page) throw cmsError(404, 'PAGE_NOT_FOUND', 'Published page not found');
     return page;

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cmsPublishBodySchema = exports.cmsDraftBodySchema = exports.cmsPageSeedSchema = exports.supportedCmsSlugs = exports.MAX_CMS_PAYLOAD_BYTES = void 0;
+exports.cmsPublishBodySchema = exports.cmsDraftBodySchema = exports.cmsPageSeedSchema = exports.MAX_CMS_PAYLOAD_BYTES = void 0;
 exports.supportsPageContract = supportsPageContract;
 exports.validatePuckData = validatePuckData;
 exports.validateCmsSeedInput = validateCmsSeedInput;
@@ -12,14 +12,13 @@ const cms_pages_v1_json_1 = __importDefault(require("./cms-pages.v1.json"));
 exports.MAX_CMS_PAYLOAD_BYTES = 90 * 1024;
 const MAX_TEXT_LENGTH = 4000;
 const contracts = new Map(cms_pages_v1_json_1.default.map(page => [page.slug, page]));
-exports.supportedCmsSlugs = [...contracts.keys()];
 function supportsPageContract(slug, route, schemaVersion) {
     const contract = contracts.get(slug);
     return contract?.route === route && contract.schemaVersion === schemaVersion;
 }
 const approvedLinks = new Set(['/signup', '/contact', '/#how-it-works', '/#features', '/#pricing', '/#faq']);
 const slugSchema = zod_1.z.string().trim().min(1).max(100).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must use lowercase letters, numbers and hyphens');
-const routeSchema = zod_1.z.string().trim().min(1).max(200).regex(/^\/(?:(?:[A-Za-z0-9_-]+|\[id\])(?:\/(?:[A-Za-z0-9_-]+|\[id\]))*|#(?:navbar|footer))?$/, 'Route must be a local path without query strings');
+const routeSchema = zod_1.z.string().trim().min(1).max(200).regex(/^\/(?!\/)[A-Za-z0-9/_-]*$/, 'Route must be a local path without query strings');
 exports.cmsPageSeedSchema = zod_1.z.object({
     name: zod_1.z.string().trim().min(1).max(120),
     slug: slugSchema,
@@ -57,8 +56,8 @@ function fields(value, sample, path, ids, key = '', optionalImage = false) {
         safeText(value, path);
         if (key.endsWith('Href') && !approvedLinks.has(value))
             fail(path, 'destination is not approved');
-        if (key === 'image' || key.endsWith('Image')) {
-            if ((optionalImage || sample === '') && value === '')
+        if (key === 'image') {
+            if (optionalImage && value === '')
                 return;
             if (/^media:[0-9a-fA-F]{24}$/.test(value))
                 ids.add(value.slice(6).toLowerCase());
@@ -84,12 +83,8 @@ function fields(value, sample, path, ids, key = '', optionalImage = false) {
     }
     const defaults = object(sample, path);
     const record = exact(value, Object.keys(defaults), path);
-    for (const [name, item] of Object.entries(defaults)) {
-        if (key === 'labels')
-            safeText(record[name], path + '.' + name);
-        else
-            fields(record[name], item, path + '.' + name, ids, name, optionalImage);
-    }
+    for (const [name, item] of Object.entries(defaults))
+        fields(record[name], item, path + '.' + name, ids, name, optionalImage);
 }
 function validatePuckData(input, slug) {
     const contract = contracts.get(slug);
@@ -102,12 +97,7 @@ function validatePuckData(input, slug) {
     exact(exact(data.root, ['props'], 'data.root').props, [], 'data.root.props');
     if (data.zones !== undefined)
         exact(data.zones, [], 'data.zones');
-    let content = data.content;
-    if (slug === 'home' && Array.isArray(content) && content.length === contract.data.content.length - 1) {
-        const index = contract.data.content.findIndex(section => section.type === 'Testimonials');
-        // Legacy Home snapshots predate testimonials. Compare them using the same fixed section order.
-        content = [...content.slice(0, index), contract.data.content[index], ...content.slice(index)];
-    }
+    const content = data.content;
     if (!Array.isArray(content) || content.length !== contract.data.content.length)
         fail('data.content', 'page section count is fixed');
     const mediaIds = new Set();
