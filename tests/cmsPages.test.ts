@@ -314,6 +314,27 @@ describe('CMS pages', () => {
       .toEqual(homepageSeed[0].data);
   });
 
+  it('publishes a visual Home layout while validating the existing section copy', async () => {
+    await cmsPageService.seedPages(homepageSeed);
+    const home = await Page.findOne({ slug: 'home' });
+    const existing = homepageSeed[0].data.content[0];
+    const data = {
+      root: { props: { builder: 'visual', schemaVersion: 2 } },
+      content: [
+        { type: 'Heading', props: { id: 'new-heading', text: 'A new heading' } },
+        { type: 'ExistingSection', props: { id: 'existing-hero', source: existing.props.id, copy: existing.props } },
+      ],
+    };
+    const path = '/api/v1/admin/pages/' + home?.id + '/publish';
+    const headers = { ...adminHeaders, 'If-Match': '0' };
+    const invalid = structuredClone(data);
+    Object.assign(invalid.content[1].props, { copy: { id: existing.props.id } });
+    expect((await request(app).post(path).set(headers).send({ data: invalid })).status).toBe(400);
+    expect((await request(app).post(path).set(headers).send({ data })).status).toBe(200);
+    const live = await request(app).get('/api/v1/public/pages/home');
+    expect(live.body.data.content).toEqual(data);
+  });
+
   it('keeps visual Contact drafts separate and requires a working Contact form to publish', async () => {
     await cmsPageService.seedPages(homepageSeed);
     const contact = await Page.findOne({ slug: 'contact' });

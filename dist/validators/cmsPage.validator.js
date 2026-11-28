@@ -98,6 +98,43 @@ function validatePuckData(input, slug, publishing = false) {
     const contract = contracts.get(slug);
     if (!contract)
         fail('data', 'page contract is unsupported');
+    if (slug !== 'contact' && exports.editableCmsSlugs.includes(slug) && (0, contactBuilder_schema_1.isBuilderData)(input)) {
+        const result = (0, contactBuilder_schema_1.validateBuilderData)(input, (source, copy) => {
+            const section = contract.data.content.find(item => item.props.id === source);
+            if (!section)
+                return false;
+            const media = new Set();
+            try {
+                fields(copy, section.props, 'section.content', media);
+                if (copy.id !== source)
+                    return false;
+                return [...media];
+            }
+            catch {
+                return false;
+            }
+        });
+        if (!result.ok)
+            fail(result.path, result.message);
+        if (publishing) {
+            const visible = (0, contactBuilder_schema_1.toPublicData)(result.data);
+            if (!visible.content.length)
+                fail('data.content', 'Add visible content before publishing');
+            if (slug !== 'home') {
+                const retained = new Map();
+                (0, contactBuilder_schema_1.visitNodes)(visible.content, node => {
+                    if (node.type === 'ExistingSection') {
+                        const source = String(node.props.source);
+                        retained.set(source, (retained.get(source) ?? 0) + 1);
+                    }
+                });
+                if (contract.data.content.some(section => retained.get(section.props.id) !== 1)) {
+                    fail('data.content', 'Keep one copy of each existing page or shared section');
+                }
+            }
+        }
+        return { data: result.data, mediaIds: result.mediaIds, structure: 'visual-builder-v2' };
+    }
     if (slug === 'contact' && (0, contactBuilder_schema_1.isBuilderData)(input)) {
         const result = (0, contactBuilder_schema_1.validateBuilderData)(input);
         if (!result.ok)

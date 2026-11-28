@@ -371,7 +371,7 @@ exports.CARD_TYPES = ["Card", "ContactInfoCard", "AddressCard", "EmailCard", "Ph
 exports.FIELD_TYPES = ["TextInput", "EmailInput", "PhoneInput", "NumberInput", "Dropdown", "RadioGroup", "CheckboxField", "TextArea"];
 /** What ordinary containers accept: everything except the parts that only make sense inside a form or a column set. */
 exports.GENERAL_CHILDREN = [
-    ...exports.LAYOUT_TYPES, ...TYPOGRAPHY_TYPES, ...MEDIA_TYPES, ...INTERACTIVE_TYPES, ...exports.CARD_TYPES, "ContactForm", "FormHeading", "BusinessHours",
+    ...exports.LAYOUT_TYPES, ...TYPOGRAPHY_TYPES, ...MEDIA_TYPES, ...INTERACTIVE_TYPES, ...exports.CARD_TYPES, "ExistingSection", "ContactForm", "FormHeading", "BusinessHours",
 ];
 exports.FORM_CHILDREN = [
     ...exports.FIELD_TYPES, "SubmitButton", "FormGroup", "FormHeading", "Heading", "Subheading", "Paragraph", "RichText", "Link", "Highlight", "Spacer", "Divider", "Icon", "Image",
@@ -406,6 +406,7 @@ const field = (label, bindings, extra = {}) => ({
 const listProps = { items: { kind: "array", max: 30, item: { text: longText, href: link } } };
 const optionProps = { options: { kind: "array", max: 30, item: { label: text } } };
 exports.COMPONENTS = {
+    ExistingSection: { label: "Existing section", category: "layout", props: { source: { kind: "text" } } },
     Section: container("Section", "layout"),
     Container: container("Container", "layout"),
     Row: container("Row", "layout"),
@@ -510,7 +511,7 @@ function visitNodes(nodes, visit, ancestors = []) {
     }
 }
 function isBuilderData(value) {
-    return isObject(value) && isObject(value.root) && isObject(value.root.props) && value.root.props.builder === exports.BUILDER_ID;
+    return isObject(value) && isObject(value.root) && isObject(value.root.props) && (value.root.props.builder === exports.BUILDER_ID || value.root.props.builder === "visual");
 }
 class Invalid extends Error {
     path;
@@ -646,8 +647,19 @@ function cleanNodes(value, allow, path, walk, depth) {
         walk.ids.add(id);
         const spec = exports.COMPONENTS[type];
         const result = { id: id };
+        if (type === "ExistingSection") {
+            const approved = typeof props.source === "string" && walk.existing?.(props.source, props.copy);
+            if (!approved)
+                fail(at, "uses an invalid existing section");
+            for (const id of approved)
+                walk.media.add(id);
+            result.copy = props.copy;
+        }
+        else if (walk.existing && (type === "ContactForm" || exports.FORM_CHILDREN.includes(type) && !exports.GENERAL_CHILDREN.includes(type))) {
+            fail(at, "this component is available only on Contact");
+        }
         for (const [key, entry] of Object.entries(props)) {
-            if (key === "id" || entry === undefined || entry === null)
+            if (key === "id" || (type === "ExistingSection" && key === "copy") || entry === undefined || entry === null)
                 continue;
             const rule = Object.hasOwn(spec.props, key) ? spec.props[key] : Object.hasOwn(exports.COMMON_PROPS, key) ? exports.COMMON_PROPS[key] : undefined;
             if (!rule)
@@ -658,7 +670,7 @@ function cleanNodes(value, allow, path, walk, depth) {
     });
 }
 /** Checks a whole saved document and returns a cleaned copy (rich text sanitised, empty values dropped). */
-function validateBuilderData(input) {
+function validateBuilderData(input, existing) {
     try {
         if (!isObject(input) || Object.keys(input).some(key => !["root", "content", "zones"].includes(key)))
             fail("data", "must contain root and content only");
@@ -668,12 +680,14 @@ function validateBuilderData(input) {
         if (data.zones !== undefined && (!isObject(data.zones) || Object.keys(data.zones).length))
             fail("data.zones", "is not supported");
         if (!isBuilderData(data))
-            fail("data.root", "is not a Contact builder document");
+            fail("data.root", "is not a visual builder document");
         const root = data.root.props;
         if (root.schemaVersion !== exports.BUILDER_SCHEMA_VERSION)
             fail("data.root.props.schemaVersion", "is not supported");
-        const walk = { ids: new Set(), media: new Set(), count: 0 };
-        const props = { builder: exports.BUILDER_ID, schemaVersion: exports.BUILDER_SCHEMA_VERSION };
+        if (root.builder !== (existing ? "visual" : exports.BUILDER_ID))
+            fail("data.root.props.builder", "is not supported for this page");
+        const walk = { ids: new Set(), media: new Set(), count: 0, existing };
+        const props = { builder: root.builder, schemaVersion: exports.BUILDER_SCHEMA_VERSION };
         for (const [key, value] of Object.entries(root)) {
             if (key === "builder" || key === "schemaVersion" || value === undefined || value === null)
                 continue;

@@ -52,7 +52,7 @@ async function verifyMediaReferences(mediaIds: string[]) {
 }
 
 function validateStructure(page: { componentStructureLocked: boolean; draftData: unknown; slug: string }, structure: string) {
-  if (!page.componentStructureLocked || (page.slug === 'contact' && structure === 'contact-builder-v2')) return;
+  if (!page.componentStructureLocked || ((page.slug === 'contact' && structure === 'contact-builder-v2') || structure === 'visual-builder-v2')) return;
   const current = validatePuckData(page.draftData, page.slug).structure;
   if (current !== structure) {
     throw cmsError(409, 'CMS_STRUCTURE_LOCKED', 'This page has a fixed component structure; component insertion, deletion and reordering are not allowed.');

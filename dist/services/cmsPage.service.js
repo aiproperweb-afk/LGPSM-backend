@@ -55,7 +55,7 @@ async function verifyMediaReferences(mediaIds) {
     }
 }
 function validateStructure(page, structure) {
-    if (!page.componentStructureLocked || (page.slug === 'contact' && structure === 'contact-builder-v2'))
+    if (!page.componentStructureLocked || ((page.slug === 'contact' && structure === 'contact-builder-v2') || structure === 'visual-builder-v2'))
         return;
     const current = (0, cmsPage_validator_1.validatePuckData)(page.draftData, page.slug).structure;
     if (current !== structure) {
