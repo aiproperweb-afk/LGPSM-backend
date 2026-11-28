@@ -27,7 +27,8 @@ const METRICS: Record<string, [number, number]> = {
   Alexandria: [0.968, 0.251],
   Birthstone: [0.9, 0.35], 'Abhaya Libre ExtraBold': [0.84, 0.34], 'Alan Sans': [0.99, 0.31], 'Alegreya SC': [1.016, 0.345], Aleo: [0.905, 0.295],
   'Ancizar Serif': [0.9, 0.3], 'Berkshire Swash': [0.98, 0.262], 'Bigshot One': [0.869, 0.179], Chonburi: [0.95, 0.25], Cinzel: [0.976, 0.372],
-  'Cinzel Decorative': [0.976, 0.372], 'IM Fell Great Primer': [0.948, 0.274]
+  'Cinzel Decorative': [0.976, 0.372], 'IM Fell Great Primer': [0.948, 0.274],
+  'Inria Serif': [0.976, 0.223], 'Inknut Antiqua': [1.703, 0.876], 'Bebas Neue': [0.9, 0.3], Kalnia: [1.045, 0.3], 'Kantumruy Pro': [0.92, 0.26]
 };
 
 const round = (n: number) => Math.round(n * 100) / 100;
@@ -197,7 +198,14 @@ export async function renderThemedCard(design: ThemedDesign, input: MasterCardIn
           }
         };
       }
-      case 'when': return single(key, when, narrow(theme.when));
+      case 'when': {
+        if (theme.whenRange && /\d{4}.*\d{4}/.test(when)) return single(key, when, theme.whenRange);
+        // one day: the time and the date each on their own line, where the design sets them so
+        const [, day, hours] = (theme.whenBelow && /^(.*?\b\d{4}) (\d{1,2}:\d\d.*)$/.exec(when)) || [];
+        if (!theme.whenBelow || !day || /\d{4}/.test(hours)) return single(key, when, narrow(theme.when));
+        const [a, b] = await Promise.all([fitted(hours, theme.when), fitted(day, theme.whenBelow)]);
+        return { key, height: a.height + b.height, draw: (top, svg) => { svg.push(textSvg(a, top, s), textSvg(b, top + a.height, s)); } };
+      }
       case 'where': return single(key, where, narrow(theme.where));
       case 'qr': return qr ? qrBlock(theme, qr, scanLabel, theme.qr.size, s) : null;
       case 'info': {
@@ -224,7 +232,11 @@ export async function renderThemedCard(design: ThemedDesign, input: MasterCardIn
           key,
           height: inside + 2 * pad,
           draw: (start, svg) => {
-            if (box) svg.push(`<rect x="${round(((MASTER_WIDTH - box.width) / 2) * s)}" y="${round(start * s)}" width="${round(box.width * s)}" height="${round((inside + 2 * pad) * s)}" rx="${round(box.radius * s)}" fill="none" stroke="${box.color}" stroke-width="${round(s)}"/>`);
+            if (box) {
+              const stroke = box.colorEnd ? 'url(#box-border)' : box.color;
+              if (box.colorEnd) svg.push(`<linearGradient id="box-border" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${box.color}"/><stop offset="1" stop-color="${box.colorEnd}"/></linearGradient>`);
+              svg.push(`<rect x="${round(((MASTER_WIDTH - box.width) / 2) * s)}" y="${round(start * s)}" width="${round(box.width * s)}" height="${round((inside + 2 * pad) * s)}" rx="${round(box.radius * s)}" fill="none" stroke="${stroke}" stroke-width="${round((box.borderWidth ?? 1) * s)}"/>`);
+            }
             const top = start + pad;
             if (d) svg.push(textSvg(d, top, s));
             if (rule) {
@@ -236,7 +248,8 @@ export async function renderThemedCard(design: ThemedDesign, input: MasterCardIn
         };
       }
       // ornaments: only beside the details they belong to
-      case 'pin': return theme.pin && (when || where) ? imageBlock(key, theme.pin.file, theme.pin.size, theme.pin.size, s) : null;
+      // (a pin fixed above the location's own place means nothing without a location)
+      case 'pin': return theme.pin && (theme.anchor?.pin ? where : when || where) ? imageBlock(key, theme.pin.file, theme.pin.size, theme.pin.height ?? theme.pin.size, s) : null;
       case 'divider':
       case 'divider2': {
         const line = theme.divider;
@@ -247,7 +260,10 @@ export async function renderThemedCard(design: ThemedDesign, input: MasterCardIn
     }
   };
 
-  let blocks = (await Promise.all(theme.order.map(build))).filter((b): b is Block => !!b);
+  const all = (await Promise.all(theme.order.map(build))).filter((b): b is Block => !!b);
+  // blocks the design fixes to a part of its artwork are not in the column
+  const anchored = all.filter((b) => theme.anchor?.[b.key]);
+  let blocks = all.filter((b) => !theme.anchor?.[b.key]);
   // a divider with nothing on one side of it divides nothing
   blocks = blocks.filter((b, i) => (b.key !== 'divider' && b.key !== 'divider2') || (i > 0 && i < blocks.length - 1));
 
@@ -271,6 +287,10 @@ export async function renderThemedCard(design: ThemedDesign, input: MasterCardIn
     block.draw(y, svg, layers);
     y += block.height;
   });
+  for (const block of anchored) {
+    const at = theme.anchor![block.key]!;
+    block.draw('top' in at ? at.top : at.middle - block.height / 2, svg, layers);
+  }
 
   const base = await sharp(cached(`${theme.key}.jpg`)).resize(width, height, { fit: 'fill', kernel: 'lanczos3' }).png().toBuffer();
   const composites: Layer[] = [];

@@ -55,6 +55,13 @@ const FONT_FILES: Record<string, string> = {
   'Cinzel:700': 'Cinzel-Bold.ttf',
   'Cinzel Decorative:700': 'CinzelDecorative-Bold.ttf',
   'IM Fell Great Primer:400': 'IMFellGreatPrimer-Regular.ttf',
+  'Inria Serif:400': 'InriaSerif-Regular.ttf',
+  'Inria Serif:700': 'InriaSerif-Bold.ttf',
+  'Inknut Antiqua:700': 'InknutAntiqua-Bold.ttf',
+  'Bebas Neue:400': 'BebasNeue-Regular.ttf',
+  'Poppins:400': 'Poppins-Regular.ttf',
+  'Kalnia:400': 'Kalnia-Regular.ttf',
+  'Kantumruy Pro:400': 'KantumruyPro-Regular.ttf',
 };
 
 /** Families tried, in order, when a glyph is missing (Bengali and Devanagari names, for example). */

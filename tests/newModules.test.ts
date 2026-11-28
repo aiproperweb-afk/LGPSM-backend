@@ -99,7 +99,7 @@ describe('New Modules (Category, Template, Notification, AuditLog, Report, Ticke
 
     expect(getRes.status).toBe(200);
     expect(getRes.body.data.length).toBe(1);
-    expect(getRes.body.meta).toMatchObject({ page: 1, limit: 25, total: 1 });
+    expect(getRes.body.meta).toMatchObject({ page: 1, limit: 100, total: 1 });
   });
 
   it('Template API: organizers cannot create, update, or delete templates', async () => {

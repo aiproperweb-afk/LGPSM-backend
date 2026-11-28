@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.THEMES = exports.isSharedDesign = exports.SHARED_DESIGNS = exports.isThemedDesign = exports.THEMED_DESIGNS = void 0;
 /**
  * The cards designed for one event type each (Figma "Event Management Invitation Card": Business & Corporate, Festivals & Culture,
- * Personal & Family).
+ * Personal & Family, Education & Campus).
  * Every one is a fixed background with the same details as the master card laid out as a column, so only the styling and the order
  * differ: they are described here and drawn by themedCard.ts. All sizes are Figma pixels on the 393 x 682 card.
  */
@@ -11,7 +11,8 @@ exports.THEMED_DESIGNS = [
     'BUSINESS_CONFERENCE', 'PRODUCT_LAUNCH', 'NETWORKING_EVENT', 'CORPORATE_MEET',
     'FESTIVAL_CELEBRATION', 'PUJA_GATHERING', 'CULTURAL_PROGRAM', 'COMMUNITY_FAIR',
     'BIRTHDAY_GOLD', 'BIRTHDAY_LILAC', 'BIRTHDAY_BLUSH', 'BIRTHDAY_RAINBOW',
-    'BABY_SHOWER', 'ANNAPRASAN', 'GRIHA_PRAVESH', 'ANNIVERSARY', 'ENGAGEMENT', 'HALDI', 'MEHENDI', 'SANGEET', 'WEDDING_RECEPTION'
+    'BABY_SHOWER', 'ANNAPRASAN', 'GRIHA_PRAVESH', 'ANNIVERSARY', 'ENGAGEMENT', 'HALDI', 'MEHENDI', 'SANGEET', 'WEDDING_RECEPTION',
+    'CONVOCATION', 'FRESHERS_WELCOME', 'FAREWELL', 'COLLEGE_FEST'
 ];
 const isThemedDesign = (design) => exports.THEMED_DESIGNS.includes(design);
 exports.isThemedDesign = isThemedDesign;
@@ -23,6 +24,7 @@ const text = (family, weight, size, color, linePx, more = {}) => ({ family, weig
 const qrBox = (border, label, more = {}) => ({ size: 160, inset: 8, border, borderWidth: 1.746, radius: 0, label, labelText: 'Scan the QR code', labelGap: 8, ...more });
 const BUSINESS = 'Business & Corporate';
 const FESTIVALS = 'Festivals & Culture';
+const EDUCATION = 'Education & Campus';
 const BUSINESS_SAMPLE = {
     title: 'Annual Business Leadership and Innovation Summit 26',
     primary: 'Primary Additional Info',
@@ -374,5 +376,69 @@ exports.THEMES = {
         when: text('Ancizar Serif', 400, 16, '#202020', 28, { lines: 2, width: 355 }),
         where: text('Ancizar Serif', 400, 22, '#202020', 30, { lines: 3, width: 320 }),
         pin: { file: 'wedding-reception-pin', size: 20 }
+    },
+    CONVOCATION: {
+        key: 'convocation', name: 'Convocation Gold Frame', category: EDUCATION, subcategory: 'Convocation',
+        palette: { background: '#FFFBF3', primary: '#946700', accent: '#BD8C1C', ink: '#4A3400', heading: 'serif' },
+        sample: { ...FAMILY_SAMPLE, title: 'Holy Convocation Of Faith, Unity & Spiritual Renewal', dateTime: 'Thu 31 Dec 2026 2:00 PM – Fri 1 Jan 2027 4:00 PM', location: 'Grand Ballroom, 25 Park Street, Kolkata, WB, India' },
+        order: ['logo', 'title', 'info', 'qr', 'details'], gaps: { title: 14, info: 20, qr: 37, details: 20 }, region: [32, 651], safe: [24, 658],
+        logo: { size: 90 },
+        title: text('Inria Serif', 700, 26, '#946700', 31, { lines: 3, width: 295 }),
+        primary: text('Inter', 700, 22, '#BD8C1C', 27, { width: 345 }),
+        secondary: text('Inter', 500, 14, '#946700', 17, { width: 345 }),
+        infoGap: 8,
+        qr: qrBox('#A6813A', text('Inria Serif', 400, 14, '#946700', 17, { upper: true }), { labelText: 'Scan QR Code' }),
+        when: text('Inria Serif', 700, 18, '#946700', 22, { lines: 2, width: 345 }),
+        where: text('Inria Serif', 400, 18, '#946700', 22, { lines: 3, width: 345 }),
+        rule: { color: '#946700', opacity: 0.5, width: 345, gapBefore: 10, gapAfter: 10 }
+    },
+    FRESHERS_WELCOME: {
+        key: 'freshers-welcome', name: 'Freshers Welcome Night', category: EDUCATION, subcategory: "Freshers' Welcome",
+        palette: { background: '#050200', primary: '#B4531F', accent: '#FF8E4C', ink: '#1A0B02', heading: 'serif' },
+        sample: { ...FAMILY_SAMPLE, title: 'Sample Event title goes here', dateTime: 'Saturday, 22nd March 2028' },
+        order: ['logo', 'title', 'info', 'qr', 'when', 'where'], gaps: { title: 12, info: 14, qr: 28, when: 25, where: 14 }, region: [30, 636], safe: [18, 664],
+        logo: { size: 81 },
+        title: text('Inknut Antiqua', 700, 28, '#FFFFFF', 46, { upper: true, lines: 3, width: 320 }),
+        primary: text('Inria Serif', 700, 25, '#FF8E4C', 32, { width: 320 }),
+        secondary: text('Inria Serif', 700, 18, '#FFFFFF', 32, { width: 320 }),
+        infoGap: 0,
+        qr: qrBox('#FFFFFF', text('Inria Serif', 700, 12, '#FFFFFF', 19, { upper: true }), { size: 140, borderWidth: 0, radius: 5, labelGap: 13 }),
+        when: text('Inria Serif', 700, 25, '#FFFFFF', 29, { upper: true, lines: 3, width: 240 }),
+        whenRange: text('Inria Serif', 700, 20, '#FFFFFF', 27, { upper: true, lines: 2, width: 290 }),
+        where: text('Inria Serif', 700, 17, '#FFFFFF', 23, { lines: 3, width: 290 })
+    },
+    FAREWELL: {
+        key: 'farewell', name: 'Farewell Fairy Lights', category: EDUCATION, subcategory: 'Farewell',
+        palette: { background: '#0F0F0F', primary: '#8A6F1F', accent: '#E7C85F', ink: '#14110A', heading: 'sans' },
+        sample: { ...FAMILY_SAMPLE, title: 'Sample Event title goes here', dateTime: 'Thu 31 Dec 2026 2:00 PM – Fri 1 Jan 2027 4:00 PM' },
+        order: ['logo', 'title', 'info', 'qr', 'details'], gaps: { title: 17, info: 16, qr: 38, details: 14 }, region: [65, 648], safe: [55, 664],
+        logo: { size: 91 },
+        title: text('Bebas Neue', 400, 53, '#FFFFFF', 64, { upper: true, lines: 3, width: 320, tracking: -1.06 }),
+        primary: text('Poppins', 500, 22, '#ECC889', 31, { width: 320 }),
+        secondary: text('Poppins', 500, 14, '#FFFFFF', 20, { width: 320 }),
+        infoGap: 0,
+        qr: qrBox('#E7C85F', text('Poppins', 400, 12, '#E7C85F', 19, { upper: true }), { size: 120, borderWidth: 2, radius: 5, labelGap: 8 }),
+        when: text('Bebas Neue', 400, 17, '#E7C85F', 20, { upper: true, lines: 2, width: 282 }),
+        where: text('Poppins', 500, 9, '#FFFFFF', 14, { lines: 3, width: 275 }),
+        rule: { color: '#D0B351', opacity: 1, width: 272, gapBefore: 10, gapAfter: 6 },
+        box: { color: '#E7C85F', colorEnd: '#B89D42', borderWidth: 2, width: 298, radius: 11, padY: 15 }
+    },
+    COLLEGE_FEST: {
+        key: 'college-fest', name: 'College Fest Stage', category: EDUCATION, subcategory: 'College Fest',
+        palette: { background: '#14052E', primary: '#7A0A10', accent: '#FFC880', ink: '#1C0620', heading: 'serif' },
+        sample: { ...FAMILY_SAMPLE, title: 'Annual Day Event title here', dateTime: 'Sat 2 September 2028 4:00 PM – 9:00 PM' },
+        // the date sits on the red ribbon of the artwork, with the place under it
+        order: ['logo', 'title', 'info', 'qr', 'when', 'pin', 'where'], gaps: { title: 14, info: 24, qr: 32 }, region: [44, 481], safe: [28, 486],
+        anchor: { when: { middle: 523 }, pin: { top: 576 }, where: { top: 614 } },
+        logo: { size: 80 },
+        title: text('Kalnia', 400, 30, '#FFC880', 40, { upper: true, lines: 3, width: 320, tracking: -1.5 }),
+        primary: text('Kantumruy Pro', 400, 24, '#FFFFFF', 28, { width: 286, tracking: -1.2 }),
+        secondary: text('Kantumruy Pro', 400, 18, '#FFC880', 21, { width: 286, tracking: -0.9 }),
+        infoGap: 3,
+        qr: qrBox('#FFC880', text('Poppins', 400, 12, '#FFFFFF', 19, { upper: true }), { size: 120, borderWidth: 2, radius: 5, labelGap: 11 }),
+        when: text('Kantumruy Pro', 400, 18, '#FFFFFF', 22, { upper: true, lines: 2, width: 271, tracking: -0.54 }),
+        whenBelow: text('Kantumruy Pro', 400, 18, '#FFC880', 22, { upper: true, width: 271, tracking: -0.54 }),
+        where: text('Poppins', 500, 13, '#FFFFFF', 18, { lines: 3, width: 260 }),
+        pin: { file: 'college-fest-pin', size: 26, height: 32 }
     }
 };

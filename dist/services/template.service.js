@@ -37,7 +37,8 @@ exports.templateService = {
     },
     async getTemplates(categoryId, viewer, options = {}) {
         const page = Math.max(options.page || 1, 1);
-        const limit = Math.min(Math.max(options.limit || 25, 1), 100);
+        // (a caller that names no limit gets a full page: the shared cards alone are more than 25, and not every app pages)
+        const limit = Math.min(Math.max(options.limit || 100, 1), 100);
         const skip = (page - 1) * limit;
         const listOptions = { skip, limit, mineOnly: options.mineOnly, kind: options.kind };
         // (the shared designs are installed the first time they are needed, so no manual step stands between the code and the list)

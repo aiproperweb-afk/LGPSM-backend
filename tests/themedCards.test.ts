@@ -83,6 +83,24 @@ describe('themed cards', () => {
     expect([...subcategories].sort()).toEqual(['Annaprasan', 'Anniversary', 'Baby Shower', 'Birthday', 'Engagement', 'Griha Pravesh', 'Haldi', 'Mehendi', 'Sangeet', 'Wedding Reception']);
   });
 
+  it('has one card for every Education & Campus event type, each drawing the event\'s own logo', async () => {
+    const education = THEMED_DESIGNS.filter((d) => THEMES[d].category === 'Education & Campus');
+    expect(education.map((d) => THEMES[d].subcategory)).toEqual(['Convocation', "Freshers' Welcome", 'Farewell', 'College Fest']);
+    const logo = await sharp({ create: { width: 600, height: 600, channels: 3, background: '#0a7f3f' } }).jpeg().toBuffer();
+    for (const design of education) {
+      const card = await renderThemedCard(design, { ...THEMES[design].sample, qr, logo });
+      expect(await read(card)).toBe(CODE);
+      expect((await pixels(card)).equals(await pixels(await renderThemedCard(design, { ...THEMES[design].sample, qr })))).toBe(false);
+    }
+  });
+
+  it('keeps the College Fest date and place on the ribbon and below it, whatever sits above', async () => {
+    const foot = async (input: object) => sharp(await renderThemedCard('COLLEGE_FEST', { ...THEMES.COLLEGE_FEST.sample, ...input, qr })).extract({ left: 0, top: 990, width: 786, height: 374 }).raw().toBuffer();
+    const full = await foot({});
+    expect((await foot({ primary: '', secondary: '', title: 'Fest' })).equals(full)).toBe(true);
+    expect((await foot({ dateTime: 'Sat 2 September 2028 4:00 PM – Sun 3 September 2028 9:00 PM' })).equals(full)).toBe(false);
+  });
+
   it('gives the date in parts for a one-day event only', () => {
     expect(masterDateParts('2027-06-09T16:30:00.000Z', '2027-06-09T17:30:00.000Z')).toEqual({ month: 'June', weekday: 'Wednesday', day: '09', time: 'At 10:00 PM' });
     expect(masterDateParts('2027-06-09T16:30:00.000Z', '2027-06-12T17:30:00.000Z')).toBeNull();
